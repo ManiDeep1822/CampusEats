@@ -83,51 +83,97 @@ const RestaurantPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
-      <div className="bg-slate-900 text-white pb-10 pt-8 px-4">
-        <div className="max-w-4xl mx-auto flex items-end justify-between">
-          <div>
-            <h1 className="text-4xl font-heading font-bold mb-2 flex items-center gap-4">
-              {vendor.shopName}
-              <button onClick={toggleFav} className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition cursor-pointer">
-                <FiHeart className={`text-2xl ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+      <div className="bg-slate-900 text-white pb-8 sm:pb-12 pt-8 sm:pt-12 px-4">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
+          <div className="w-full">
+            <div className="flex items-center justify-between sm:justify-start gap-4 mb-4">
+              <h1 className="text-2xl sm:text-4xl font-heading font-bold tracking-tight">
+                {vendor.shopName}
+              </h1>
+              <button 
+                onClick={toggleFav} 
+                className="bg-white/10 p-2.5 rounded-full hover:bg-white/20 transition-all flex items-center justify-center shrink-0"
+              >
+                <FiHeart className={`text-xl sm:text-2xl ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
               </button>
-            </h1>
-            <p className="text-gray-300 mb-4">{vendor.cuisineType.join(', ')} • {vendor.location}</p>
-            <div className="flex items-center space-x-6">
-              <span className="flex items-center"><FiStar className="mr-1 text-accent"/> {vendor.rating.toFixed(1)} ({vendor.numReviews || 0} Reviews)</span>
-              <span className="flex items-center"><FiClock className="mr-1"/> 20-30 mins</span>
+            </div>
+            <p className="text-gray-400 text-sm sm:text-base mb-4 sm:mb-6">{vendor.cuisineType.join(', ')} • {vendor.location}</p>
+            <div className="flex flex-wrap items-center gap-4 sm:gap-8">
+              <span className="flex items-center text-sm sm:text-base font-medium">
+                <FiStar className="mr-2 text-accent fill-accent"/> {vendor.rating.toFixed(1)} 
+                <span className="text-gray-500 ml-1 font-normal text-xs sm:text-sm">({vendor.numReviews || 0} reviews)</span>
+              </span>
+              <span className="flex items-center text-sm sm:text-base font-medium">
+                <FiClock className="mr-2 text-primary"/> 20-30 mins
+              </span>
             </div>
           </div>
         </div>
       </div>
-      <div className="max-w-4xl mx-auto mt-8 px-4">
-        <h2 className="text-2xl font-bold font-heading mb-6">Menu</h2>
-        <div className="space-y-6">
+
+      <div className="max-w-4xl mx-auto mt-6 sm:mt-10 px-4">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
+          <h2 className="text-xl sm:text-2xl font-bold font-heading text-textPrimary">Menu</h2>
+          <div className="h-0.5 flex-1 bg-gray-100 ml-6 hidden sm:block"></div>
+        </div>
+        
+        <div className="grid grid-cols-1 gap-4 sm:gap-6">
           {menu.map((item) => (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={item._id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center transition-colors">
-              <div className="flex-1 pr-4">
-                <div className={`w-4 h-4 rounded-sm border mb-2 flex items-center justify-center ${item.isVeg ? 'border-accent' : 'border-red-500'}`}><div className={`w-2 h-2 rounded-full ${item.isVeg ? 'bg-accent' : 'bg-red-500'}`}></div></div>
-                <h3 className="text-lg font-bold text-textPrimary">{item.name}</h3>
-                <p className="text-sm text-textSecondary mb-2">{item.description}</p>
-                <div className="font-medium text-textPrimary">₹{item.price}</div>
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              key={item._id} 
+              className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:shadow-md transition-shadow"
+            >
+              <div className="flex-1 w-full order-2 sm:order-1">
+                <div className={`w-4 h-4 rounded-sm border mb-2 flex items-center justify-center ${item.isVeg ? 'border-accent' : 'border-red-500'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${item.isVeg ? 'bg-accent' : 'bg-red-500'}`}></div>
+                </div>
+                <h3 className="text-lg font-bold text-textPrimary mb-1">{item.name}</h3>
+                <p className="text-xs sm:text-sm text-textSecondary mb-3 line-clamp-2">{item.description}</p>
+                <div className="font-bold text-textPrimary text-lg">₹{item.price}</div>
               </div>
-              <div className="w-32 flex flex-col items-center">
-                <div className="w-full h-24 bg-gray-50 rounded-lg mb-2 overflow-hidden border border-gray-100 flex items-center justify-center p-1">{item.image ? <img src={item.image} alt={item.name} className="max-w-full max-h-full object-contain rounded"/> : <div className="text-2xl opacity-30">🍲</div>}</div>
-                {getQuantity(item._id) === 0 ? (
-                  <button onClick={() => handleAddToCart(item)} disabled={item.isAvailable === false} className={`w-full py-1.5 px-4 bg-white border font-bold rounded shadow-sm text-sm uppercase transition ${item.isAvailable !== false ? 'border-primary text-primary hover:bg-orange-50' : 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-50'}`}>
-                    {item.isAvailable !== false ? 'Add' : 'Out of Stock'}
-                  </button>
-                ) : (
-                  <div className="flex items-center justify-between w-full bg-white border border-primary rounded shadow-sm px-2 py-1.5">
-                    <button onClick={() => handleRemove(item._id)} className="text-gray-600 hover:text-primary"><FiMinus/></button>
-                    <span className="font-bold text-primary text-sm">{getQuantity(item._id)}</span>
-                    <button onClick={() => handleAddToCart(item)} disabled={item.isAvailable === false} className="text-gray-600 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"><FiPlus/></button>
-                  </div>
-                )}
+              
+              <div className="w-full sm:w-32 flex flex-row sm:flex-col items-center justify-between sm:justify-center gap-3 order-1 sm:order-2">
+                <div className="relative w-24 h-24 sm:w-full sm:h-24 bg-gray-50 rounded-xl overflow-hidden border border-gray-50 flex items-center justify-center p-1 group shrink-0">
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                  ) : (
+                    <div className="text-3xl opacity-20">🍲</div>
+                  )}
+                  {item.isAvailable === false && (
+                    <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-white/80 px-2 py-1 rounded">Out</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 sm:w-full max-w-[120px]">
+                  {getQuantity(item._id) === 0 ? (
+                    <button 
+                      onClick={() => handleAddToCart(item)} 
+                      disabled={item.isAvailable === false} 
+                      className={`w-full py-2 px-4 border-2 font-bold rounded-xl shadow-sm text-xs sm:text-sm uppercase transition-all ${item.isAvailable !== false ? 'border-primary/20 bg-white text-primary hover:bg-primary hover:text-white' : 'border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50'}`}
+                    >
+                      {item.isAvailable !== false ? 'Add' : 'Sold Out'}
+                    </button>
+                  ) : (
+                    <div className="flex items-center justify-between w-full bg-primary rounded-xl shadow-md px-1 py-1 transform transition-transform animate-in zoom-in-95 duration-200">
+                      <button onClick={() => handleRemove(item._id)} className="p-1 px-2 text-white hover:bg-white/20 rounded-lg transition"><FiMinus size={14}/></button>
+                      <span className="font-bold text-white text-sm">{getQuantity(item._id)}</span>
+                      <button onClick={() => handleAddToCart(item)} disabled={item.isAvailable === false} className="p-1 px-2 text-white hover:bg-white/20 rounded-lg transition disabled:opacity-30"><FiPlus size={14}/></button>
+                    </div>
+                  )}
+                </div>
               </div>
             </motion.div>
           ))}
-          {menu.length === 0 && <div className="text-center text-gray-500 py-10">No items available currently.</div>}
+          {menu.length === 0 && (
+            <div className="text-center text-gray-400 py-16 bg-white rounded-2xl border border-dashed border-gray-200">
+              <span className="text-4xl block mb-2">🍽️</span>
+              No items available currently.
+            </div>
+          )}
         </div>
       </div>
 

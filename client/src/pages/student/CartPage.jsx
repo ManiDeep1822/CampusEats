@@ -50,58 +50,87 @@ const CartPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-8">
-        <div className="flex-1 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-2xl font-bold font-heading mb-6 border-b pb-4">Order Summary</h2>
+    <div className="min-h-screen bg-gray-50 py-6 sm:py-10 px-4">
+      <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-6 sm:gap-8">
+        <div className="flex-1 bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h2 className="text-xl sm:text-2xl font-bold font-heading mb-6 border-b border-gray-50 pb-4">Order Summary</h2>
           <div className="space-y-6">
             {items.map(item => (
-              <div key={item.menuItemId} className="flex justify-between items-center">
+              <div key={item.menuItemId} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div className="flex-1 pr-4">
-                  <div className={`w-3 h-3 rounded-sm border inline-block mr-2 align-middle ${item.isVeg ? 'border-accent' : 'border-red-500'}`}><div className={`w-1.5 h-1.5 rounded-full m-auto mt-0.5 ${item.isVeg ? 'bg-accent' : 'bg-red-500'}`}></div></div>
-                  <span className="font-medium">{item.name}</span>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center bg-gray-50 border rounded-lg px-2 py-1">
-                    <button onClick={() => dispatch(removeFromCart(item.menuItemId))} className="p-1 hover:text-primary"><FiMinus size={14}/></button>
-                    <span className="w-6 text-center text-sm font-bold">{item.quantity}</span>
-                    <button onClick={() => dispatch(addToCart(item))} className="p-1 hover:text-primary"><FiPlus size={14}/></button>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${item.isVeg ? 'border-accent' : 'border-red-500'}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${item.isVeg ? 'bg-accent' : 'bg-red-500'}`}></div>
+                    </div>
+                    <span className="font-bold text-textPrimary leading-tight">{item.name}</span>
                   </div>
-                  <div className="w-16 text-right font-medium">₹{item.price * item.quantity}</div>
+                  <div className="text-xs text-textSecondary sm:hidden">₹{item.price} per item</div>
+                </div>
+                <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+                  <div className="flex items-center bg-gray-50 border border-gray-100 rounded-xl px-2 py-1">
+                    <button onClick={() => dispatch(removeFromCart(item.menuItemId))} className="p-1.5 text-gray-500 hover:text-primary transition-colors"><FiMinus size={14}/></button>
+                    <span className="w-8 text-center text-sm font-extrabold text-gray-800">{item.quantity}</span>
+                    <button onClick={() => dispatch(addToCart(item))} className="p-1.5 text-gray-500 hover:text-primary transition-colors"><FiPlus size={14}/></button>
+                  </div>
+                  <div className="w-20 text-right font-bold text-textPrimary">₹{item.price * item.quantity}</div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="mt-8 pt-6 border-t space-y-4">
-            <h3 className="font-bold">Delivery Details</h3>
-            <div className="relative">
-              <FiMapPin className="absolute left-3 top-3 text-gray-400" />
-              <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Hostel Block, Room No..." className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
+          <div className="mt-10 pt-8 border-t border-gray-50 space-y-5">
+            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+               <FiMapPin className="text-primary" /> Delivery Details
+            </h3>
+            <div className="space-y-4">
+              <input 
+                type="text" 
+                value={address} 
+                onChange={e => setAddress(e.target.value)} 
+                placeholder="Hostel Block, Room No..." 
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-medium" 
+              />
+              <textarea 
+                value={instructions} 
+                onChange={e => setInstructions(e.target.value)} 
+                placeholder="Cooking instructions (e.g. Make it spicy, Don't ring bell)..." 
+                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all h-24 text-sm font-medium resize-none"
+              ></textarea>
             </div>
-            <textarea value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Instructions..." className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-primary outline-none h-20"></textarea>
           </div>
         </div>
-        <div className="w-full md:w-80 bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-fit">
-          <h2 className="text-lg font-bold mb-4">Live Bill Details</h2>
+
+        <div className="w-full md:w-80 bg-white p-6 rounded-2xl shadow-xl shadow-slate-200/50 border border-gray-100 h-fit sticky bottom-4 md:static">
+          <h2 className="text-lg font-bold mb-5 text-gray-800">Live Bill Details</h2>
           {calculating || !bill ? (
-             <div className="py-10 text-center text-sm text-gray-400 flex flex-col items-center">
-                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
-                Calculating best prices...
+             <div className="py-12 text-center text-sm text-gray-400 flex flex-col items-center">
+                <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="font-medium">Calculating best prices...</p>
              </div>
           ) : (
              <>
-               <div className="space-y-3 text-sm text-textSecondary mb-4">
-                 <div className="flex justify-between"><span>Item Total</span><span>₹{bill.subtotal.toFixed(2)}</span></div>
-                 <div className="flex justify-between">
-                   <span>Distance Fee <span className="text-[10px] bg-orange-100 text-orange-600 px-1 py-0.5 rounded ml-1 font-bold">{bill.distance}km</span></span>
-                   <span>₹{bill.deliveryFee.toFixed(2)}</span>
+               <div className="space-y-3.5 text-sm text-textSecondary mb-6">
+                 <div className="flex justify-between items-center"><span>Item Total</span><span className="font-bold text-textPrimary">₹{bill.subtotal.toFixed(2)}</span></div>
+                 <div className="flex justify-between items-center">
+                   <div className="flex items-center gap-1.5">
+                     <span>Delivery Fee</span>
+                     <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full font-bold">{bill.distance}km</span>
+                   </div>
+                   <span className="font-bold text-textPrimary">₹{bill.deliveryFee.toFixed(2)}</span>
                  </div>
-                 <div className="flex justify-between"><span>Platform Fee</span><span>₹{bill.platformFee.toFixed(2)}</span></div>
-                 <div className="flex justify-between"><span>Taxes & GST (5%)</span><span>₹{bill.taxes.toFixed(2)}</span></div>
+                 <div className="flex justify-between items-center"><span>Platform Fee</span><span className="font-bold text-textPrimary">₹{bill.platformFee.toFixed(2)}</span></div>
+                 <div className="flex justify-between items-center"><span>Taxes & GST (5%)</span><span className="font-bold text-textPrimary">₹{bill.taxes.toFixed(2)}</span></div>
                </div>
-               <div className="border-t pt-4 flex justify-between font-bold text-lg mb-6"><span>To Pay</span><span>₹{bill.finalTotal.toFixed(2)}</span></div>
-               <button onClick={handleProceed} className="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-orange-600 transition">Proceed to Payment</button>
+               <div className="border-t border-dashed border-gray-200 pt-5 flex justify-between font-extrabold text-xl mb-6 text-textPrimary">
+                 <span>To Pay</span>
+                 <span className="text-primary">₹{bill.finalTotal.toFixed(2)}</span>
+               </div>
+               <button 
+                 onClick={handleProceed} 
+                 className="w-full bg-primary text-white py-4 rounded-xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/30 hover:shadow-orange-500/40 active:scale-[0.98]"
+               >
+                 Proceed to Checkout
+               </button>
              </>
           )}
         </div>

@@ -197,11 +197,11 @@ const deliverOrder = asyncHandler(async (req, res) => {
     `;
 
     if (order.studentId?.email) {
-      sendEmail({
+      await sendEmail({
         email: order.studentId.email,
         subject: `CampusEats Receipt: Order #${order.orderId} Delivered`,
         html: htmlReceipt
-      }).catch(err => console.error("Receipt email failed to send:", err));
+      });
     }
 
     res.json(order);

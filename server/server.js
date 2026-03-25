@@ -32,8 +32,11 @@ const server = http.createServer(app);
 // Connect Database
 connectDB();
 
+// Normalize CLIENT_URL to prevent CORS mismatches (strips trailing slashes)
+const CLIENT_URL = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+
 // Middleware
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));
+app.use(cors({ origin: CLIENT_URL, credentials: true }));
 app.use(helmet());
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
@@ -66,7 +69,7 @@ app.use(hpp());
 // Socket.io Setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: CLIENT_URL,
     methods: ['GET', 'POST', 'PUT', 'DELETE']
   }
 });

@@ -12,23 +12,32 @@ const sendEmail = async (options) => {
     return;
   }
 
+  const emailUser = process.env.EMAIL_USER;
+  const emailPass = process.env.EMAIL_PASS.replace(/\s/g, ''); // Remove spaces from Gmail app passwords
+
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user: emailUser,
+      pass: emailPass,
     },
   });
 
   const mailOptions = {
-    from: `"CampusEats Platform" <${process.env.EMAIL_USER}>`,
+    from: `"CampusEats Platform" <${emailUser}>`,
     to: options.email,
     subject: options.subject,
     html: options.html,
     text: options.message,
   };
 
-  await transporter.sendMail(mailOptions);
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error(`❌ SMTP Error [${options.subject}]:`, error.message);
+    if (process.env.NODE_ENV !== 'production') console.error(error);
+    throw new Error(`Email delivery failed: ${error.message}`);
+  }
 };
 
 module.exports = sendEmail;

@@ -153,52 +153,52 @@ const OrderTracking = () => {
           )}
         </div>
 
-        <div className="relative pl-8 space-y-8 py-4">
-          <div className="absolute left-11 top-6 bottom-6 w-0.5 bg-gray-200"></div>
+        <div className="relative pl-4 sm:pl-8 space-y-6 sm:space-y-8 py-4 sm:py-6">
+          <div className="absolute left-[27px] sm:left-11 top-6 bottom-6 w-0.5 bg-gray-100"></div>
           {steps.map((step, idx) => {
             const isDelivered = (trackingStatus || activeOrder.status) === 'delivered';
             const isCompleted = idx < currentStepIdx || (isDelivered && idx === currentStepIdx);
             const isActive = idx === currentStepIdx && !isDelivered;
-            const labels = { placed: "Order Placed", confirmed: "Vendor Confirmed", preparing: "Food Preparing", ready: "Ready for Pickup", picked_up: "Out for Delivery", delivered: "Delivered Successfully" };
+            const labels = { placed: "Order Placed", confirmed: "Confirmed", preparing: "Preparing", ready: "Ready", picked_up: "Out for Delivery", delivered: "Delivered" };
             return (
               <div key={step} className="flex items-center relative z-10">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-4 ${isActive ? 'bg-primary border-orange-200 animate-pulse' : isCompleted ? 'bg-accent border-green-100' : 'bg-gray-200 border-white'}`}>
-                  {(isCompleted || isActive) && <div className="w-2 h-2 bg-white rounded-full"></div>}
+                <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center shrink-0 border-2 sm:border-4 ${isActive ? 'bg-primary border-orange-200 animate-pulse' : isCompleted ? 'bg-accent border-green-100' : 'bg-gray-100 border-white'}`}>
+                  {(isCompleted || isActive) && <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full"></div>}
                 </div>
-                <div className={`ml-4 ${isActive ? 'text-primary font-bold' : isCompleted ? 'text-gray-800' : 'text-gray-400'}`}>{labels[step]}</div>
+                <div className={`ml-4 text-sm sm:text-base ${isActive ? 'text-primary font-bold' : isCompleted ? 'text-gray-800' : 'text-gray-400'}`}>{labels[step]}</div>
               </div>
             );
           })}
         </div>
         
         {activeOrder.deliveryBoyId && (
-           <div className="mt-10 pt-6 border-t bg-gray-50 p-4 rounded-lg flex items-center justify-between">
+           <div className="mt-8 pt-6 border-t bg-gray-50/50 p-4 rounded-xl flex items-center justify-between">
               <div>
-                <p className="text-sm text-textSecondary">Delivery Partner</p>
-                <p className="font-bold">{activeOrder.deliveryBoyId.vehicleType} Rider</p>
+                <p className="text-[10px] sm:text-xs text-textSecondary uppercase font-bold tracking-wider mb-1">Delivery Partner</p>
+                <p className="font-bold text-gray-800 text-sm sm:text-base">{activeOrder.deliveryBoyId.vehicleType} Rider Assigned</p>
               </div>
-              <div className="text-xl bg-orange-100 p-2 rounded-full">🛵</div>
+              <div className="text-xl bg-orange-100/50 p-2 sm:p-3 rounded-full">🛵</div>
            </div>
         )}
 
         {/* Smart ETA Banner */}
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-5 mb-8 mt-8 flex flex-col md:flex-row items-start md:items-center justify-between shadow-sm">
-           <div>
-             <h3 className="text-orange-800 font-bold mb-1 text-sm uppercase tracking-wider">
-               {activeOrder.scheduledFor ? '🗓️ Scheduled Delivery' : '⚡ Estimated Arrival'}
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200 rounded-2xl p-5 sm:p-6 mb-8 mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between shadow-sm gap-6">
+           <div className="w-full sm:w-auto">
+             <h3 className="text-orange-800 font-bold mb-1 text-[10px] sm:text-xs uppercase tracking-widest flex items-center gap-2">
+               {activeOrder.scheduledFor ? '🗓️ Scheduled' : '⚡ Est. Arrival'}
              </h3>
-             <p className="text-orange-950 font-extrabold text-3xl">
+             <p className="text-orange-950 font-black text-3xl sm:text-4xl">
                {activeOrder?.estimatedDeliveryTime 
-                 ? Math.max(0, Math.ceil((new Date(activeOrder.estimatedDeliveryTime) - new Date()) / 60000)) + " mins"
+                 ? Math.max(0, Math.ceil((new Date(activeOrder.estimatedDeliveryTime) - new Date()) / 60000)) + "m"
                  : 'Calculating...'}
              </p>
-             <p className="text-orange-800/60 text-[10px] font-bold mt-1">
-               BY {activeOrder?.estimatedDeliveryTime && new Date(activeOrder.estimatedDeliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+             <p className="text-orange-800/60 text-[10px] font-bold mt-1 uppercase">
+               Expected by {activeOrder?.estimatedDeliveryTime && new Date(activeOrder.estimatedDeliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
              </p>
            </div>
-           <div className="text-left md:text-right mt-4 md:mt-0">
-             <p className="text-xs text-orange-600 font-bold uppercase tracking-wide mb-1">Delivery Address</p>
-             <p className="text-orange-900 font-medium md:w-48 leading-snug">{activeOrder?.deliveryAddress || 'Campus'}</p>
+           <div className="w-full sm:text-right sm:border-l sm:border-orange-200/50 sm:pl-6">
+             <p className="text-[10px] text-orange-600 font-bold uppercase tracking-widest mb-1">Delivery To</p>
+             <p className="text-orange-900 font-bold text-sm sm:text-base leading-snug line-clamp-2">{activeOrder?.deliveryAddress || 'Campus'}</p>
            </div>
         </div>
 
