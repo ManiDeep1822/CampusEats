@@ -58,17 +58,21 @@ const sendOTP = asyncHandler(async (req, res) => {
 
 const verifyAndRegister = asyncHandler(async (req, res) => {
   const { otp, name, email, password, role, phone, address, ...extra } = req.body;
+  console.log(`🔍 [Registration] Attempt for: ${email}`);
 
   const otpRecord = await OTP.findOne({ email });
   if (!otpRecord) {
+    console.log(`❌ [Registration] OTP Not Found/Expired for: ${email}`);
     res.status(400); throw new Error('OTP Expired or Not Found. Please request a new one.');
   }
   if (otpRecord.otp !== otp) {
+    console.log(`❌ [Registration] Invalid OTP for: ${email}`);
     res.status(400); throw new Error('Invalid Verification Code');
   }
 
   const userExists = await User.findOne({ email });
   if (userExists) {
+    console.log(`❌ [Registration] User already exists: ${email}`);
     res.status(400); throw new Error('User already exists');
   }
 
@@ -78,23 +82,31 @@ const verifyAndRegister = asyncHandler(async (req, res) => {
      res.status(403); throw new Error('Unauthorized role assignment: Cannot self-register as an administrator.');
   }
 
+  console.log(`⏳ [Registration] Creating user doc for: ${email}...`);
   const user = await User.create({ name, email, password, role: assignedRole, phone, address });
+  console.log(`✅ [Registration] User created: ${user?._id}`);
 
   if (user) {
-    await OTP.deleteOne({ email }); // Clean up
+    await OTP.deleteOne({ email }); 
+    console.log(`🧹 [Registration] OTP cleaned up for: ${email}`);
 
     if (assignedRole === 'vendor') {
+      console.log(`🏪 [Registration] Creating vendor profile...`);
       await Vendor.create({ userId: user._id, shopName: extra.shopName || `${name}'s Shop`, location: extra.location || 'Campus', cuisineType: extra.cuisineType || [] });
     } else if (assignedRole === 'delivery') {
+      console.log(`🛵 [Registration] Creating delivery profile...`);
       await DeliveryBoy.create({ userId: user._id, vehicleType: extra.vehicleType || 'Bicycle' });
     }
+
+    const token = generateToken(user._id);
+    console.log(`🔑 [Registration] Token generated. Response sending...`);
 
     res.status(201).json({
       _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
-      token: generateToken(user._id),
+      token: token,
     });
   } else {
     res.status(400); throw new Error('Invalid user data');

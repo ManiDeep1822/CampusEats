@@ -70,7 +70,10 @@ const Register = () => {
       else if (data.role === 'delivery') navigate('/delivery/dashboard');
       else navigate('/');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Verification failed');
+      console.error('Registration Verification Error:', error);
+      const status = error.response?.status;
+      const message = error.response?.data?.message || error.message || 'Verification failed';
+      toast.error(`${message}${status ? ` (Status: ${status})` : ''}`, { duration: 5000 });
     } finally {
       setLoading(false);
     }

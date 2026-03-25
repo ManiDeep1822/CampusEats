@@ -152,6 +152,7 @@ app.use('/api/admin', adminRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
+  console.error('🔥 Server Error:', err); // Log the full error to stdout for debugging
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
   res.status(statusCode);
   res.json({
