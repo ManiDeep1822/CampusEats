@@ -91,48 +91,84 @@ const MenuManagement = () => {
           <button onClick={() => setShowModal(true)} className="bg-primary text-white font-bold px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-orange-600 transition"><FiPlus/> Add Item</button>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-100 text-gray-600 border-b">
-                <th className="p-4 font-bold">Item Name</th>
-                <th className="p-4 font-bold">Category</th>
-                <th className="p-4 font-bold">Price</th>
-                <th className="p-4 font-bold text-center">Type</th>
-                <th className="p-4 font-bold text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {menu.map(item => (
-                <tr key={item._id} className="border-b last:border-0 hover:bg-gray-50 transition">
-                  <td className="p-4 flex items-center gap-4">
-                    {item.image ? (
-                      <img src={item.image} alt={item.name} className="h-12 w-12 object-cover rounded shadow-sm" />
-                    ) : (
-                      <div className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center text-gray-500 text-xs shadow-sm">No Img</div>
-                    )}
-                    <div>
-                      <div className="font-bold text-gray-800">{item.name}</div>
-                      <div className="text-xs text-gray-500 truncate w-48">{item.description}</div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-gray-600">{item.category}</td>
-                  <td className="p-4 font-bold">₹{item.price}</td>
-                  <td className="p-4 text-center">
-                    <span className={`px-2 py-1 rounded text-xs font-bold ${item.isVeg ? 'bg-green-100 text-accent' : 'bg-red-100 text-red-600'}`}>{item.isVeg ? 'VEG' : 'NON-VEG'}</span>
-                  </td>
-                  <td className="p-4 text-right space-x-3">
-                    <button onClick={() => handleToggle(item._id)} className={`p-2 rounded font-bold text-xs ${item.isAvailable !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
-                      {item.isAvailable !== false ? 'IN STOCK' : 'OUT OF STOCK'}
-                    </button>
-                    <button onClick={() => handleEdit(item)} className="text-blue-500 hover:text-blue-700 bg-blue-50 p-2 rounded"><FiEdit2/></button>
-                    <button onClick={() => handleDelete(item._id)} className="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded"><FiTrash2/></button>
-                  </td>
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-4">
+          {menu.length === 0 && <p className="text-center text-gray-500 py-8">No items yet. Add some to get started!</p>}
+          {menu.map(item => (
+            <div key={item._id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div className="flex items-center gap-3 mb-3">
+                {item.image ? (
+                  <img src={item.image} alt={item.name} className="h-14 w-14 object-cover rounded-lg shadow-sm flex-shrink-0" />
+                ) : (
+                  <div className="h-14 w-14 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs font-bold flex-shrink-0">No Img</div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-gray-800 truncate">{item.name}</div>
+                  <div className="text-xs text-gray-500 truncate">{item.description}</div>
+                  <div className="text-sm font-bold text-primary mt-0.5">₹{item.price}</div>
+                </div>
+                <span className={`text-xs font-bold px-2 py-1 rounded flex-shrink-0 ${item.isVeg ? 'bg-green-100 text-accent' : 'bg-red-100 text-red-600'}`}>{item.isVeg ? 'VEG' : 'NON'}</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button onClick={() => handleToggle(item._id)} className={`flex-1 text-xs font-bold py-1.5 px-2 rounded ${item.isAvailable !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {item.isAvailable !== false ? '✅ IN STOCK' : '❌ OUT'}
+                </button>
+                <button onClick={() => handleEdit(item)} className="text-blue-500 bg-blue-50 p-2 rounded-lg"><FiEdit2 size={16}/></button>
+                <button onClick={() => handleDelete(item._id)} className="text-red-500 bg-red-50 p-2 rounded-lg"><FiTrash2 size={16}/></button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View (scrollable) */}
+        <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-100 text-gray-600 border-b">
+                  <th className="p-4 font-bold">Item Name</th>
+                  <th className="p-4 font-bold">Category</th>
+                  <th className="p-4 font-bold">Price</th>
+                  <th className="p-4 font-bold text-center">Type</th>
+                  <th className="p-4 font-bold text-right">Actions</th>
                 </tr>
-              ))}
-              {menu.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-gray-500">No items available. Add some to get started!</td></tr>}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {menu.map(item => (
+                  <tr key={item._id} className="border-b last:border-0 hover:bg-gray-50 transition">
+                    <td className="p-4">
+                      <div className="flex items-center gap-4">
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} className="h-12 w-12 object-cover rounded shadow-sm flex-shrink-0" />
+                        ) : (
+                          <div className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center text-gray-500 text-xs shadow-sm flex-shrink-0">No Img</div>
+                        )}
+                        <div>
+                          <div className="font-bold text-gray-800">{item.name}</div>
+                          <div className="text-xs text-gray-500 truncate max-w-[200px]">{item.description}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4 text-gray-600">{item.category}</td>
+                    <td className="p-4 font-bold">₹{item.price}</td>
+                    <td className="p-4 text-center">
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${item.isVeg ? 'bg-green-100 text-accent' : 'bg-red-100 text-red-600'}`}>{item.isVeg ? 'VEG' : 'NON-VEG'}</span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => handleToggle(item._id)} className={`px-3 py-1.5 rounded font-bold text-xs whitespace-nowrap ${item.isAvailable !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
+                          {item.isAvailable !== false ? 'IN STOCK' : 'OUT'}
+                        </button>
+                        <button onClick={() => handleEdit(item)} className="text-blue-500 hover:text-blue-700 bg-blue-50 p-2 rounded"><FiEdit2/></button>
+                        <button onClick={() => handleDelete(item._id)} className="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded"><FiTrash2/></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {menu.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-gray-500">No items available. Add some to get started!</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {showModal && (

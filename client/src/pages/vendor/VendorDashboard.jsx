@@ -138,10 +138,10 @@ const VendorDashboard = () => {
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
            <h2 className="text-xl font-bold font-heading mb-4">Quick Actions</h2>
-           <div className="flex space-x-4">
-             <Link to="/vendor/menu" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary hover:text-primary transition">Manage Menu</Link>
-             <Link to="/vendor/orders" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary hover:text-primary transition">Live Orders Queue</Link>
-             <Link to="/vendor/kds" className="px-5 py-3 border border-transparent bg-gray-900 text-white rounded-lg font-bold hover:bg-gray-800 transition shadow-lg">🔥 Open Kitchen Display (KDS)</Link>
+           <div className="flex flex-wrap gap-3">
+             <Link to="/vendor/menu" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary hover:text-primary transition text-sm">Manage Menu</Link>
+             <Link to="/vendor/orders" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary hover:text-primary transition text-sm">Live Orders Queue</Link>
+             <Link to="/vendor/kds" className="px-5 py-3 border border-transparent bg-gray-900 text-white rounded-lg font-bold hover:bg-gray-800 transition shadow-lg text-sm">🔥 Kitchen Display (KDS)</Link>
            </div>
         </div>
       </div>

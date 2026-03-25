@@ -197,11 +197,12 @@ const deliverOrder = asyncHandler(async (req, res) => {
     `;
 
     if (order.studentId?.email) {
-      await sendEmail({
+      // Fire-and-forget — don't block the delivery confirmation response on email
+      sendEmail({
         email: order.studentId.email,
         subject: `CampusEats Receipt: Order #${order.orderId} Delivered`,
         html: htmlReceipt
-      });
+      }).catch(err => console.warn('Receipt email failed (non-critical):', err.message));
     }
 
     res.json(order);
