@@ -6,11 +6,16 @@ const MenuItem = require('../models/MenuItem');
 const Notification = require('../models/Notification');
 const webpush = require('web-push');
 
-webpush.setVapidDetails(
-  `mailto:${process.env.VAPID_EMAIL}`,
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
+// Guard against missing VAPID keys to prevent crashing on startup
+if (process.env.VAPID_EMAIL && process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    `mailto:${process.env.VAPID_EMAIL}`,
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+} else {
+  console.warn('⚠️  VAPID keys not configured — web push notifications will be disabled.');
+}
 
 const getMyVendorId = async (userId) => {
   const vendor = await Vendor.findOne({ userId });
