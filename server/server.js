@@ -161,5 +161,22 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Health check endpoint (used by keep-alive ping below)
+app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok' }));
+
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+
+  // Keep-alive: ping self every 10 mins to prevent Render free tier cold starts
+  if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
+    const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
+    setInterval(() => {
+      fetch(keepAliveUrl)
+        .then(() => console.log('[Keep-Alive] Server pinged successfully'))
+        .catch(err => console.warn('[Keep-Alive] Ping failed:', err.message));
+    }, 10 * 60 * 1000); // Every 10 minutes
+    console.log(`[Keep-Alive] Self-ping configured for: ${keepAliveUrl}`);
+  }
+});
+
