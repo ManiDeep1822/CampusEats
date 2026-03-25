@@ -114,21 +114,24 @@ const Navbar = () => {
                     )}
                   </button>
                   {/* ... Notification Dropdown Content ... */}
-                  <div className={`absolute right-0 w-[90vw] sm:w-80 mt-2 bg-white rounded-2xl shadow-2xl transition-all duration-300 transform origin-top-right border border-gray-100 overflow-hidden z-[100] ${isNotifOpen ? 'opacity-100 visible scale-100' : 'opacity-0 invisible scale-95'}`}>
-                    <div className="flex justify-between items-center px-4 py-3 border-b bg-gray-50">
-                      <span className="font-bold text-gray-700">Notifications</span>
-                      <div className="flex gap-3">
+                  <div className={`absolute right-0 w-[280px] sm:w-80 mt-2 bg-white rounded-2xl shadow-2xl transition-all duration-300 transform origin-top-right border border-gray-100 overflow-hidden z-[100] ${isNotifOpen ? 'opacity-100 visible scale-100' : 'opacity-0 invisible scale-95'}`}>
+                    <div className="flex justify-between items-center px-4 py-2.5 border-b bg-gray-50/50">
+                      <span className="font-bold text-gray-700 text-sm">Notifications</span>
+                      <div className="flex gap-2.5 items-center">
                         {unreadCount > 0 && (
-                          <button onClick={(e) => { e.preventDefault(); dispatch(markAllNotificationsRead()); }} className="text-xs text-primary font-bold hover:underline">Mark all read</button>
+                          <button onClick={(e) => { e.preventDefault(); dispatch(markAllNotificationsRead()); }} className="text-[10px] text-primary font-bold hover:underline py-1">Mark all read</button>
                         )}
                         {notifications.length > 0 && (
-                          <button onClick={(e) => { e.preventDefault(); dispatch(deleteNotifications()); }} className="text-gray-400 hover:text-red-500 transition-colors" title="Clear All"><FiTrash2 size={14} /></button>
+                          <button onClick={(e) => { e.preventDefault(); dispatch(deleteNotifications()); }} className="text-gray-400 hover:text-red-500 transition-colors p-1" title="Clear All"><FiTrash2 size={13} /></button>
                         )}
                       </div>
                     </div>
-                    <div className="max-h-80 overflow-y-auto">
+                    <div className="max-h-72 overflow-y-auto">
                       {notifications.length === 0 ? (
-                        <p className="text-center text-gray-500 py-6 text-sm">No notifications yet.</p>
+                        <div className="flex flex-col items-center justify-center py-8 px-4 opacity-40">
+                          <FiBell size={24} className="mb-2" />
+                          <p className="text-center text-xs font-medium">No notifications yet.</p>
+                        </div>
                       ) : (
                          notifications.map((notif) => (
                            <div 
@@ -141,14 +144,14 @@ const Navbar = () => {
                                   else if (user?.role === 'vendor') navigate('/vendor/orders');
                                }
                              }}
-                             className={`cursor-pointer px-4 py-3 border-b border-gray-50 flex justify-between items-start gap-3 transition ${!notif.isRead ? 'bg-orange-50/30 hover:bg-orange-100/50' : 'bg-white hover:bg-gray-50'}`}
+                             className={`cursor-pointer px-4 py-2.5 border-b border-gray-50 flex justify-between items-start gap-3 transition ${!notif.isRead ? 'bg-orange-50/20 hover:bg-orange-100/40' : 'bg-white hover:bg-gray-50'}`}
                            >
                              <div className="flex-1">
-                               <p className={`text-xs sm:text-sm ${!notif.isRead ? 'font-bold text-gray-800' : 'text-gray-600'}`}>{notif.message}</p>
-                               <p className="text-[10px] text-gray-400 mt-1">{new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                               <p className={`text-[13px] leading-snug ${!notif.isRead ? 'font-bold text-gray-800' : 'text-gray-500'}`}>{notif.message}</p>
+                               <p className="text-[9px] text-gray-400 mt-1 uppercase font-bold">{new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                              </div>
                              {!notif.isRead && (
-                               <button onClick={(e) => { e.stopPropagation(); dispatch(markNotificationRead(notif._id)); }} className="text-primary hover:text-orange-600 mt-1 bg-orange-100/50 p-1 rounded-full hover:bg-orange-200 transition"><FiCheck size={12} /></button>
+                               <button onClick={(e) => { e.stopPropagation(); dispatch(markNotificationRead(notif._id)); }} className="text-primary mt-0.5 bg-orange-100/50 p-1.5 rounded-full hover:bg-orange-200 transition-colors"><FiCheck size={11} /></button>
                              )}
                            </div>
                          ))
