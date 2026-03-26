@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getDashboardStats, toggleShopStatus, getMenu, addMenuItem, updateMenuItem, deleteMenuItem, toggleMenuItemStatus, getOrders, updateOrderStatus } = require('../controllers/vendor.controller');
+const { getDashboardStats, toggleShopStatus, getMenu, addMenuItem, updateMenuItem, deleteMenuItem, toggleMenuItemStatus, getOrders, updateOrderStatus, updateVendorProfile } = require('../controllers/vendor.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { authorizeRoles } = require('../middleware/role.middleware');
 

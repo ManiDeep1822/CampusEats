@@ -14,36 +14,78 @@ const CartFloatingButton = () => {
 
   return (
     <AnimatePresence>
-      <motion.div 
-        initial={{ y: 100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 100, opacity: 0 }}
-        className="fixed bottom-6 left-4 w-[calc(100%-90px)] md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-md z-50"
-      >
-
-        <button 
-          onClick={() => navigate('/student/cart')}
-          className="w-full bg-primary text-white p-3 sm:p-4 rounded-2xl shadow-2xl flex items-center justify-between hover:bg-orange-600 transition-all active:scale-[0.98] group"
+      {/* MOBILE VIEW: Premium Full-Width Bottom Bar */}
+      <div className="md:hidden">
+        <motion.div 
+          initial={{ y: 150, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 150, opacity: 0 }}
+          className="fixed bottom-0 left-0 w-full z-50"
         >
-          <div className="flex items-center gap-3">
-            <div className="bg-white/20 p-2 rounded-lg">
-              <FiShoppingCart size={18} className="sm:w-5 sm:h-5" />
+          <div className="bg-slate-950 text-white p-6 pb-9 rounded-t-[2.5rem] shadow-[0_-20px_50px_rgba(0,0,0,0.4)] border-t border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-primary/20 p-3 rounded-2xl text-primary border border-primary/20">
+                <FiShoppingCart size={22} />
+              </div>
+              <div className="text-left">
+                <p className="text-[11px] uppercase font-bold tracking-widest text-primary leading-none mb-1.5">{totalItems} Items Added</p>
+                <p className="text-2xl font-black leading-none tracking-tight">₹{totalAmount.toFixed(2)}</p>
+              </div>
             </div>
-            <div className="text-left">
-              <p className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest opacity-80 leading-none mb-1">{totalItems} {totalItems === 1 ? 'Item' : 'Items'}</p>
-              <p className="text-base sm:text-lg font-bold leading-none">₹{totalAmount.toFixed(2)}</p>
+            
+            <button 
+              onClick={() => navigate('/student/cart')}
+              className="bg-primary text-white px-8 py-4 rounded-2xl font-black text-lg shadow-lg shadow-orange-500/40 active:scale-95 transition-all flex items-center gap-2"
+            >
+              <span>Pay</span>
+              <FiArrowRight size={20} />
+            </button>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* DESKTOP VIEW: Sidebar Window (Small & Elegant) */}
+      <div className="hidden md:block">
+        <motion.div 
+          initial={{ x: 300, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 300, opacity: 0 }}
+          className="fixed top-24 right-8 w-72 bg-white/80 backdrop-blur-xl shadow-[0_30px_60px_rgba(0,0,0,0.12)] rounded-[2.5rem] border border-white overflow-hidden z-40 flex flex-col p-2"
+        >
+          <div className="bg-slate-900 text-white p-5 rounded-[2rem] mb-2">
+            <h3 className="font-bold flex items-center gap-2 text-sm uppercase tracking-widest opacity-90">
+              <FiShoppingCart className="text-primary" /> Active Cart
+            </h3>
+            <div className="mt-4 flex justify-between items-end">
+              <span className="text-3xl font-black tracking-tighter">₹{totalAmount.toFixed(2)}</span>
+              <span className="bg-white/20 px-2 py-1 rounded-lg text-[10px] font-bold">{totalItems} ITEMS</span>
             </div>
           </div>
 
-          
-          <div className="flex items-center gap-2 font-bold">
-            <span>Pay</span>
-            <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+          <div className="px-4 py-2 max-h-[30vh] overflow-y-auto space-y-3">
+            {items.map((item) => (
+              <div key={item.menuItemId} className="flex justify-between items-center text-xs">
+                <span className="font-bold text-gray-700 truncate pr-2">{item.name}</span>
+                <span className="bg-gray-100 px-1.5 py-0.5 rounded font-bold text-gray-500 shrink-0">x{item.quantity}</span>
+              </div>
+            ))}
           </div>
-        </button>
-      </motion.div>
+
+          <div className="p-2 pt-4">
+            <button 
+              onClick={() => navigate('/student/cart')}
+              className="w-full bg-primary text-white py-4 rounded-[1.5rem] font-bold hover:bg-orange-600 transition-all flex items-center justify-center gap-2 group shadow-xl shadow-orange-500/20"
+            >
+              <span>Pay Now</span>
+              <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+        </motion.div>
+      </div>
     </AnimatePresence>
   );
+
+
 };
 
 export default CartFloatingButton;

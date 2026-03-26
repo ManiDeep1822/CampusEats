@@ -6,6 +6,8 @@ import api from '../../services/api';
 
 const CampusEatsAI = () => {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const { items } = useSelector((state) => state.cart);
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -82,7 +84,8 @@ const CampusEatsAI = () => {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9, transition: { duration: 0.2 } }}
-            className="fixed bottom-24 right-6 w-80 md:w-96 h-[500px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col z-[100]"
+            className={`fixed right-6 w-80 md:w-96 h-[500px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col z-[100] transition-all duration-300 ${items.length > 0 ? 'bottom-40 md:bottom-24' : 'bottom-24'}`}
+
           >
             {/* Header */}
             <div className="bg-primary/10 border-b border-gray-100 p-4 flex items-center justify-between">
@@ -183,12 +186,13 @@ const CampusEatsAI = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-tr from-orange-500 to-primary rounded-full shadow-xl shadow-orange-500/30 flex items-center justify-center text-white z-[100] border-2 border-white"
+        className={`fixed right-6 w-14 h-14 bg-gradient-to-tr from-orange-500 to-primary rounded-full shadow-xl shadow-orange-500/30 flex items-center justify-center text-white z-[100] border-2 border-white transition-all duration-300 ${items.length > 0 ? 'bottom-24 md:bottom-6' : 'bottom-6'}`}
       >
         {isOpen ? <FiX size={24} /> : <FiMessageSquare size={24} />}
       </motion.button>
     </>
   );
 };
+
 
 export default CampusEatsAI;
