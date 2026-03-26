@@ -199,37 +199,28 @@ const os = require('os');
 
 const PORT = process.env.PORT || 5000;
 
-if (cluster.isPrimary && process.env.NODE_ENV === 'production') {
-  const numCPUs = os.cpus().length;
-  console.log(`Master ${process.pid} is running. Spawning ${numCPUs} workers...`);
+// Start Server
+connectDB().then(() => {
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
 
-  for (let i = 0; i < numCPUs; i++) {
-    cluster.fork();
-  }
-
-  cluster.on('exit', (worker, code, signal) => {
-    console.log(`Worker ${worker.process.pid} died. Spawning a new one...`);
-    cluster.fork();
+    // Keep-alive: ping self every 10 mins to prevent Render free tier cold starts
+    if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
+      const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
+      setInterval(() => {
+        if (typeof fetch !== 'undefined') {
+          fetch(keepAliveUrl)
+            .then(() => console.log('[Keep-Alive] Server pinged successfully'))
+            .catch(err => console.warn('[Keep-Alive] Ping failed:', err.message));
+        }
+      }, 10 * 60 * 1000); 
+    }
   });
-} else {
-  connectDB().then(() => {
-    server.listen(PORT, () => {
-      console.log(`Worker ${process.pid} started. Server running on port ${PORT}`);
+}).catch(err => {
+  console.error('❌ Failed to connect to MongoDB. Server will not start:', err.message);
+  process.exit(1);
+});
 
-      // Keep-alive: ping self every 10 mins to prevent Render free tier cold starts
-      if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
-        const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
-        setInterval(() => {
-          if (typeof fetch !== 'undefined') {
-            fetch(keepAliveUrl)
-              .then(() => console.log('[Keep-Alive] Server pinged successfully'))
-              .catch(err => console.warn('[Keep-Alive] Ping failed:', err.message));
-          }
-        }, 10 * 60 * 1000); 
-      }
-    });
-  });
-}
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {

@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import SwipeableToaster from './components/shared/SwipeableToaster';
 import Navbar from './components/shared/Navbar';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 import GlobalNotificationListener from './components/shared/GlobalNotificationListener';
@@ -42,7 +42,7 @@ const ManageFeedback = lazy(() => import('./pages/admin/ManageFeedback'));
 function App() {
   return (
     <div className="min-h-screen bg-background text-textPrimary font-sans">
-        <Toaster position="top-center" />
+        <SwipeableToaster />
         <GlobalNotificationListener />
         <Navbar />
         <CampusEatsAI />

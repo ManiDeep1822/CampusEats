@@ -117,9 +117,10 @@ const handleBotQuery = asyncHandler(async (req, res) => {
 
     // Call Gemini to generate the response
     const generativeModel = ai.getGenerativeModel({ 
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       systemInstruction: systemPrompt 
     });
+
 
     const result = await generativeModel.generateContent({
       contents: [{ role: 'user', parts: [{ text: message }] }],
