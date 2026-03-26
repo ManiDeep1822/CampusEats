@@ -90,12 +90,15 @@ const verifyPayment = asyncHandler(async (req, res) => {
         io.to(`vendor:${order.vendorId}`).emit('order:new', { orderId: order._id, message: vendorMsg });
 
         // Persist vendor notification to DB
-        await Notification.create({
+        const notification = await Notification.create({
           recipient: order.vendorId,
           message: vendorMsg,
           type: 'order_update',
           orderId: order._id
         });
+
+        // --- NEW: Real-time Socket Emission ---
+        io.to(`vendor:${order.vendorId}`).emit('notification', notification);
       }
     }
     

@@ -150,12 +150,15 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       io.to(`student:${order.studentId}`).emit(`order:${status}`, { orderId: order._id, message: studentMsg });
       
       // Persist Notification to DB
-      await Notification.create({
+      const notification = await Notification.create({
         recipient: order.studentId,
         message: studentMsg,
         type: 'order_update',
         orderId: order._id
       });
+
+      // --- NEW: Real-time Socket Emission ---
+      io.to(`student:${order.studentId}`).emit('notification', notification);
       
       if (status === 'ready') {
         const populatedOrder = await Order.findById(order._id).populate('vendorId');

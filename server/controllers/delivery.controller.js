@@ -78,12 +78,15 @@ const pickUpOrder = asyncHandler(async (req, res) => {
       io.to(studentRoom).emit('order:picked', { orderId: order._id, message: msg });
 
       // Persist
-      await Notification.create({
+      const notification = await Notification.create({
         recipient: order.studentId,
         message: msg,
         type: 'order_update',
         orderId: order._id
       });
+
+      // --- NEW: Real-time Socket Emission ---
+      io.to(studentRoom).emit('notification', notification);
     }
     
     res.json(order);
@@ -136,9 +139,13 @@ const deliverOrder = asyncHandler(async (req, res) => {
       io.to(vendorRoom).emit('order:delivered', { orderId: order._id, message: vendorMsg });
 
       // Persist for student
-      await Notification.create({ recipient: order.studentId, message: studentMsg, type: 'order_update', orderId: order._id });
+      const studentNotif = await Notification.create({ recipient: order.studentId, message: studentMsg, type: 'order_update', orderId: order._id });
       // Persist for vendor
-      await Notification.create({ recipient: order.vendorId, message: vendorMsg, type: 'order_update', orderId: order._id });
+      const vendorNotif = await Notification.create({ recipient: order.vendorId, message: vendorMsg, type: 'order_update', orderId: order._id });
+
+      // --- NEW: Real-time Socket Emission ---
+      io.to(studentRoom).emit('notification', studentNotif);
+      io.to(vendorRoom).emit('notification', vendorNotif);
     }
 
     // Generate and dispatch beautiful HTML Email Receipt asynchronously
@@ -249,12 +256,15 @@ const sendDeliveryOTP = asyncHandler(async (req, res) => {
       });
 
       // Persist
-      await Notification.create({
+      const notification = await Notification.create({
         recipient: order.studentId,
         message: msg,
         type: 'system',
         orderId: order._id
       });
+
+      // --- NEW: Real-time Socket Emission ---
+      io.to(studentRoom).emit('notification', notification);
     }
 
     res.status(200).json({ message: 'Delivery PIN pushed to Student App Notifications' });

@@ -6,8 +6,10 @@ import {
   fetchNotifications, 
   markNotificationRead, 
   markAllNotificationsRead, 
-  deleteNotifications 
+  deleteNotifications,
+  addNotification
 } from '../../store/notificationSlice';
+import { useSocketContext } from '../../context/SocketContext';
 import { FiShoppingCart, FiUser, FiBell, FiCheck, FiTrash2 } from 'react-icons/fi';
 
 const Navbar = () => {
@@ -23,6 +25,7 @@ const Navbar = () => {
   const menuRef = useRef(null);
   const notifRef = useRef(null);
   const profileRef = useRef(null);
+  const socket = useSocketContext();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -45,6 +48,15 @@ const Navbar = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (socket) {
+      socket.on('notification', (data) => {
+        dispatch(addNotification(data));
+      });
+      return () => socket.off('notification');
+    }
+  }, [socket, dispatch]);
 
   const handleLogout = () => {
     dispatch(logout());

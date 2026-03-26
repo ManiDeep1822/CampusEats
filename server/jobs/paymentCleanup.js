@@ -53,12 +53,15 @@ const startPaymentCleanupJob = (io) => {
 
               // 4. Persist Notification in DB
               try {
-                await Notification.create({
+                const notification = await Notification.create({
                   recipient: order.studentId,
                   message: msg,
                   type: 'order_update',
                   orderId: order._id
                 });
+
+                // --- NEW: Real-time Socket Emission ---
+                io.to(studentRoom).emit('notification', notification);
               } catch (nErr) {
                 console.error("Cleanup notification persist error:", nErr.message);
               }

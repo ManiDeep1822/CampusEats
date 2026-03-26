@@ -230,12 +230,15 @@ const cancelOrder = asyncHandler(async (req, res) => {
     io.to(`vendor:${order.vendorId}`).emit('order:cancelled', { orderId: order._id, message: msg });
 
     // Persist
-    await Notification.create({
+    const notification = await Notification.create({
       recipient: order.vendorId,
       message: msg,
       type: 'order_update',
       orderId: order._id
     });
+
+    // --- NEW: Real-time Socket Emission ---
+    io.to(`vendor:${order.vendorId}`).emit('notification', notification);
   }
 
   res.json({ message: 'Order cancelled successfully' });
