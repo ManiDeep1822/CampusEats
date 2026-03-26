@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { setCredentials } from '../../store/slices/authSlice';
+import { setCredentials } from '../../store/authSlice';
 import { FiArrowLeft, FiPlus, FiDollarSign, FiZap, FiShield } from 'react-icons/fi';
 
 const QUICK_AMOUNTS = [50, 100, 200, 500, 1000];
