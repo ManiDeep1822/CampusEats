@@ -37,15 +37,14 @@ const VendorDashboard = () => {
     const uploadToast = toast.loading('Uploading image...');
     try {
       // 1. Upload to Cloudinary
-      const uploadRes = await api.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const uploadRes = await api.post('/upload', formData);
       const imageUrl = uploadRes.data.imageUrl;
 
       // 2. Update Vendor Profile
       await api.put('/vendor/profile', { shopImage: imageUrl });
       
       setData({ ...data, shopDetails: { ...data.shopDetails, shopImage: imageUrl } });
+      await fetchStats(); // Refresh all stats and details from backend
       toast.success('Restaurant image updated!', { id: uploadToast });
     } catch (error) {
       console.error(error);
