@@ -161,7 +161,8 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
         const populatedOrder = await Order.findById(order._id).populate('vendorId');
         const vendorName = populatedOrder.vendorId?.shopName || 'Campus Spot';
         
-        io.emit('order:ready', { orderId: order._id, message: `🛵 An order is ready for pickup at ${vendorName}` });
+        // --- FIX: Targeted broadcast to all DELIVER boys only, not everyone ---
+        io.to('role:delivery').emit('order:ready', { orderId: order._id, message: `🛵 An order is ready for pickup at ${vendorName}` });
         
         const student = await User.findById(order.studentId);
         if (student && student.pushSubscription) {

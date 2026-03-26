@@ -65,7 +65,7 @@ const Navbar = () => {
         <div className="flex justify-between h-16 items-center">
           {/* Logo */}
           <Link to={isAuthenticated ? getDashboardLink() : '/'} className="flex items-center space-x-2 group shrink-0">
-            <span className="text-xl sm:text-2xl font-heading font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 group-hover:from-orange-500 group-hover:to-rose-400 transition-all">CampusEats</span>
+            <span className="text-2xl font-heading font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 group-hover:from-orange-500 group-hover:to-rose-400 transition-all max-sm:text-xl">CampusEats</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -79,15 +79,15 @@ const Navbar = () => {
           {/* User Actions */}
           <div className="flex items-center space-x-2 sm:space-x-4">
             {!isAuthenticated ? (
-              <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="flex items-center space-x-4 max-sm:space-x-2">
                 <Link to="/login" className="text-textPrimary hover:text-primary font-bold transition-colors text-sm px-2">Login</Link>
-                <Link to="/register" className="bg-primary text-white px-4 sm:px-6 py-2 rounded-xl font-bold hover:bg-orange-600 transition-all shadow-md hover:shadow-orange-500/20 text-sm">Sign Up</Link>
+                <Link to="/register" className="bg-primary text-white px-6 py-2 rounded-xl font-bold hover:bg-orange-600 transition-all shadow-md hover:shadow-orange-500/20 text-sm max-sm:px-4">Sign Up</Link>
               </div>
             ) : (
               <div className="flex items-center space-x-1 sm:space-x-3">
                 {user.role === 'student' && (
                   <Link to="/student/cart" className="relative p-2 text-textPrimary hover:text-primary transition-all">
-                    <FiShoppingCart size={22} className="sm:w-6 sm:h-6" />
+                    <FiShoppingCart size={24} className="max-sm:w-[22px] max-sm:h-[22px]" />
                     {totalItems > 0 && (
                       <span className="absolute top-1 right-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold leading-none text-white bg-accent rounded-full border-2 border-white">
                         {totalItems}
@@ -106,7 +106,7 @@ const Navbar = () => {
                     }}
                     className={`p-2 transition-all text-xl focus:outline-none rounded-full ${isNotifOpen ? 'bg-orange-100 text-primary scale-105' : 'text-textPrimary hover:text-primary active:scale-95'}`}
                   >
-                    <FiBell size={22} className="sm:w-6 sm:h-6" />
+                    <FiBell size={24} className="max-sm:w-[22px] max-sm:h-[22px]" />
                     {unreadCount > 0 && (
                       <span className="absolute top-1 right-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold leading-none text-white bg-red-500 rounded-full border-2 border-white">
                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -114,7 +114,7 @@ const Navbar = () => {
                     )}
                   </button>
                   {/* ... Notification Dropdown Content ... */}
-                  <div className={`absolute right-0 w-[280px] sm:w-80 mt-2 bg-white rounded-2xl shadow-2xl transition-all duration-300 transform origin-top-right border border-gray-100 overflow-hidden z-[100] ${isNotifOpen ? 'opacity-100 visible scale-100' : 'opacity-0 invisible scale-95'}`}>
+                  <div className={`absolute right-0 w-80 mt-2 bg-white rounded-2xl shadow-2xl transition-all duration-300 transform origin-top-right border border-gray-100 overflow-hidden z-[100] max-sm:w-[280px] ${isNotifOpen ? 'opacity-100 visible scale-100' : 'opacity-0 invisible scale-95'}`}>
                     <div className="flex justify-between items-center px-4 py-2.5 border-b bg-gray-50/50">
                       <span className="font-bold text-gray-700 text-sm">Notifications</span>
                       <div className="flex gap-2.5 items-center">

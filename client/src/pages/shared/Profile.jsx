@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import { FiLock, FiShield, FiUser, FiMail, FiPhone, FiMapPin, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import api from '../../utils/api';
+import api from '../../services/api';
 
 const Profile = () => {
     const { user } = useSelector((state) => state.auth);

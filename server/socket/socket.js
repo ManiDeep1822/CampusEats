@@ -9,7 +9,12 @@ const socketHandler = (io) => {
       }
       const room = `${role}:${userId}`;
       socket.join(room);
-      console.log(`✅ Socket ${socket.id} successfully joined room => ${room}`);
+      
+      // Join a role-wide room for broad broadcasts (e.g., all riders see ready orders)
+      const roleRoom = `role:${role}`;
+      socket.join(roleRoom);
+      
+      console.log(`✅ Socket ${socket.id} joined rooms: [${room}, ${roleRoom}]`);
     });
 
     socket.on('send_message', async (data) => {

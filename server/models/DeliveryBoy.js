@@ -6,6 +6,7 @@ const deliveryBoySchema = new mongoose.Schema({
   isAvailable: { type: Boolean, default: false },
   currentLocation: { type: String },
   totalDeliveries: { type: Number, default: 0 },
+  earnings: { type: Number, default: 0 },
   rating: { type: Number, default: 0 },
   activeOrderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' }
 }, { timestamps: true });

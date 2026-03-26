@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const Payment = require('../models/Payment');
 const Order = require('../models/Order');
+const Notification = require('../models/Notification');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
@@ -52,6 +53,16 @@ const verifyPayment = asyncHandler(async (req, res) => {
   const payment = await Payment.findById(paymentId);
   if (!payment) { res.status(404); throw new Error('Payment not found'); }
 
+  // --- FIX: Idempotency Guard ---
+  // Prevents re-processing if the CRON job already cancelled this, or
+  // if this webhook is called twice.
+  if (payment.status === 'completed') {
+    return res.json({ success: true, payment, message: 'Payment was already verified.' });
+  }
+  if (payment.status === 'cancelled') {
+    res.status(400); throw new Error('Payment session has expired. Please place a new order.');
+  }
+
   const body = razorpay_order_id + "|" + razorpay_payment_id;
   const expectedSignature = crypto
     .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -74,9 +85,17 @@ const verifyPayment = asyncHandler(async (req, res) => {
       
       const io = req.app.get('io');
       if (io) {
-        // Officially alert the vendor that the order is paid and placed!
-        io.to(`vendor:${order.vendorId}`).emit('order:new', { orderId: order._id, message: `🚀 You just received a new paid order for ₹${order.totalAmount}!` });
-        io.emit('order:new', { orderId: order._id, message: `✅ A new order (#${order.orderId}) was just successfully placed & paid!` });
+        const vendorMsg = `🚀 New paid order! A confirmed order for ₹${order.totalAmount} is waiting for you.`;
+        // --- FIX: This is the CORRECT place to notify vendor. Only after payment confirmed. ---
+        io.to(`vendor:${order.vendorId}`).emit('order:new', { orderId: order._id, message: vendorMsg });
+
+        // Persist vendor notification to DB
+        await Notification.create({
+          recipient: order.vendorId,
+          message: vendorMsg,
+          type: 'order_update',
+          orderId: order._id
+        });
       }
     }
     

@@ -83,27 +83,27 @@ const RestaurantPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
-      <div className="bg-slate-900 text-white pb-8 sm:pb-12 pt-8 sm:pt-12 px-4">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
+      <div className="bg-slate-900 text-white pb-12 pt-12 px-4 max-sm:pb-8 max-sm:pt-8">
+        <div className="max-w-4xl mx-auto flex flex-row items-end justify-between gap-6 max-sm:flex-col max-sm:items-start">
           <div className="w-full">
-            <div className="flex items-center justify-between sm:justify-start gap-4 mb-4">
-              <h1 className="text-2xl sm:text-4xl font-heading font-bold tracking-tight">
+            <div className="flex items-center justify-start gap-4 mb-4 max-sm:justify-between">
+              <h1 className="text-4xl font-heading font-bold tracking-tight max-sm:text-2xl">
                 {vendor.shopName}
               </h1>
               <button 
                 onClick={toggleFav} 
                 className="bg-white/10 p-2.5 rounded-full hover:bg-white/20 transition-all flex items-center justify-center shrink-0"
               >
-                <FiHeart className={`text-xl sm:text-2xl ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                <FiHeart className={`text-2xl ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'} max-sm:text-xl`} />
               </button>
             </div>
-            <p className="text-gray-400 text-sm sm:text-base mb-4 sm:mb-6">{vendor.cuisineType.join(', ')} • {vendor.location}</p>
-            <div className="flex flex-wrap items-center gap-4 sm:gap-8">
-              <span className="flex items-center text-sm sm:text-base font-medium">
+            <p className="text-gray-400 text-base mb-6 max-sm:text-sm max-sm:mb-4">{vendor.cuisineType.join(', ')} • {vendor.location}</p>
+            <div className="flex flex-wrap items-center gap-8 max-sm:gap-4">
+              <span className="flex items-center text-base font-medium max-sm:text-sm">
                 <FiStar className="mr-2 text-accent fill-accent"/> {vendor.rating.toFixed(1)} 
-                <span className="text-gray-500 ml-1 font-normal text-xs sm:text-sm">({vendor.numReviews || 0} reviews)</span>
+                <span className="text-gray-500 ml-1 font-normal text-sm max-sm:text-xs">({vendor.numReviews || 0} reviews)</span>
               </span>
-              <span className="flex items-center text-sm sm:text-base font-medium">
+              <span className="flex items-center text-base font-medium max-sm:text-sm">
                 <FiClock className="mr-2 text-primary"/> 20-30 mins
               </span>
             </div>
@@ -111,10 +111,10 @@ const RestaurantPage = () => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto mt-6 sm:mt-10 px-4">
-        <div className="flex items-center justify-between mb-6 sm:mb-8">
-          <h2 className="text-xl sm:text-2xl font-bold font-heading text-textPrimary">Menu</h2>
-          <div className="h-0.5 flex-1 bg-gray-100 ml-6 hidden sm:block"></div>
+      <div className="max-w-4xl mx-auto mt-10 px-4 max-sm:mt-6">
+        <div className="flex items-center justify-between mb-8 max-sm:mb-6">
+          <h2 className="text-2xl font-bold font-heading text-textPrimary max-sm:text-xl">Menu</h2>
+          <div className="h-0.5 flex-1 bg-gray-100 ml-6 max-sm:hidden"></div>
         </div>
         
         <div className="grid grid-cols-1 gap-4 sm:gap-6">
@@ -123,19 +123,19 @@ const RestaurantPage = () => {
               initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }} 
               key={item._id} 
-              className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:shadow-md transition-shadow"
+              className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-row justify-between items-center gap-4 hover:shadow-md transition-shadow max-sm:flex-col max-sm:items-start max-sm:p-4"
             >
-              <div className="flex-1 w-full order-2 sm:order-1">
+              <div className="flex-1 w-full max-sm:order-2">
                 <div className={`w-4 h-4 rounded-sm border mb-2 flex items-center justify-center ${item.isVeg ? 'border-accent' : 'border-red-500'}`}>
                   <div className={`w-1.5 h-1.5 rounded-full ${item.isVeg ? 'bg-accent' : 'bg-red-500'}`}></div>
                 </div>
                 <h3 className="text-lg font-bold text-textPrimary mb-1">{item.name}</h3>
-                <p className="text-xs sm:text-sm text-textSecondary mb-3 line-clamp-2">{item.description}</p>
+                <p className="text-sm text-textSecondary mb-3 line-clamp-2 max-sm:text-xs">{item.description}</p>
                 <div className="font-bold text-textPrimary text-lg">₹{item.price}</div>
               </div>
               
-              <div className="w-full sm:w-32 flex flex-row sm:flex-col items-center justify-between sm:justify-center gap-3 order-1 sm:order-2">
-                <div className="relative w-24 h-24 sm:w-full sm:h-24 bg-gray-50 rounded-xl overflow-hidden border border-gray-50 flex items-center justify-center p-1 group shrink-0">
+              <div className="w-32 flex flex-col items-center justify-center gap-3 max-sm:w-full max-sm:flex-row max-sm:justify-between max-sm:order-1">
+                <div className="relative w-full h-24 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex items-center justify-center p-1 group shrink-0 max-sm:w-24 max-sm:h-24">
                   {item.image ? (
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                   ) : (
@@ -148,12 +148,12 @@ const RestaurantPage = () => {
                   )}
                 </div>
 
-                <div className="flex-1 sm:w-full max-w-[120px]">
+                <div className="w-full max-w-[120px] max-sm:flex-1">
                   {getQuantity(item._id) === 0 ? (
                     <button 
                       onClick={() => handleAddToCart(item)} 
                       disabled={item.isAvailable === false} 
-                      className={`w-full py-2 px-4 border-2 font-bold rounded-xl shadow-sm text-xs sm:text-sm uppercase transition-all ${item.isAvailable !== false ? 'border-primary/20 bg-white text-primary hover:bg-primary hover:text-white' : 'border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50'}`}
+                      className={`w-full py-2 px-4 border-2 font-bold rounded-xl shadow-sm text-sm uppercase transition-all max-sm:text-xs ${item.isAvailable !== false ? 'border-primary/20 bg-white text-primary hover:bg-primary hover:text-white' : 'border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50'}`}
                     >
                       {item.isAvailable !== false ? 'Add' : 'Sold Out'}
                     </button>

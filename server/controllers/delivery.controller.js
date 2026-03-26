@@ -19,7 +19,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     stats: {
       totalDeliveries: deliveryBoy.totalDeliveries,
       rating: deliveryBoy.rating,
-      earnings: deliveryBoy.totalDeliveries * 20
+      earnings: deliveryBoy.earnings
     }
   });
 });
@@ -122,6 +122,7 @@ const deliverOrder = asyncHandler(async (req, res) => {
     deliveryBoy.activeOrderId = null;
     deliveryBoy.isAvailable = true;
     deliveryBoy.totalDeliveries += 1;
+    deliveryBoy.earnings += (order.deliveryFee || 15);
     await deliveryBoy.save();
 
     const io = req.app.get('io');

@@ -125,22 +125,10 @@ const placeOrder = asyncHandler(async (req, res) => {
   
   const createdOrder = await order.save();
   
-  const io = req.app.get('io');
-  if (io) {
-    const msg = `🚀 You just received a new order for ₹${bill.finalTotal}!`;
-    io.to(`vendor:${vendorId}`).emit('order:new', { orderId: createdOrder._id, message: msg });
-    
-    // Persist
-    await Notification.create({
-      recipient: vendorId,
-      message: msg,
-      type: 'order_update',
-      orderId: createdOrder._id
-    });
-    
-    // Keep global emit for general dashboard/student listening
-    io.emit('order:new', { orderId: createdOrder._id, message: `A new order (#${orderId}) was just placed!` });
-  }
+  // NOTE: We do NOT notify the vendor here.
+  // The vendor is only notified in payment.controller.js -> verifyPayment()
+  // AFTER the Razorpay signature is confirmed. This prevents phantom unpaid
+  // orders from appearing on the vendor's dashboard.
   
   res.status(201).json(createdOrder);
 });
