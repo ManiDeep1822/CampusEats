@@ -41,26 +41,29 @@ console.log('🚀 Loading routes and middleware...');
 // CORS Whitelist — always allow Vercel production + local dev, plus any extra CLIENT_URL from env
 const allowedOrigins = [
   'https://campus-eats-drab.vercel.app',
+  'https://campus-eats-drab.vercel.app/',
   'http://localhost:5173',
   'http://localhost:3000',
 ];
-// Also add whatever is set in env (in case of custom domains)
-const CLIENT_URL = (process.env.CLIENT_URL || '').replace(/\/+$/, '');
-if (CLIENT_URL && !allowedOrigins.includes(CLIENT_URL)) {
-  allowedOrigins.push(CLIENT_URL);
-}
 
+// Combine origins and add flexibility
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
+    
+    // Check if origin is in whitelist or is a vercel.app subdomain
+    const isAllowed = allowedOrigins.includes(origin) || 
+                      origin.includes('vercel.app');
+
+    if (isAllowed) {
       callback(null, true);
     } else {
-      console.warn(`CORS blocked origin: ${origin}`);
+      console.warn(`❌ CORS blocked origin: "${origin}"`);
       callback(new Error(`CORS policy blocked origin: ${origin}`));
     }
   },
+
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

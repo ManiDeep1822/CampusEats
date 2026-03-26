@@ -10,13 +10,10 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// In version 2.x, the export is a direct factory function, not a class.
-// We use the simpler syntax compatible with this project's version.
-const storage = multerStorageCloudinary({
-  cloudinary: cloudinary,
-  folder: 'campuseats/menu_items',
-  allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
-});
+// Switch to memory storage for maximum reliability across versions.
+// We will upload the buffer manually in the route controller.
+const storage = multer.memoryStorage();
+
 
 
 
