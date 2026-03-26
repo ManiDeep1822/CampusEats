@@ -45,7 +45,13 @@ const MyOrders = () => {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <span className="text-sm font-bold bg-gray-100 px-3 py-1 rounded text-gray-600">#{order.orderId}</span>
-                    <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full ${order.status === 'placed' ? 'bg-blue-100 text-blue-600' : order.status === 'preparing' ? 'bg-yellow-100 text-yellow-600' : order.status === 'ready' ? 'bg-green-100 text-green-600' : order.status === 'cancelled' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
+                    <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full ${
+                      order.status === 'placed' ? 'bg-blue-100 text-blue-600' : 
+                      order.status === 'preparing' ? 'bg-yellow-100 text-yellow-600' : 
+                      order.status === 'ready' ? 'bg-green-100 text-green-600' : 
+                      order.status === 'delivered' ? 'bg-emerald-100 text-emerald-600' :
+                      order.status === 'cancelled' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'
+                    }`}>
                       {order.status.replace('_', ' ')}
                     </span>
                   </div>
@@ -68,6 +74,16 @@ const MyOrders = () => {
                   <Link to={`/student/tracking/${order._id}`} className="w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-xl transition">
                     View Details
                   </Link>
+                  {order.status === 'delivered' && (
+                    <a 
+                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/receipts/${order._id}/receipt`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full text-center bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold py-2.5 px-4 rounded-xl transition text-sm"
+                    >
+                      View Receipt 📄
+                    </a>
+                  )}
                 </div>
               </div>
             ))}

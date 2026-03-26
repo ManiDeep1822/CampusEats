@@ -2,7 +2,10 @@ const asyncHandler = require('express-async-handler');
 const DeliveryBoy = require('../models/DeliveryBoy');
 const Order = require('../models/Order');
 const Notification = require('../models/Notification');
+const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
+const webpush = require('../utils/webpush');
+const { generateReceiptHTML } = require('../utils/receiptTemplate');
 
 const getMyDeliveryId = async (userId) => {
   const boy = await DeliveryBoy.findOne({ userId });
@@ -62,7 +65,6 @@ const pickUpOrder = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
   
   if (order && order.deliveryBoyId && order.deliveryBoyId.toString() === deliveryBoyId.toString()) {
-    // Security Check: Order MUST be ready or preparing to be picked up
     if (order.status !== 'ready' && order.status !== 'preparing') {
       res.status(400);
       throw new Error(`Cannot pick up order. Current status is ${order.status}`);
@@ -77,15 +79,12 @@ const pickUpOrder = asyncHandler(async (req, res) => {
       const msg = '🛵 Zoom zoom! Your rider just picked up your food and is on the way!';
       io.to(studentRoom).emit('order:picked', { orderId: order._id, message: msg });
 
-      // Persist
       const notification = await Notification.create({
         recipient: order.studentId,
         message: msg,
         type: 'order_update',
         orderId: order._id
       });
-
-      // --- NEW: Real-time Socket Emission ---
       io.to(studentRoom).emit('notification', notification);
     }
     
@@ -100,12 +99,11 @@ const deliverOrder = asyncHandler(async (req, res) => {
   const { otp } = req.body;
   const deliveryBoyId = await getMyDeliveryId(req.user._id);
   const order = await Order.findById(req.params.id)
-    .populate('studentId', 'name email')
+    .populate('studentId', 'name email pushSubscription')
     .populate('vendorId', 'shopName')
     .populate('items.menuItemId', 'name price');
   
   if (order && order.deliveryBoyId && order.deliveryBoyId.toString() === deliveryBoyId.toString()) {
-    // Security Check: Order MUST be picked up to be delivered
     if (order.status !== 'picked_up') {
       res.status(400);
       throw new Error(`Cannot deliver order. Current status is ${order.status}`);
@@ -138,94 +136,51 @@ const deliverOrder = asyncHandler(async (req, res) => {
       io.to(studentRoom).emit('order:delivered', { orderId: order._id, message: studentMsg });
       io.to(vendorRoom).emit('order:delivered', { orderId: order._id, message: vendorMsg });
 
-      // Persist for student
       const studentNotif = await Notification.create({ recipient: order.studentId, message: studentMsg, type: 'order_update', orderId: order._id });
-      // Persist for vendor
       const vendorNotif = await Notification.create({ recipient: order.vendorId, message: vendorMsg, type: 'order_update', orderId: order._id });
 
-      // --- NEW: Real-time Socket Emission ---
       io.to(studentRoom).emit('notification', studentNotif);
       io.to(vendorRoom).emit('notification', vendorNotif);
     }
 
-    // Generate and dispatch beautiful HTML Email Receipt asynchronously
-    const htmlReceipt = `
-      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
-        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 20px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px;">Order Delivered! 🎉</h1>
-          <p style="color: #d1fae5; font-size: 16px; margin-top: 8px; font-weight: 400;">Thank you for choosing CampusEats</p>
-        </div>
-        <div style="padding: 40px 30px;">
-          <h2 style="color: #1e293b; font-size: 20px; font-weight: 700; margin-bottom: 20px;">Hi ${order.studentId?.name || 'Customer'},</h2>
-          <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
-            Your food from <strong>${order.vendorId?.shopName || 'CampusEats Vendor'}</strong> has been successfully handed over by your rider. We hope you enjoy your meal!
-          </p>
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px;">
-            <h3 style="margin-top: 0; margin-bottom: 15px; color: #374151; font-size: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">Receipt Summary</h3>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-              <span style="color: #64748b; font-weight: 500;">Order ID</span>
-              <span style="color: #1e293b; font-weight: 700;">#${order.orderId}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-              <span style="color: #64748b; font-weight: 500;">Restaurant</span>
-              <span style="color: #1e293b; font-weight: 700;">${order.vendorId?.shopName || 'CampusEats Vendor'}</span>
-            </div>
+    // --- NEW: Multi-Channel Delivery Status (Push + Email) ---
+    const htmlReceipt = generateReceiptHTML(order);
 
-            <div style="margin-top: 20px; border-top: 1px dashed #cbd5e1; padding-top: 15px;">
-              <h4 style="margin: 0 0 12px 0; color: #374151; font-size: 15px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Items Delivered</h4>
-              <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
-                <thead>
-                  <tr style="border-bottom: 2px solid #e2e8f0; color: #475569;">
-                    <th style="padding: 8px 0; font-weight: 600;">Item</th>
-                    <th style="padding: 8px 0; font-weight: 600; text-align: center;">Qty</th>
-                    <th style="padding: 8px 0; font-weight: 600; text-align: right;">Rate</th>
-                    <th style="padding: 8px 0; font-weight: 600; text-align: right;">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${order.items.map(i => `
-                    <tr style="border-bottom: 1px solid #f1f5f9; color: #334155;">
-                      <td style="padding: 10px 0;">${i.menuItemId?.name || 'Item'}</td>
-                      <td style="padding: 10px 0; text-align: center;">${i.quantity || 0}</td>
-                      <td style="padding: 10px 0; text-align: right;">₹${(i.price || 0).toFixed(2)}</td>
-                      <td style="padding: 10px 0; text-align: right; font-weight: 600;">₹${((i.price || 0) * (i.quantity || 0)).toFixed(2)}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e1;">
-              <span style="color: #0f172a; font-weight: 800; font-size: 18px;">Total Paid</span>
-              <span style="color: #10b981; font-weight: 800; font-size: 18px;">₹${(order.totalAmount || 0).toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
+    // 1. Send Email Receipt
     if (order.studentId?.email) {
-      console.log(`📧 Attempting to send receipt email to: ${order.studentId.email} for Order #${order.orderId}`);
-      
-      try {
-        await sendEmail({
-          email: order.studentId.email,
-          subject: `CampusEats Receipt: Order #${order.orderId} Delivered`,
-          html: htmlReceipt,
-          message: `Your CampusEats order #${order.orderId} from ${order.vendorId?.shopName || 'CampusEats Vendor'} has been delivered! Total: ₹${(order.totalAmount || 0).toFixed(2)}`
+      console.log(`📧 Dispatching receipt email to: ${order.studentId.email}`);
+      sendEmail({
+        email: order.studentId.email,
+        subject: `Order Delivered: #${order.orderId}`,
+        html: htmlReceipt,
+        message: `Your CampusEats order #${order.orderId} has been delivered! Total: ₹${(order.totalAmount || 0).toFixed(2)}`
+      }).catch(err => console.error('❌ Async Email Failure:', err.message));
+    }
+
+    // 2. Send Web Push Notification
+    if (order.studentId?.pushSubscription) {
+      console.log(`🫸 Sending Web Push to student: ${order.studentId._id}`);
+      const pushPayload = JSON.stringify({
+        title: 'Order Delivered! 🎉',
+        body: `Enjoy your meal from ${order.vendorId?.shopName || 'CampusEats'}!`,
+        icon: '/logo192.png',
+        data: {
+            url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/student/orders`,
+            orderId: order._id
+        }
+      });
+
+      webpush.sendNotification(order.studentId.pushSubscription, pushPayload)
+        .then(() => console.log('✅ Web Push delivered successfully'))
+        .catch(err => {
+            console.error('❌ Web Push FAILED:', err.message);
+            if (err.statusCode === 410 || err.statusCode === 404) {
+                User.findByIdAndUpdate(order.studentId._id, { $unset: { pushSubscription: 1 } }).exec();
+            }
         });
-        console.log(`✅ Receipt email successfully sent to ${order.studentId.email}`);
-      } catch (err) {
-        console.error(`❌ Receipt email FAILED for ${order.studentId.email}:`, err.message);
-        // We don't throw here to ensure the rider gets a successful response
-        // but the failure is now clearly logged.
-      }
-    } else {
-      console.warn(`⚠️ No email found for student ${order.studentId?._id}, skipping receipt.`);
     }
 
     res.json(order);
-
   } else { 
     res.status(404); 
     throw new Error('Order not found or not assigned to you'); 
@@ -267,15 +222,12 @@ const sendDeliveryOTP = asyncHandler(async (req, res) => {
         message: msg 
       });
 
-      // Persist
       const notification = await Notification.create({
         recipient: order.studentId,
         message: msg,
         type: 'system',
         orderId: order._id
       });
-
-      // --- NEW: Real-time Socket Emission ---
       io.to(studentRoom).emit('notification', notification);
     }
 

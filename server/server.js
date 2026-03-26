@@ -24,6 +24,7 @@ const adminRoutes = require('./routes/admin.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const botRoutes = require('./routes/bot.routes');
 const feedbackRoutes = require('./routes/feedback.routes');
+const receiptRoutes = require('./routes/receipt.routes');
 const notificationRoutes = require('./routes/notification.routes');
 
 const app = express();
@@ -183,6 +184,7 @@ app.use('/api/payment', apiLimiter, paymentRoutes);
 app.use('/api/upload', apiLimiter, uploadRoutes);
 app.use('/api/bot', apiLimiter, botRoutes);
 app.use('/api/feedback', apiLimiter, feedbackRoutes);
+app.use('/api/receipts', receiptRoutes);
 app.use('/api/notifications', apiLimiter, notificationRoutes);
 
 // Bypass rate limits for System Admin to allow heavy dashboard data querying

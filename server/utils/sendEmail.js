@@ -41,8 +41,16 @@ const sendEmail = async (options) => {
   try {
     const info = await transporter.sendMail(mailOptions);
     console.log(`📨 Email sent successfully. Message ID: ${info.messageId}`);
+    return info;
   } catch (error) {
     console.error(`❌ SMTP Send Error [${options.subject}]:`, error.message);
+    if (error.code === 'EAUTH') {
+        console.error('   -> Check if EMAIL_PASS is a valid App Password and EMAIL_USER is correct.');
+    } else if (error.code === 'ESOCKET') {
+        console.error('   -> Network or Firewall issue. Check your server\'s outbound connectivity.');
+    }
+    // We log the full error for high-level debugging
+    console.debug('Full SMTP Error Context:', error);
     throw new Error(`Email delivery failed: ${error.message}`);
   }
 };

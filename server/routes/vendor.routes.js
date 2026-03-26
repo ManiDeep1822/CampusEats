@@ -12,5 +12,6 @@ router.route('/menu/:id').put(updateMenuItem).delete(deleteMenuItem);
 router.put('/menu/:id/toggle', toggleMenuItemStatus);
 router.get('/orders', getOrders);
 router.put('/orders/:id/status', updateOrderStatus);
+router.put('/profile', updateVendorProfile);
 
 module.exports = router;

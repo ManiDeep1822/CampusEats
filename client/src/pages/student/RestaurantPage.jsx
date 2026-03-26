@@ -7,6 +7,8 @@ import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
 import { addToCart, removeFromCart } from '../../store/cartSlice';
 import toast from 'react-hot-toast';
+import CartFloatingButton from '../../components/student/CartFloatingButton';
+
 
 const RestaurantPage = () => {
   const { id } = useParams();
@@ -226,6 +228,7 @@ const RestaurantPage = () => {
           ))}
         </div>
       </div>
+      <CartFloatingButton />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
-import { FiLock, FiShield, FiUser, FiMail, FiPhone, FiMapPin, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { FiLock, FiShield, FiUser, FiMail, FiPhone, FiMapPin, FiCheckCircle, FiAlertCircle, FiEye, FiEyeOff } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
@@ -13,6 +13,10 @@ const Profile = () => {
         newPassword: '',
         confirmPassword: ''
     });
+
+    const [showCurrent, setShowCurrent] = useState(false);
+    const [showNew, setShowNew] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
 
     const [strength, setStrength] = useState({
         length: false,
@@ -122,14 +126,21 @@ const Profile = () => {
                                 <div className="relative">
                                     <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                                     <input 
-                                        type="password"
+                                        type={showCurrent ? "text" : "password"}
                                         name="currentPassword"
                                         value={formData.currentPassword}
                                         onChange={handleChange}
                                         required
-                                        className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-100 bg-white/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                                        className="w-full pl-12 pr-12 py-3.5 rounded-2xl border border-gray-100 bg-white/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
                                         placeholder="••••••••"
                                     />
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setShowCurrent(!showCurrent)} 
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition"
+                                    >
+                                        {showCurrent ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+                                    </button>
                                 </div>
                             </div>
 
@@ -139,14 +150,21 @@ const Profile = () => {
                                     <div className="relative">
                                         <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                                         <input 
-                                            type="password"
+                                            type={showNew ? "text" : "password"}
                                             name="newPassword"
                                             value={formData.newPassword}
                                             onChange={handleChange}
                                             required
-                                            className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-100 bg-white/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                                            className="w-full pl-12 pr-12 py-3.5 rounded-2xl border border-gray-100 bg-white/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
                                             placeholder="••••••••"
                                         />
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setShowNew(!showNew)} 
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition"
+                                        >
+                                            {showNew ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+                                        </button>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -154,14 +172,21 @@ const Profile = () => {
                                     <div className="relative">
                                         <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                                         <input 
-                                            type="password"
+                                            type={showConfirm ? "text" : "password"}
                                             name="confirmPassword"
                                             value={formData.confirmPassword}
                                             onChange={handleChange}
                                             required
-                                            className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-100 bg-white/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                                            className="w-full pl-12 pr-12 py-3.5 rounded-2xl border border-gray-100 bg-white/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
                                             placeholder="••••••••"
                                         />
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setShowConfirm(!showConfirm)} 
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition"
+                                        >
+                                            {showConfirm ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+                                        </button>
                                     </div>
                                 </div>
                             </div>

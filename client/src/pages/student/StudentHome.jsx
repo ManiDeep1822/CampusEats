@@ -5,6 +5,8 @@ import { FiSearch, FiClock, FiStar, FiHeart } from 'react-icons/fi';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
 import { toast } from 'react-hot-toast';
+import CartFloatingButton from '../../components/student/CartFloatingButton';
+
 
 const StudentHome = () => {
   const [vendors, setVendors] = useState([]);
@@ -145,6 +147,7 @@ const StudentHome = () => {
           </div>
         )}
       </div>
+      <CartFloatingButton />
     </div>
   );
 };

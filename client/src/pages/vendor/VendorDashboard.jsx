@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiTrendingUp, FiShoppingBag, FiStar, FiClock } from 'react-icons/fi';
+import { FiTrendingUp, FiShoppingBag, FiStar, FiClock, FiCamera } from 'react-icons/fi';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
@@ -27,16 +27,60 @@ const VendorDashboard = () => {
     } catch (error) { toast.error('Failed to toggle status'); }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const uploadToast = toast.loading('Uploading image...');
+    try {
+      // 1. Upload to Cloudinary
+      const uploadRes = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const imageUrl = uploadRes.data.imageUrl;
+
+      // 2. Update Vendor Profile
+      await api.put('/vendor/profile', { shopImage: imageUrl });
+      
+      setData({ ...data, shopDetails: { ...data.shopDetails, shopImage: imageUrl } });
+      toast.success('Restaurant image updated!', { id: uploadToast });
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to upload image', { id: uploadToast });
+    }
+  };
+
   if (loading) return <Loader />;
   if (!data || !data.stats) return <div className="text-center py-20 text-red-500 font-bold">Error loading dashboard. Please refresh.</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-6xl mx-auto space-y-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold font-heading">{data.shopDetails.shopName}</h1>
-            <p className="text-textSecondary text-sm">{data.shopDetails.location}</p>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-6 w-full md:w-auto">
+            <div className="relative group">
+              <div className="w-24 h-24 rounded-2xl overflow-hidden bg-orange-100 border-4 border-white shadow-md flex-shrink-0">
+                {data.shopDetails.shopImage ? (
+                  <img src={data.shopDetails.shopImage} alt="Shop" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-3xl">🏪</div>
+                )}
+              </div>
+              <label className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-2xl">
+                <FiCamera className="text-white text-2xl" />
+                <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+              </label>
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold font-heading text-gray-900">{data.shopDetails.shopName}</h1>
+              <p className="text-textSecondary text-sm flex items-center gap-1">
+                <span className="w-2 h-2 bg-primary rounded-full inline-block"></span>
+                {data.shopDetails.location}
+              </p>
+            </div>
           </div>
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-2">
