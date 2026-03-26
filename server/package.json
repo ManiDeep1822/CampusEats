@@ -5,7 +5,6 @@
     "node": ">=18.0.0"
   },
   "main": "index.js",
-
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
@@ -42,5 +41,8 @@
     "socket.io-client": "^4.8.3",
     "web-push": "^3.6.7",
     "xss-clean": "^0.1.4"
+  },
+  "devDependencies": {
+    "artillery": "^2.0.30"
   }
 }

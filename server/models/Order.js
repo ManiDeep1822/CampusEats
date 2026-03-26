@@ -14,7 +14,8 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: ['pending_payment', 'placed', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered', 'cancelled'],
     default: 'pending_payment',
-    required: true
+    required: true,
+    index: true
   },
   deliveryAddress: { type: String, required: true },
   totalAmount: { type: Number, required: true },
@@ -23,7 +24,7 @@ const orderSchema = new mongoose.Schema({
   platformFee: { type: Number, default: 0 },
   paymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment' },
   estimatedTime: { type: Number }, // in minutes
-  placedAt: { type: Date, default: Date.now },
+  placedAt: { type: Date, default: Date.now, index: true },
   scheduledFor: { type: Date }, // Feature: Scheduled Deliveries
   estimatedDeliveryTime: { type: Date }, // Feature: Smart ETAs
   deliveredAt: { type: Date },

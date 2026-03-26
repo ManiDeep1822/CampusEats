@@ -118,7 +118,7 @@ startPaymentCleanupJob(io);
 // Rate Limiting Config
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 150,
+  max: 500, // Balanced for production stability
   message: { message: 'Too many requests from this IP, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -200,24 +200,42 @@ app.use((err, req, res, next) => {
 // Health check endpoint (used by keep-alive ping below)
 app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok' }));
 
-const PORT = process.env.PORT || 5000;
-connectDB().then(() => {
-  server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+const cluster = require('cluster');
+const os = require('os');
 
-    // Keep-alive: ping self every 10 mins to prevent Render free tier cold starts
-    if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
-      const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
-      setInterval(() => {
-        if (typeof fetch !== 'undefined') {
-          fetch(keepAliveUrl)
-            .then(() => console.log('[Keep-Alive] Server pinged successfully'))
-            .catch(err => console.warn('[Keep-Alive] Ping failed:', err.message));
-        }
-      }, 10 * 60 * 1000); 
-    }
+const PORT = process.env.PORT || 5000;
+
+if (cluster.isMaster && process.env.NODE_ENV === 'production') {
+  const numCPUs = os.cpus().length;
+  console.log(`Master ${process.pid} is running. Spawning ${numCPUs} workers...`);
+
+  for (let i = 0; i < numCPUs; i++) {
+    cluster.fork();
+  }
+
+  cluster.on('exit', (worker, code, signal) => {
+    console.log(`Worker ${worker.process.pid} died. Spawning a new one...`);
+    cluster.fork();
   });
-});
+} else {
+  connectDB().then(() => {
+    server.listen(PORT, () => {
+      console.log(`Worker ${process.pid} started. Server running on port ${PORT}`);
+
+      // Keep-alive: ping self every 10 mins to prevent Render free tier cold starts
+      if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
+        const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
+        setInterval(() => {
+          if (typeof fetch !== 'undefined') {
+            fetch(keepAliveUrl)
+              .then(() => console.log('[Keep-Alive] Server pinged successfully'))
+              .catch(err => console.warn('[Keep-Alive] Ping failed:', err.message));
+          }
+        }, 10 * 60 * 1000); 
+      }
+    });
+  });
+}
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {

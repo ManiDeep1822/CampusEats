@@ -18,7 +18,6 @@ const Profile = lazy(() => import('./pages/shared/Profile'));
 const StudentHome = lazy(() => import('./pages/student/StudentHome'));
 const RestaurantPage = lazy(() => import('./pages/student/RestaurantPage'));
 const CartPage = lazy(() => import('./pages/student/CartPage'));
-const CheckoutPage = lazy(() => import('./pages/student/CheckoutPage'));
 const OrderTracking = lazy(() => import('./pages/student/OrderTracking'));
 const MyOrders = lazy(() => import('./pages/student/MyOrders'));
 const CampusWallet = lazy(() => import('./pages/student/CampusWallet'));
@@ -65,7 +64,6 @@ function App() {
               <Route path="/student/home" element={<StudentHome />} />
               <Route path="/student/restaurant/:id" element={<RestaurantPage />} />
               <Route path="/student/cart" element={<CartPage />} />
-              <Route path="/student/checkout" element={<CheckoutPage />} />
               <Route path="/student/tracking/:id" element={<OrderTracking />} />
               <Route path="/student/orders" element={<MyOrders />} />
               <Route path="/student/wallet" element={<CampusWallet />} />

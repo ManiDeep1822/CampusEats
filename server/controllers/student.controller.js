@@ -289,4 +289,54 @@ const subscribeToPush = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { getVendors, getVendorById, searchItems, calculateOrderBill, placeOrder, getMyOrders, getOrderById, createVendorReview, toggleFavorite, getFavorites, cancelOrder, rateOrder, subscribeToPush };
+// --- ADDRESS MANAGEMENT ---
+const getSavedAddresses = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  res.json(user.savedAddresses || []);
+});
+
+const addSavedAddress = asyncHandler(async (req, res) => {
+  const { address, tag, isDefault } = req.body;
+  if (!address) {
+    res.status(400);
+    throw new Error('Address is required');
+  }
+
+  const user = await User.findById(req.user._id);
+  
+  // If isDefault is true, unset other defaults
+  if (isDefault) {
+    user.savedAddresses.forEach(a => a.isDefault = false);
+  }
+
+  user.savedAddresses.push({ address, tag: tag || 'Other', isDefault: !!isDefault });
+  await user.save();
+  
+  res.status(201).json(user.savedAddresses);
+});
+
+const deleteSavedAddress = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  user.savedAddresses = user.savedAddresses.filter(a => a._id.toString() !== req.params.id);
+  await user.save();
+  res.json(user.savedAddresses);
+});
+
+module.exports = { 
+  getVendors, 
+  getVendorById, 
+  searchItems, 
+  calculateOrderBill, 
+  placeOrder, 
+  getMyOrders, 
+  getOrderById, 
+  createVendorReview, 
+  toggleFavorite, 
+  getFavorites, 
+  cancelOrder, 
+  rateOrder, 
+  subscribeToPush,
+  getSavedAddresses,
+  addSavedAddress,
+  deleteSavedAddress
+};

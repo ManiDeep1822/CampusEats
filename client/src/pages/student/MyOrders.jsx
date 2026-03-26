@@ -74,16 +74,7 @@ const MyOrders = () => {
                   <Link to={`/student/tracking/${order._id}`} className="w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-xl transition">
                     View Details
                   </Link>
-                  {order.status === 'delivered' && (
-                    <a 
-                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/receipts/${order._id}/receipt?token=${JSON.parse(localStorage.getItem('userInfo'))?.token}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full text-center bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold py-2.5 px-4 rounded-xl transition text-sm"
-                    >
-                      View Receipt 📄
-                    </a>
-                  )}
+
                 </div>
               </div>
             ))}

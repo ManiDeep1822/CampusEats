@@ -38,19 +38,22 @@ router.get('/:id/receipt', protect, asyncHandler(async (req, res) => {
         <title>CampusEats Receipt - #${order.orderId}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-          body { background-color: #f1f5f9; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+          body { background-color: #f1f5f9; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; font-family: sans-serif; }
+          .receipt-container { width: 100%; max-width: 600px; margin: 0 auto; }
+          .no-print { margin-bottom: 20px; text-align: right; }
+          
           @media print {
             body { background-color: white; padding: 0; }
             .no-print { display: none; }
+            .receipt-container { max-width: 100%; margin: 0; }
           }
         </style>
       </head>
       <body>
-        <div style="width: 100%;">
-          <div class="no-print" style="max-width: 600px; margin: 0 auto 20px; text-align: right;">
-            <button onclick="window.print()" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">Print Receipt</button>
+        <div class="receipt-container">
+          <div id="receipt-content">
+            ${html}
           </div>
-          ${html}
         </div>
       </body>
     </html>

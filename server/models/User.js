@@ -9,11 +9,17 @@ const userSchema = new mongoose.Schema({
     type: String, 
     enum: ['student', 'vendor', 'delivery', 'admin'], 
     default: 'student',
-    required: true
+    required: true,
+    index: true
   },
   phone: { type: String },
   profilePic: { type: String },
   address: { type: String },
+  savedAddresses: [{
+    tag: { type: String, enum: ['Home', 'Hostel', 'Office', 'Other'], default: 'Other' },
+    address: { type: String, required: true },
+    isDefault: { type: Boolean, default: false }
+  }],
   isVerified: { type: Boolean, default: false },
   campusId: { type: String, sparse: true, unique: true },
   favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' }],

@@ -15,7 +15,7 @@ const Register = () => {
     password: '',
     role: 'student',
     phone: '',
-    campusId: '',
+    address: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -51,18 +51,19 @@ const Register = () => {
       return false;
     }
 
-    // 3. Phone Number Validation (10-digit Indian format)
-    const phoneRegex = /^[6789]\d{9}$/;
+    // 3. Phone Number Validation (10 digits)
+    const phoneRegex = /^\d{10}$/;
     if (!phoneRegex.test(phone)) {
-      toast.error('Invalid phone number. Must be a 10-digit number starting with 6-9.');
+      toast.error('Invalid phone number. Must be a 10-digit number.');
       return false;
     }
 
-    // 4. Campus ID Validation
-    if (formData.role === 'student' && !formData.campusId) {
-      toast.error('Campus ID is required for students');
+    // 4. Address Check
+    if (address.length < 5) {
+      toast.error('Please provide a more detailed address');
       return false;
     }
+
 
     // 5. Password Strength Validation
     // Min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special char
@@ -149,15 +150,27 @@ const Register = () => {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-textSecondary mb-1">Campus ID</label>
+            <label className="block text-sm font-medium text-textSecondary mb-1">Phone Number</label>
             <input 
-              type="text" 
-              name="campusId" 
-              required={formData.role === 'student'}
-              value={formData.campusId} 
+              type="tel" 
+              name="phone" 
+              required 
+              value={formData.phone} 
               onChange={handleChange} 
               className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" 
-              placeholder="e.g. CE-2024-1234"
+              placeholder="10-digit mobile number"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-textSecondary mb-1">Delivery Address / Hostel Details</label>
+            <input 
+              type="text" 
+              name="address" 
+              required 
+              value={formData.address} 
+              onChange={handleChange} 
+              className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" 
+              placeholder="e.g. Block A, Room 302, Green Hostel"
             />
           </div>
 

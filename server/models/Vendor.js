@@ -8,14 +8,14 @@ const reviewSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const vendorSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   shopName: { type: String, required: true },
   shopImage: { type: String },
   cuisineType: [{ type: String }],
   location: { type: String, required: true }, // campus building/block
   operatingHours: { type: String },
-  isOpen: { type: Boolean, default: false },
-  isApproved: { type: Boolean, default: false },
+  isOpen: { type: Boolean, default: false, index: true },
+  isApproved: { type: Boolean, default: false, index: true },
   rating: { type: Number, default: 0 },
   numReviews: { type: Number, default: 0 },
   reviews: [reviewSchema],
