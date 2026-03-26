@@ -194,8 +194,7 @@ app.use((err, req, res, next) => {
 // Health check endpoint (used by keep-alive ping below)
 app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok' }));
 
-const cluster = require('cluster');
-const os = require('os');
+
 
 const PORT = process.env.PORT || 5000;
 
