@@ -37,6 +37,7 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const ManageUsers = lazy(() => import('./pages/admin/ManageUsers'));
 const ManageVendors = lazy(() => import('./pages/admin/ManageVendors'));
 const ManageRiders = lazy(() => import('./pages/admin/ManageRiders'));
+const ManageFeedback = lazy(() => import('./pages/admin/ManageFeedback'));
 
 function App() {
   return (
@@ -85,6 +86,7 @@ function App() {
               <Route path="/admin/users" element={<ManageUsers />} />
               <Route path="/admin/vendors" element={<ManageVendors />} />
               <Route path="/admin/riders" element={<ManageRiders />} />
+              <Route path="/admin/feedback" element={<ManageFeedback />} />
             </Route>
           </Routes>
         </Suspense>

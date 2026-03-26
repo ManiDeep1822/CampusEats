@@ -10,4 +10,10 @@ router.post('/', submitFeedback);
 // Admin-only route to retrieve feedback
 router.get('/', protect, authorizeRoles('admin'), getFeedback);
 
+// Admin-only route to reply to feedback
+router.put('/:id/reply', protect, authorizeRoles('admin'), replyToFeedback);
+
+// Admin-only route to delete feedback
+router.delete('/:id', protect, authorizeRoles('admin'), deleteFeedback);
+
 module.exports = router;

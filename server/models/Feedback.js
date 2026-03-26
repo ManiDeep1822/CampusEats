@@ -7,7 +7,10 @@ const feedbackSchema = new mongoose.Schema({
   category: { type: String, default: 'General Inquiry' },
   message: { type: String, required: true },
   rating: { type: Number, min: 1, max: 5 },
-  resolved: { type: Boolean, default: false }
+  resolved: { type: Boolean, default: false },
+  adminReply: { type: String },
+  repliedAt: { type: Date },
+  isReplied: { type: Boolean, default: false }
 }, { timestamps: true });
 
 const Feedback = mongoose.model('Feedback', feedbackSchema);

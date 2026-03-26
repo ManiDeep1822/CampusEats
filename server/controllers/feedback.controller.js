@@ -29,4 +29,40 @@ const getFeedback = asyncHandler(async (req, res) => {
   res.json(feedbacks);
 });
 
-module.exports = { submitFeedback, getFeedback };
+// @desc    Reply to Feedback
+// @route   PUT /api/feedback/:id/reply
+// @access  Private/Admin
+const replyToFeedback = asyncHandler(async (req, res) => {
+  const { adminReply } = req.body;
+  const feedback = await Feedback.findById(req.params.id);
+
+  if (!feedback) {
+    res.status(404);
+    throw new Error('Feedback not found');
+  }
+
+  feedback.adminReply = adminReply;
+  feedback.isReplied = true;
+  feedback.repliedAt = Date.now();
+  feedback.resolved = true; // Mark as resolved once replied
+
+  const updatedFeedback = await feedback.save();
+  res.json(updatedFeedback);
+});
+
+// @desc    Delete Feedback
+// @route   DELETE /api/feedback/:id
+// @access  Private/Admin
+const deleteFeedback = asyncHandler(async (req, res) => {
+  const feedback = await Feedback.findById(req.params.id);
+
+  if (!feedback) {
+    res.status(404);
+    throw new Error('Feedback not found');
+  }
+
+  await feedback.deleteOne();
+  res.json({ message: 'Feedback removed successfully' });
+});
+
+module.exports = { submitFeedback, getFeedback, replyToFeedback, deleteFeedback };

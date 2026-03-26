@@ -6,7 +6,8 @@ import {
   FiDollarSign, 
   FiTruck,
   FiTrendingUp,
-  FiActivity
+  FiActivity,
+  FiMessageSquare
 } from 'react-icons/fi';
 import { 
   AreaChart, 
@@ -105,6 +106,9 @@ const AdminDashboard = () => {
               </Link>
               <Link to="/admin/riders" className="bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-emerald-600 transition flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95">
                 <FiTruck /> Manage Riders
+              </Link>
+              <Link to="/admin/feedback" className="bg-purple-500 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-purple-600 transition flex items-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95">
+                <FiMessageSquare /> Manage Feedback
               </Link>
             </div>
           </div>
