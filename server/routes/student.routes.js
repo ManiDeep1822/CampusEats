@@ -16,7 +16,8 @@ const {
   subscribeToPush,
   getSavedAddresses,
   addSavedAddress,
-  deleteSavedAddress
+  deleteSavedAddress,
+  getOrderReceipt
 } = require('../controllers/student.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { authorizeRoles } = require('../middleware/role.middleware');
@@ -29,6 +30,7 @@ router.post('/calculate-bill', calculateOrderBill);
 router.post('/order', placeOrder);
 router.get('/orders', getMyOrders);
 router.get('/orders/:id', getOrderById);
+router.get('/orders/:id/receipt', getOrderReceipt);
 router.put('/orders/:id/cancel', cancelOrder);
 router.post('/orders/:id/rate', rateOrder);
 router.post('/vendors/:id/reviews', createVendorReview);

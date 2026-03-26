@@ -129,6 +129,7 @@ const registerUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      profilePic: user.profilePic,
       token: token,
     });
   } else {
@@ -146,6 +147,7 @@ const loginUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      profilePic: user.profilePic,
       token: generateToken(user._id),
     });
   } else {
@@ -193,17 +195,21 @@ const googleAuth = asyncHandler(async (req, res) => {
     let user = await User.findOne({ email });
 
     if (user) {
-      // User exists, just log them in
+      // User exists, update profile picture and name if they've changed
+      user.name = name || user.name;
+      user.profilePic = picture || user.profilePic;
+      await user.save();
+
       res.status(200).json({
         _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
+        profilePic: user.profilePic,
         token: generateToken(user._id),
       });
     } else {
       // Create new user (default role: student)
-      // Note: We use a random password since they are authenticated via Google
       const generatedPassword = Math.random().toString(36).slice(-16) + 'A1!'; 
       
       user = await User.create({
@@ -211,7 +217,7 @@ const googleAuth = asyncHandler(async (req, res) => {
         email,
         password: generatedPassword, 
         profilePic: picture,
-        isVerified: true, // Google accounts are pre-verified
+        isVerified: true,
         role: 'student'
       });
 
@@ -221,6 +227,7 @@ const googleAuth = asyncHandler(async (req, res) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          profilePic: user.profilePic,
           token: generateToken(user._id),
         });
       } else {

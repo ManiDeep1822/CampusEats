@@ -39,7 +39,6 @@ console.log('🚀 Loading routes and middleware...');
 // CORS Whitelist — always allow Vercel production + local dev, plus any extra CLIENT_URL from env
 const allowedOrigins = [
   'https://campus-eats-drab.vercel.app',
-  'https://campus-eats-drab.vercel.app/',
   'http://localhost:5173',
   'http://localhost:3000',
 ];
@@ -136,10 +135,10 @@ const apiLimiter = rateLimit({
           const parts = token.split('.');
           if (parts.length === 3) {
             const payloadBase64 = parts[1];
-            const payloadBuffer = Buffer.from(payloadBase64, 'base64');
+            const payloadBuffer = Buffer.from(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
             const payload = JSON.parse(payloadBuffer.toString('utf8'));
             if (payload.id && payload.exp) { 
-              // Valid token peek
+              return true; // Corrected: Efficiently skip rate limit for authenticated users
             }
           }
         }
@@ -148,9 +147,6 @@ const apiLimiter = rateLimit({
       }
     }
     
-    // 3. Heuristic: If they are requesting from an admin-specific frontend route/referrer (useful for local dev)
-    if (req.headers.referer && req.headers.referer.includes('/admin/')) return true;
-
     return false;
   }
 });
@@ -162,9 +158,7 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    // If it's a login attempt explicitly requesting the admin portal, don't lock them out while debugging
-    if (req.body && req.body.email && req.body.email === 'admin@campus.edu') return true;
-    return false;
+    return false; // Removed bypass for admin@campus.edu to prevent brute-force
   }
 });
 
@@ -205,7 +199,7 @@ const os = require('os');
 
 const PORT = process.env.PORT || 5000;
 
-if (cluster.isMaster && process.env.NODE_ENV === 'production') {
+if (cluster.isPrimary && process.env.NODE_ENV === 'production') {
   const numCPUs = os.cpus().length;
   console.log(`Master ${process.pid} is running. Spawning ${numCPUs} workers...`);
 

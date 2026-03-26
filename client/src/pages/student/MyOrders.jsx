@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
 import { formatDistanceToNow } from 'date-fns';
+import { FiDownload } from 'react-icons/fi';
 
 const MyOrders = () => {
+  const { user, token } = useSelector(state => state.auth);
+  const dispatch = useDispatch();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,6 +27,10 @@ const MyOrders = () => {
     };
     fetchMyOrders();
   }, []);
+
+  const handleDownloadReceipt = (orderId) => {
+    window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/student/orders/${orderId}/receipt?token=${token}`, '_blank');
+  };
 
   if (loading) return <Loader />;
 
@@ -74,6 +82,14 @@ const MyOrders = () => {
                   <Link to={`/student/tracking/${order._id}`} className="w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-xl transition">
                     View Details
                   </Link>
+                  {['delivered', 'ready', 'preparing', 'placed'].includes(order.status) && (
+                    <button 
+                      onClick={() => handleDownloadReceipt(order._id)}
+                      className="w-full text-center text-xs font-bold text-gray-400 hover:text-primary transition-colors flex items-center justify-center gap-1.5"
+                    >
+                       <FiDownload size={14} /> Receipt
+                    </button>
+                  )}
 
                 </div>
               </div>

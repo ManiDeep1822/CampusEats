@@ -15,7 +15,6 @@ const Register = () => {
     password: '',
     role: 'student',
     phone: '',
-    address: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -58,11 +57,6 @@ const Register = () => {
       return false;
     }
 
-    // 4. Address Check
-    if (address.length < 5) {
-      toast.error('Please provide a more detailed address');
-      return false;
-    }
 
 
     // 5. Password Strength Validation
@@ -116,6 +110,7 @@ const Register = () => {
               value={formData.name} 
               onChange={handleChange} 
               className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" 
+              placeholder="e.g. John Doe"
             />
           </div>
           <div>
@@ -127,6 +122,7 @@ const Register = () => {
               value={formData.email} 
               onChange={handleChange} 
               className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" 
+              placeholder="e.g. john@university.edu"
             />
           </div>
           <div>
@@ -139,6 +135,7 @@ const Register = () => {
                 value={formData.password} 
                 onChange={handleChange} 
                 className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none pr-10" 
+                placeholder="••••••••"
               />
               <button 
                 type="button" 
@@ -159,18 +156,6 @@ const Register = () => {
               onChange={handleChange} 
               className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" 
               placeholder="10-digit mobile number"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-textSecondary mb-1">Delivery Address / Hostel Details</label>
-            <input 
-              type="text" 
-              name="address" 
-              required 
-              value={formData.address} 
-              onChange={handleChange} 
-              className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" 
-              placeholder="e.g. Block A, Room 302, Green Hostel"
             />
           </div>
 

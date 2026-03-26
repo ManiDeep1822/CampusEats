@@ -4,6 +4,7 @@ const User = require('../models/User');
 const MenuItem = require('../models/MenuItem');
 const Order = require('../models/Order');
 const Notification = require('../models/Notification');
+const { generateReceiptHTML } = require('../utils/receiptTemplate');
 
 const getVendors = asyncHandler(async (req, res) => {
   const vendors = await Vendor.find({ isOpen: true, isApproved: true }).populate('userId', 'name profilePic');
@@ -289,6 +290,27 @@ const subscribeToPush = asyncHandler(async (req, res) => {
   }
 });
 
+const getOrderReceipt = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id)
+    .populate('studentId', 'name email address')
+    .populate('vendorId', 'shopName location')
+    .populate('items.menuItemId', 'name');
+
+  if (!order) {
+    res.status(404);
+    throw new Error('Order not found');
+  }
+
+  // Security: only the student who placed the order or an admin can see the receipt
+  if (order.studentId._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    res.status(403);
+    throw new Error('Not authorized to view this receipt');
+  }
+
+  const receiptHtml = generateReceiptHTML(order);
+  res.send(receiptHtml);
+});
+
 // --- ADDRESS MANAGEMENT ---
 const getSavedAddresses = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
@@ -338,5 +360,6 @@ module.exports = {
   subscribeToPush,
   getSavedAddresses,
   addSavedAddress,
-  deleteSavedAddress
+  deleteSavedAddress,
+  getOrderReceipt
 };

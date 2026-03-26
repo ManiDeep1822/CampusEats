@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   FiMinus, FiPlus, FiMapPin, FiPlusCircle, FiSettings, FiCheck, 
-  FiClock, FiCheckCircle, FiChevronDown, FiArrowRight, FiShield, FiTag, FiSmartphone, FiTruck, FiInfo
+  FiClock, FiCheckCircle, FiChevronDown, FiArrowRight, FiShield, FiTag, FiSmartphone, FiTruck, FiInfo, FiDownload
 } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { addToCart, removeFromCart, clearCart } from '../../store/cartSlice';
@@ -14,7 +14,7 @@ import toast from 'react-hot-toast';
 
 const CartPage = () => {
   const { items, vendorId } = useSelector(state => state.cart);
-  const { user } = useSelector(state => state.auth);
+  const { user, token } = useSelector(state => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -155,6 +155,10 @@ const CartPage = () => {
     } finally { 
       setLoading(false); 
     }
+  };
+
+  const handleDownloadReceipt = (orderId) => {
+    window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/student/orders/${orderId}/receipt?token=${token}`, '_blank');
   };
 
   const handleDeleteAddress = async (id) => {
@@ -556,6 +560,12 @@ const CartPage = () => {
                   className="w-full bg-slate-900 text-white py-6 rounded-[1.5rem] font-black text-xl hover:bg-black transition-all flex items-center justify-center gap-4 group shadow-xl shadow-slate-200 active:scale-95"
                 >
                   Track Live <FiArrowRight className="group-hover:translate-x-2 transition-transform" />
+                </button>
+                <button 
+                  onClick={() => handleDownloadReceipt(placedOrder?._id)}
+                  className="w-full bg-slate-100 text-slate-900 py-4 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all flex items-center justify-center gap-2 group active:scale-95 border border-slate-200"
+                >
+                   <FiDownload size={18} /> Save Receipt
                 </button>
                 <button 
                   onClick={() => { setShowSuccessModal(false); navigate('/student/home'); }}
