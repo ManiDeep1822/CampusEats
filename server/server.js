@@ -30,7 +30,13 @@ const app = express();
 const server = http.createServer(app);
 
 // Connect Database
-connectDB();
+console.log('⏳ Connecting to MongoDB...');
+connectDB().then(() => {
+  console.log('✅ MongoDB Initialization call complete');
+});
+
+console.log('🚀 Loading routes and middleware...');
+
 
 // CORS Whitelist — always allow Vercel production + local dev, plus any extra CLIENT_URL from env
 const allowedOrigins = [
