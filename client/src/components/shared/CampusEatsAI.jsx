@@ -12,6 +12,8 @@ const CampusEatsAI = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   const messagesEndRef = useRef(null);
 
   const SUGGESTIONS = [
@@ -38,6 +40,27 @@ const CampusEatsAI = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
+
+  // Hide on scroll logic
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Show if scrolling up or at the top
+      if (currentScrollY < lastScrollY || currentScrollY < 100) {
+        setIsVisible(true);
+      } 
+      // Hide if scrolling down
+      else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsVisible(false);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   const handleSend = async (e, forcedMessage = null) => {
     if (e) e.preventDefault();
@@ -182,17 +205,32 @@ const CampusEatsAI = () => {
       </AnimatePresence>
 
       {/* Floating Action Button */}
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className={`fixed right-6 w-14 h-14 bg-gradient-to-tr from-orange-500 to-primary rounded-full shadow-xl shadow-orange-500/30 flex items-center justify-center text-white z-[100] border-2 border-white transition-all duration-300 ${items.length > 0 ? 'bottom-24 md:bottom-6' : 'bottom-6'}`}
-      >
-        {isOpen ? <FiX size={24} /> : <FiMessageSquare size={24} />}
-      </motion.button>
+      <AnimatePresence>
+        {(isVisible || isOpen) && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className={`fixed right-4 md:right-6 z-[100] transition-all duration-500 flex items-center gap-2 group ${items.length > 0 ? 'bottom-24 md:bottom-6' : 'bottom-6'}`}
+          >
+            {/* Tooltip Labelling */}
+            <span className="bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl">
+              Chat for Help
+            </span>
+
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className={`w-12 h-12 md:w-14 md:h-14 bg-gradient-to-tr from-orange-500 to-primary rounded-full shadow-xl shadow-orange-500/20 flex items-center justify-center text-white border-2 border-white transition-all duration-300 ${!isOpen ? 'opacity-60 hover:opacity-100 scale-90 hover:scale-105' : 'opacity-100'}`}
+            >
+              {isOpen ? <FiX size={24} /> : <FiMessageSquare size={24} />}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };
+
 
 
 export default CampusEatsAI;
