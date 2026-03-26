@@ -158,6 +158,76 @@ const logoutUser = asyncHandler(async (req, res) => {
   res.json({ message: 'Logged out' });
 });
 
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// @desc    Authenticate user with Google ID Token
+// @route   POST /api/auth/google
+// @access  Public
+const googleAuth = asyncHandler(async (req, res) => {
+  const { credential } = req.body;
+  
+  if (!credential) {
+    res.status(400);
+    throw new Error('Google ID token (credential) is required');
+  }
+
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub: googleId } = payload;
+
+    // Check if user exists by email
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // User exists, just log them in
+      res.status(200).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        token: generateToken(user._id),
+      });
+    } else {
+      // Create new user (default role: student)
+      // Note: We use a random password since they are authenticated via Google
+      const generatedPassword = Math.random().toString(36).slice(-16) + 'A1!'; 
+      
+      user = await User.create({
+        name,
+        email,
+        password: generatedPassword, 
+        profilePic: picture,
+        isVerified: true, // Google accounts are pre-verified
+        role: 'student'
+      });
+
+      if (user) {
+        res.status(201).json({
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          token: generateToken(user._id),
+        });
+      } else {
+        res.status(400);
+        throw new Error('Failed to create user with Google data');
+      }
+    }
+  } catch (error) {
+    console.error('Google Auth Error:', error.message);
+    res.status(401);
+    throw new Error('Invalid Google Token or authentication failed');
+  }
+});
+
+
 // @desc    Change Password
 // @route   PUT /api/auth/change-password
 // @access  Private
@@ -186,4 +256,4 @@ const changePassword = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { registerUser, loginUser, getMe, refreshToken, logoutUser, changePassword, sendOTP };
+module.exports = { registerUser, loginUser, getMe, refreshToken, logoutUser, changePassword, sendOTP, googleAuth };

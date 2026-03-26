@@ -5,6 +5,8 @@ import { setCredentials } from '../store/authSlice';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
+import { GoogleLogin } from '@react-oauth/google';
+
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -160,6 +162,38 @@ const Register = () => {
             {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Create Account'}
           </button>
         </form>
+
+        <div className="relative my-8">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-textSecondary font-medium">Or continue with</span>
+          </div>
+        </div>
+
+        <div className="flex justify-center">
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              try {
+                const { data } = await api.post('/auth/google', { 
+                  credential: credentialResponse.credential 
+                });
+                dispatch(setCredentials({ user: data, token: data.token, role: data.role }));
+                toast.success('Registration Successful!');
+                navigate(data.role === 'admin' ? '/admin/dashboard' : data.role === 'student' ? '/student/home' : data.role === 'vendor' ? '/vendor/dashboard' : '/delivery/dashboard');
+              } catch (err) {
+                toast.error('Google Sign-up failed');
+              }
+            }}
+            onError={() => {
+              toast.error('Google Sign-up failed');
+            }}
+            text="signup_with"
+            shape="pill"
+          />
+        </div>
+
 
         <p className="mt-6 text-center text-textSecondary">
           Already have an account? <Link to="/login" className="text-primary font-bold hover:underline">Log in</Link>

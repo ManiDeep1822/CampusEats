@@ -16,21 +16,19 @@ const sendEmail = async (options) => {
   const emailUser = process.env.EMAIL_USER.trim();
   const emailPass = process.env.EMAIL_PASS.replace(/\s/g, '');
 
-  // Use explicit SMTP host/port config for maximum reliability
-  // Port 587 (STARTTLS) is used instead of 465 (SSL) because port 465 is commonly blocked by ISPs
+  console.log(`📧 Preparing to send email using account: ${emailUser}`);
+
+
+  // Gmail App Passwords work best with the 'service' configuration which handles
+  // the correct host, port, and security settings automatically.
   const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // upgrade later with STARTTLS
-    requireTLS: true,
+    service: 'gmail',
     auth: {
       user: emailUser,
       pass: emailPass,
     },
-    tls: {
-      rejectUnauthorized: false
-    }
   });
+
 
   const mailOptions = {
     from: `"CampusEats Platform" <${emailUser}>`,

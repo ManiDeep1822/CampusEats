@@ -71,34 +71,41 @@ const verifyPayment = asyncHandler(async (req, res) => {
 
   const isAuthentic = expectedSignature === razorpay_signature;
 
-  if (isAuthentic) {
+    if (isAuthentic) {
     payment.status = 'completed';
     payment.paidAt = Date.now();
     payment.transactionId = razorpay_payment_id; // real payment ID
     await payment.save();
 
     const order = await Order.findById(payment.orderId);
+
     if (order) {
       order.paymentId = payment._id;
       order.status = 'placed'; // Lock in the placed status
       await order.save();
       
+      const populatedOrder = await Order.findById(order._id).populate({
+        path: 'vendorId',
+        select: 'userId'
+      });
+
       const io = req.app.get('io');
-      if (io) {
+      if (io && populatedOrder.vendorId?.userId) {
+        const vendorRoom = `vendor:${populatedOrder.vendorId.userId}`;
         const vendorMsg = `🚀 New paid order! A confirmed order for ₹${order.totalAmount} is waiting for you.`;
-        // --- FIX: This is the CORRECT place to notify vendor. Only after payment confirmed. ---
-        io.to(`vendor:${order.vendorId}`).emit('order:new', { orderId: order._id, message: vendorMsg });
+        
+        io.to(vendorRoom).emit('order:new', { orderId: order._id, message: vendorMsg });
 
         // Persist vendor notification to DB
         const notification = await Notification.create({
-          recipient: order.vendorId,
+          recipient: populatedOrder.vendorId.userId,
           message: vendorMsg,
           type: 'order_update',
           orderId: order._id
         });
 
-        // --- NEW: Real-time Socket Emission ---
-        io.to(`vendor:${order.vendorId}`).emit('notification', notification);
+        // Real-time Socket Emission
+        io.to(vendorRoom).emit('notification', notification);
       }
     }
     

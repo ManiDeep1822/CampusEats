@@ -95,8 +95,9 @@ app.use(hpp());
 // Socket.io Setup
 const io = new Server(server, {
   cors: {
-    origin: CLIENT_URL,
-    methods: ['GET', 'POST', 'PUT', 'DELETE']
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
   }
 });
 

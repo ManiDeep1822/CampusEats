@@ -186,9 +186,9 @@ const deliverOrder = asyncHandler(async (req, res) => {
                   ${order.items.map(i => `
                     <tr style="border-bottom: 1px solid #f1f5f9; color: #334155;">
                       <td style="padding: 10px 0;">${i.menuItemId?.name || 'Item'}</td>
-                      <td style="padding: 10px 0; text-align: center;">${i.quantity}</td>
-                      <td style="padding: 10px 0; text-align: right;">₹${i.price.toFixed(2)}</td>
-                      <td style="padding: 10px 0; text-align: right; font-weight: 600;">₹${(i.price * i.quantity).toFixed(2)}</td>
+                      <td style="padding: 10px 0; text-align: center;">${i.quantity || 0}</td>
+                      <td style="padding: 10px 0; text-align: right;">₹${(i.price || 0).toFixed(2)}</td>
+                      <td style="padding: 10px 0; text-align: right; font-weight: 600;">₹${((i.price || 0) * (i.quantity || 0)).toFixed(2)}</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -197,7 +197,7 @@ const deliverOrder = asyncHandler(async (req, res) => {
 
             <div style="display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e1;">
               <span style="color: #0f172a; font-weight: 800; font-size: 18px;">Total Paid</span>
-              <span style="color: #10b981; font-weight: 800; font-size: 18px;">₹${order.totalAmount.toFixed(2)}</span>
+              <span style="color: #10b981; font-weight: 800; font-size: 18px;">₹${(order.totalAmount || 0).toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -205,15 +205,27 @@ const deliverOrder = asyncHandler(async (req, res) => {
     `;
 
     if (order.studentId?.email) {
-      // Fire-and-forget — don't block the delivery confirmation response on email
-      sendEmail({
-        email: order.studentId.email,
-        subject: `CampusEats Receipt: Order #${order.orderId} Delivered`,
-        html: htmlReceipt
-      }).catch(err => console.warn('Receipt email failed (non-critical):', err.message));
+      console.log(`📧 Attempting to send receipt email to: ${order.studentId.email} for Order #${order.orderId}`);
+      
+      try {
+        await sendEmail({
+          email: order.studentId.email,
+          subject: `CampusEats Receipt: Order #${order.orderId} Delivered`,
+          html: htmlReceipt,
+          message: `Your CampusEats order #${order.orderId} from ${order.vendorId?.shopName || 'CampusEats Vendor'} has been delivered! Total: ₹${(order.totalAmount || 0).toFixed(2)}`
+        });
+        console.log(`✅ Receipt email successfully sent to ${order.studentId.email}`);
+      } catch (err) {
+        console.error(`❌ Receipt email FAILED for ${order.studentId.email}:`, err.message);
+        // We don't throw here to ensure the rider gets a successful response
+        // but the failure is now clearly logged.
+      }
+    } else {
+      console.warn(`⚠️ No email found for student ${order.studentId?._id}, skipping receipt.`);
     }
 
     res.json(order);
+
   } else { 
     res.status(404); 
     throw new Error('Order not found or not assigned to you'); 
