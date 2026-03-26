@@ -201,11 +201,24 @@ server.listen(PORT, () => {
   if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
     const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
     setInterval(() => {
-      fetch(keepAliveUrl)
-        .then(() => console.log('[Keep-Alive] Server pinged successfully'))
-        .catch(err => console.warn('[Keep-Alive] Ping failed:', err.message));
-    }, 10 * 60 * 1000); // Every 10 minutes
-    console.log(`[Keep-Alive] Self-ping configured for: ${keepAliveUrl}`);
+      if (typeof fetch !== 'undefined') {
+        fetch(keepAliveUrl)
+          .then(() => console.log('[Keep-Alive] Server pinged successfully'))
+          .catch(err => console.warn('[Keep-Alive] Ping failed:', err.message));
+      }
+    }, 10 * 60 * 1000); 
   }
 });
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err, promise) => {
+  console.error(`🔥 Unhandled Rejection: ${err.message}`);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error(`🔥 Uncaught Exception: ${err.message}`);
+  process.exit(1);
+});
+
 
