@@ -12,6 +12,7 @@ const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const ContactUs = lazy(() => import('./pages/shared/ContactUs'));
+const Profile = lazy(() => import('./pages/shared/Profile'));
 
 // Student Pages
 const StudentHome = lazy(() => import('./pages/student/StudentHome'));
@@ -51,6 +52,11 @@ function App() {
             
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            
+            {/* Shared Protected Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['student', 'vendor', 'delivery', 'admin']} />}>
+              <Route path="/profile" element={<Profile />} />
+            </Route>
             
             {/* Protected Routes */}
             <Route element={<ProtectedRoute allowedRoles={['student']} />}>

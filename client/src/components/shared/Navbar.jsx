@@ -176,6 +176,7 @@ const Navbar = () => {
                   </button>
                   <div className={`absolute right-0 w-48 mt-2 py-2 bg-white rounded-xl shadow-xl transition-all duration-300 transform origin-top-right border border-gray-100 ${isProfileOpen ? 'opacity-100 visible scale-100' : 'opacity-0 invisible scale-95'}`}>
                     <Link onClick={() => setIsProfileOpen(false)} to={getDashboardLink()} className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Dashboard</Link>
+                    <Link onClick={() => setIsProfileOpen(false)} to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Profile Settings</Link>
                     {user?.role === 'student' && (
                       <Link onClick={() => setIsProfileOpen(false)} to="/student/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium border-b border-gray-100">My Orders</Link>
                     )}
@@ -203,6 +204,7 @@ const Navbar = () => {
                        <p className="text-sm font-bold text-gray-800 truncate">{user?.name}</p>
                     </div>
                     <Link onClick={() => setIsMenuOpen(false)} to={getDashboardLink()} className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Dashboard</Link>
+                    <Link onClick={() => setIsMenuOpen(false)} to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Profile Settings</Link>
                     <Link onClick={() => setIsMenuOpen(false)} to="/contact" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Contact Us</Link>
                     {user?.role === 'student' && (
                       <Link onClick={() => setIsMenuOpen(false)} to="/student/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">My Orders</Link>

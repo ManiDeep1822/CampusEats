@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCredentials } from '../store/authSlice';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -13,10 +14,8 @@ const Register = () => {
     role: 'student',
     phone: '',
   });
-  const [step, setStep] = useState(1);
-  const [otp, setOtp] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [resendTimer, setResendTimer] = useState(0);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
@@ -31,36 +30,49 @@ const Register = () => {
     }
   }, [isAuthenticated, user, navigate]);
 
-  useEffect(() => {
-    let interval;
-    if (resendTimer > 0) {
-      interval = setInterval(() => setResendTimer(prev => prev - 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [resendTimer]);
-
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleSendOTP = async (e, isResend = false) => {
-    if (e) e.preventDefault();
-    setLoading(true);
-    try {
-      await api.post('/auth/send-otp', { email: formData.email });
-      toast.success(isResend ? 'New verification code sent!' : 'Verification code sent to email!');
-      setStep(2);
-      setResendTimer(30); // 30 second anti-spam cooldown
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to send verification code');
-    } finally {
-      setLoading(false);
+  const validateForm = () => {
+    const { name, email, password, phone } = formData;
+    
+    // 1. Name Check
+    if (name.length < 2) {
+      toast.error('Name is too short');
+      return false;
     }
+
+    // 2. Email Validation (Regex)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error('Invalid email format');
+      return false;
+    }
+
+    // 3. Phone Number Validation (10-digit Indian format)
+    const phoneRegex = /^[6789]\d{9}$/;
+    if (!phoneRegex.test(phone)) {
+      toast.error('Invalid phone number. Must be a 10-digit number starting with 6-9.');
+      return false;
+    }
+
+    // 4. Password Strength Validation
+    // Min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special char
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      toast.error('Password must be 8+ chars and include: uppercase, lowercase, number, and special character');
+      return false;
+    }
+
+    return true;
   };
 
-  const handleVerifyOTP = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     setLoading(true);
     try {
-      const { data } = await api.post('/auth/verify-register', { ...formData, otp });
+      const { data } = await api.post('/auth/register', formData);
       dispatch(setCredentials({ user: data, token: data.token, role: data.role }));
       toast.success('Registration Successful!');
       
@@ -70,7 +82,7 @@ const Register = () => {
       else if (data.role === 'delivery') navigate('/delivery/dashboard');
       else navigate('/');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Verification failed. Please try again.');
+      toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -81,64 +93,74 @@ const Register = () => {
       <div className="max-w-lg w-full bg-white rounded-xl shadow-lg p-8">
         <h2 className="text-3xl font-heading font-bold text-center text-textPrimary mb-2">Create Account</h2>
         <p className="text-center text-textSecondary mb-8">
-          {step === 1 ? 'Join the CampusEats platform today!' : 'Check your email for the verification code'}
+          Join the CampusEats platform today!
         </p>
 
-        {step === 1 ? (
-          <form onSubmit={handleSendOTP} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-textSecondary mb-1">Full Name</label>
-              <input type="text" name="name" required value={formData.name} onChange={handleChange} className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-textSecondary mb-1">Email</label>
-              <input type="email" name="email" required value={formData.email} onChange={handleChange} className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-textSecondary mb-1">Password</label>
-              <input type="password" name="password" required minLength="6" value={formData.password} onChange={handleChange} className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-textSecondary mb-1">Phone Number</label>
-              <input type="text" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" />
-            </div>
-
-            <button type="submit" disabled={loading} className="w-full bg-primary text-white font-bold py-3 mt-4 rounded-lg hover:bg-orange-600 transition disabled:opacity-70 flex justify-center items-center gap-2">
-              {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Send Verification Code'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerifyOTP} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-textSecondary mb-1 text-center font-bold">Enter 6-Digit Code</label>
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-textSecondary mb-1">Full Name</label>
+            <input 
+              type="text" 
+              name="name" 
+              required 
+              value={formData.name} 
+              onChange={handleChange} 
+              className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-textSecondary mb-1">Email</label>
+            <input 
+              type="email" 
+              name="email" 
+              required 
+              value={formData.email} 
+              onChange={handleChange} 
+              className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-textSecondary mb-1">Password</label>
+            <div className="relative">
               <input 
-                type="text" 
-                maxLength="6" 
+                type={showPassword ? "text" : "password"} 
+                name="password" 
                 required 
-                value={otp} 
-                onChange={e => setOtp(e.target.value.replace(/[^0-9]/g, ''))} 
-                className="w-full px-4 py-4 text-3xl tracking-[1em] text-center font-mono rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none bg-gray-50" 
-                placeholder="000000"
+                value={formData.password} 
+                onChange={handleChange} 
+                className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none pr-10" 
               />
-            </div>
-            <button type="submit" disabled={loading || otp.length < 6} className="w-full bg-green-500 text-white font-bold py-3 mt-4 rounded-lg hover:bg-green-600 transition disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg shadow-green-500/20">
-              {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Verify & Register'}
-            </button>
-            <div className="flex justify-between items-center mt-4">
               <button 
                 type="button" 
-                onClick={() => handleSendOTP(null, true)} 
-                disabled={resendTimer > 0 || loading} 
-                className="text-sm font-bold text-primary hover:underline disabled:text-gray-400 disabled:no-underline transition"
+                onClick={() => setShowPassword(!showPassword)} 
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition"
               >
-                {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
-              </button>
-              <button type="button" onClick={() => setStep(1)} className="text-sm text-textSecondary font-bold hover:text-textPrimary transition">
-                Change Details
+                {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
               </button>
             </div>
-          </form>
-        )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-textSecondary mb-1">Phone Number</label>
+            <input 
+              type="text" 
+              name="phone" 
+              required
+              value={formData.phone} 
+              onChange={handleChange} 
+              className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" 
+              placeholder="e.g. 9876543210"
+            />
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full bg-primary text-white font-bold py-3 mt-4 rounded-lg hover:bg-orange-600 transition disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg shadow-orange-500/20"
+          >
+            {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Create Account'}
+          </button>
+        </form>
+
         <p className="mt-6 text-center text-textSecondary">
           Already have an account? <Link to="/login" className="text-primary font-bold hover:underline">Log in</Link>
         </p>

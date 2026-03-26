@@ -56,37 +56,62 @@ const sendOTP = asyncHandler(async (req, res) => {
   res.status(200).json({ message: 'Verification code sent to email' });
 });
 
-const verifyAndRegister = asyncHandler(async (req, res) => {
-  const { otp, name, email, password, role, phone, address, ...extra } = req.body;
+const registerUser = asyncHandler(async (req, res) => {
+  const { name, email, password, role, phone, address, ...extra } = req.body;
 
-  const otpRecord = await OTP.findOne({ email });
-  if (!otpRecord) {
-    res.status(400); throw new Error('OTP Expired or Not Found. Please request a new one.');
-  }
-  if (otpRecord.otp !== otp) {
-    res.status(400); throw new Error('Invalid Verification Code');
+  // 1. Basic Field Validation
+  if (!name || !email || !password || !phone) {
+    res.status(400); throw new Error('Please provide all required fields (name, email, password, phone)');
   }
 
+  // 2. Email Validation (Regex)
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    res.status(400); throw new Error('Invalid email format');
+  }
+
+  // 3. Phone Number Validation (10-digit Indian format)
+  const phoneRegex = /^[6789]\d{9}$/;
+  if (!phoneRegex.test(phone)) {
+    res.status(400); throw new Error('Invalid phone number. Must be a 10-digit number starting with 6-9.');
+  }
+
+  // 4. Password Strength Validation
+  // Min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special char
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  if (!passwordRegex.test(password)) {
+    res.status(400); throw new Error('Password must be at least 8 characters long and include: 1 uppercase, 1 lowercase, 1 number, and 1 special character.');
+  }
+
+  // 5. Check if user already exists
   const userExists = await User.findOne({ email });
   if (userExists) {
     res.status(400); throw new Error('User already exists');
   }
 
-  // Security Patch: Prevent Privilege Escalation
+  // 6. Security Patch: Prevent Privilege Escalation
   let assignedRole = role || 'student';
   if (assignedRole === 'admin') {
-     res.status(403); throw new Error('Unauthorized role assignment: Cannot self-register as an administrator.');
+    res.status(403); throw new Error('Unauthorized role assignment: Cannot self-register as an administrator.');
   }
 
+  // 7. Create User
   const user = await User.create({ name, email, password, role: assignedRole, phone, address });
 
   if (user) {
-    await OTP.deleteOne({ email }); 
-
+    // 8. Create secondary profiles based on role
     if (assignedRole === 'vendor') {
-      await Vendor.create({ userId: user._id, shopName: extra.shopName || `${name}'s Shop`, location: extra.location || 'Campus', cuisineType: extra.cuisineType || [] });
+      await Vendor.create({ 
+        userId: user._id, 
+        shopName: extra.shopName || `${name}'s Shop`, 
+        location: extra.location || 'Campus', 
+        cuisineType: extra.cuisineType || [] 
+      });
     } else if (assignedRole === 'delivery') {
-      await DeliveryBoy.create({ userId: user._id, vehicleType: extra.vehicleType || 'Bicycle' });
+      await DeliveryBoy.create({ 
+        userId: user._id, 
+        vehicleType: extra.vehicleType || 'Bicycle' 
+      });
     }
 
     const token = generateToken(user._id);
@@ -133,4 +158,32 @@ const logoutUser = asyncHandler(async (req, res) => {
   res.json({ message: 'Logged out' });
 });
 
-module.exports = { sendOTP, verifyAndRegister, loginUser, getMe, refreshToken, logoutUser };
+// @desc    Change Password
+// @route   PUT /api/auth/change-password
+// @access  Private
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    res.status(400); throw new Error('Please provide current and new passwords');
+  }
+
+  const user = await User.findById(req.user._id);
+
+  if (user && (await user.matchPassword(currentPassword))) {
+    // Validate strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      res.status(400); throw new Error('New password must meet strength requirements (8+ chars, uppercase, lowercase, number, special char)');
+    }
+
+    user.password = newPassword;
+    await user.save();
+    res.json({ message: 'Password changed successfully' });
+  } else {
+    res.status(401);
+    throw new Error('Invalid current password');
+  }
+});
+
+module.exports = { registerUser, loginUser, getMe, refreshToken, logoutUser, changePassword };

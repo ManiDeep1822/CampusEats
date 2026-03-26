@@ -17,28 +17,20 @@ const sendEmail = async (options) => {
   const emailPass = process.env.EMAIL_PASS.replace(/\s/g, '');
 
   // Use explicit SMTP host/port config for maximum reliability
+  // Port 587 (STARTTLS) is used instead of 465 (SSL) because port 465 is commonly blocked by ISPs
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // TLS
+    port: 587,
+    secure: false, // upgrade later with STARTTLS
+    requireTLS: true,
     auth: {
       user: emailUser,
       pass: emailPass,
     },
     tls: {
-      rejectUnauthorized: false // Allow self-signed certs in dev environments
+      rejectUnauthorized: false
     }
   });
-
-  // Verify SMTP connectivity before sending
-  try {
-    await transporter.verify();
-    console.log(`✅ SMTP connected. Sending email to: ${options.email}`);
-  } catch (verifyError) {
-    console.error('❌ SMTP Connection Failed:', verifyError.message);
-    console.error('Check EMAIL_USER and EMAIL_PASS in your .env file. Make sure a Gmail App Password is used (not your regular password).');
-    throw new Error(`SMTP connection failed: ${verifyError.message}`);
-  }
 
   const mailOptions = {
     from: `"CampusEats Platform" <${emailUser}>`,

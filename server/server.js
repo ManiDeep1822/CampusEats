@@ -32,11 +32,37 @@ const server = http.createServer(app);
 // Connect Database
 connectDB();
 
-// Normalize CLIENT_URL to prevent CORS mismatches (strips trailing slashes)
-const CLIENT_URL = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+// CORS Whitelist — always allow Vercel production + local dev, plus any extra CLIENT_URL from env
+const allowedOrigins = [
+  'https://campus-eats-drab.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+// Also add whatever is set in env (in case of custom domains)
+const CLIENT_URL = (process.env.CLIENT_URL || '').replace(/\/+$/, '');
+if (CLIENT_URL && !allowedOrigins.includes(CLIENT_URL)) {
+  allowedOrigins.push(CLIENT_URL);
+}
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error(`CORS policy blocked origin: ${origin}`));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
 
 // Middleware
-app.use(cors({ origin: CLIENT_URL, credentials: true }));
+app.use(cors(corsOptions));
+
 app.use(helmet());
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
