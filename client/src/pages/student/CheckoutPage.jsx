@@ -12,7 +12,6 @@ const CheckoutPage = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [method, setMethod] = useState('razorpay');
   const [loading, setLoading] = useState(false);
   const [scheduledFor, setScheduledFor] = useState('');
 
@@ -45,7 +44,6 @@ const CheckoutPage = () => {
   const finalTotal = state.finalTotal;
 
   const handlePayment = async () => {
-    if (method !== 'razorpay') return toast.error("Only Razorpay is currently supported.");
     setLoading(true);
     
     try {
@@ -59,6 +57,7 @@ const CheckoutPage = () => {
       };
       const { data: order } = await api.post('/student/order', orderPayload);
 
+      // ─── RAZORPAY PAYMENT PATH ─────────────────────────────────────────
       // 2. Initiate Razorpay Checkout on backend
       const { data: initData } = await api.post('/payment/initiate', { orderId: order._id });
 
@@ -72,7 +71,6 @@ const CheckoutPage = () => {
         order_id: initData.razorpayOrderId,
         handler: async function (response) {
           try {
-            // 4. Send signature to backend for cryptographic verification
             await api.post('/payment/verify', {
               paymentId: initData.payment._id,
               razorpay_order_id: response.razorpay_order_id,
@@ -97,15 +95,11 @@ const CheckoutPage = () => {
       };
 
       const razorpayInstance = new window.Razorpay(options);
-      
-      razorpayInstance.on('payment.failed', function (response){
-         toast.error(response.error.description || "Payment completely failed");
-      });
-      
+      razorpayInstance.on('payment.failed', (response) => toast.error(response.error.description));
       razorpayInstance.open();
 
     } catch (error) { 
-      toast.error(error.response?.data?.message || 'Failed to initiate payment'); 
+      toast.error(error.response?.data?.message || 'Failed to complete transaction'); 
     } finally { 
       setLoading(false); 
     }
@@ -117,10 +111,11 @@ const CheckoutPage = () => {
         <h2 className="text-2xl font-bold font-heading mb-6">Payment</h2>
         <div className="text-3xl font-extrabold text-center mb-8">₹{finalTotal.toFixed(2)}</div>
         <div className="space-y-4 mb-8">
-          <label className="flex items-center p-4 border border-primary bg-orange-50 text-primary font-bold rounded-lg cursor-pointer transition">
+          <label className="flex items-center p-4 border border-primary bg-orange-50 rounded-lg">
              <input type="radio" checked readOnly className="mr-3 text-primary focus:ring-primary"/>
-             Razorpay (UPI / Cards)
+             <span className="font-bold text-primary">Razorpay (UPI / Cards / Net Banking)</span>
           </label>
+          
           <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-not-allowed opacity-50 transition">
              <input type="radio" disabled className="mr-3 text-primary focus:ring-primary"/>
              Cash on Delivery (Disabled)

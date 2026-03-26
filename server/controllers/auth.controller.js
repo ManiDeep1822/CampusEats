@@ -84,9 +84,15 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   // 5. Check if user already exists
-  const userExists = await User.findOne({ email });
+  const userExists = await User.findOne({ 
+    $or: [{ email }, { campusId: extra.campusId }] 
+  });
   if (userExists) {
-    res.status(400); throw new Error('User already exists');
+    if (userExists.email === email) {
+      res.status(400); throw new Error('User with this email already exists');
+    } else {
+      res.status(400); throw new Error('Campus ID is already registered');
+    }
   }
 
   // 6. Security Patch: Prevent Privilege Escalation
@@ -96,7 +102,16 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   // 7. Create User
-  const user = await User.create({ name, email, password, role: assignedRole, phone, address });
+  const user = await User.create({ 
+    name, 
+    email, 
+    password, 
+    role: assignedRole, 
+    phone, 
+    address,
+    campusId: extra.campusId,
+    walletBalance: assignedRole === 'student' ? 500 : 0 // Welcome Credit
+  });
 
   if (user) {
     // 8. Create secondary profiles based on role
@@ -256,4 +271,85 @@ const changePassword = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { registerUser, loginUser, getMe, refreshToken, logoutUser, changePassword, sendOTP, googleAuth };
+
+// @desc    Send password reset OTP to email
+// @route   POST /api/auth/forgot-password
+// @access  Public
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  if (!email) { res.status(400); throw new Error('Email is required'); }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    // Respond with 200 to not leak whether an email exists (security best practice)
+    return res.status(200).json({ message: 'If an account exists with that email, a reset code has been sent.' });
+  }
+
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  await OTP.findOneAndUpdate(
+    { email },
+    { otp: otpCode, createdAt: Date.now() },
+    { upsert: true, returnDocument: 'after' }
+  );
+
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
+      <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 40px 20px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800;">CampusEats</h1>
+        <p style="color: #ffedd5; font-size: 16px; margin-top: 8px;">Password Reset Request</p>
+      </div>
+      <div style="padding: 40px 30px; text-align: center;">
+        <h2 style="color: #1e293b; font-size: 24px; font-weight: 700; margin-bottom: 20px;">Reset Your Password</h2>
+        <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+          We received a request to reset the password for your CampusEats account. Use the secure code below:
+        </p>
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; margin: 0 auto; max-width: 300px;">
+          <h1 style="margin: 0; font-size: 42px; font-weight: 700; color: #f97316; letter-spacing: 8px;">${otpCode}</h1>
+        </div>
+        <p style="color: #94a3b8; font-size: 13px; margin-top: 30px; font-weight: 500;">
+          ⏳ This code expires in <strong>5 minutes</strong>. If you didn't request this, you can safely ignore this email.
+        </p>
+      </div>
+    </div>
+  `;
+
+  await sendEmail({ email, subject: 'CampusEats — Password Reset Code', message: `Your password reset code is: ${otpCode}`, html });
+  res.status(200).json({ message: 'If an account exists with that email, a reset code has been sent.' });
+});
+
+// @desc    Verify OTP and reset password
+// @route   POST /api/auth/reset-password
+// @access  Public
+const resetPasswordWithOTP = asyncHandler(async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+
+  if (!email || !otp || !newPassword) {
+    res.status(400); throw new Error('Email, OTP, and new password are required');
+  }
+
+  // 1. Find and verify OTP
+  const otpRecord = await OTP.findOne({ email });
+  if (!otpRecord || otpRecord.otp !== otp) {
+    res.status(400); throw new Error('Invalid or expired verification code. Please request a new one.');
+  }
+
+  // 2. Validate new password strength
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  if (!passwordRegex.test(newPassword)) {
+    res.status(400); throw new Error('Password must be 8+ chars with uppercase, lowercase, number, and special character.');
+  }
+
+  // 3. Update user password
+  const user = await User.findOne({ email });
+  if (!user) { res.status(404); throw new Error('User not found'); }
+
+  user.password = newPassword;
+  await user.save();
+
+  // 4. Delete used OTP
+  await OTP.deleteOne({ email });
+
+  res.json({ message: 'Password reset successfully! You can now login with your new password.' });
+});
+
+module.exports = { registerUser, loginUser, getMe, refreshToken, logoutUser, changePassword, sendOTP, googleAuth, forgotPassword, resetPasswordWithOTP };

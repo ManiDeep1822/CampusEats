@@ -43,6 +43,26 @@ const generateReceiptHTML = (order) => {
             </table>
           </div>
 
+          <div style="margin-top: 20px; border-top: 1px dashed #cbd5e1; padding-top: 15px;">
+            <h4 style="margin: 0 0 12px 0; color: #374151; font-size: 15px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Bill Breakdown</h4>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="color: #64748b; font-weight: 500;">Item Total</span>
+              <span style="color: #1e293b; font-weight: 600;">₹${(order.items.reduce((acc, i) => acc + (i.price || 0) * (i.quantity || 0), 0)).toFixed(2)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="color: #64748b; font-weight: 500;">Delivery Fee</span>
+              <span style="color: #1e293b; font-weight: 600;">₹${(order.deliveryFee || 0).toFixed(2)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="color: #64748b; font-weight: 500;">Platform Fee</span>
+              <span style="color: #1e293b; font-weight: 600;">₹${(order.platformFee || 0).toFixed(2)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="color: #64748b; font-weight: 500;">Taxes & GST (5%)</span>
+              <span style="color: #1e293b; font-weight: 600;">₹${(order.taxAmount || 0).toFixed(2)}</span>
+            </div>
+          </div>
+
           <div style="display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e1;">
             <span style="color: #0f172a; font-weight: 800; font-size: 18px;">Total Paid</span>
             <span style="color: #10b981; font-weight: 800; font-size: 18px;">₹${(order.totalAmount || 0).toFixed(2)}</span>

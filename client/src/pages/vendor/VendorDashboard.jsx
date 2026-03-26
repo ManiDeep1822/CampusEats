@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiTrendingUp, FiShoppingBag, FiStar, FiClock, FiCamera } from 'react-icons/fi';
+import { FiTrendingUp, FiShoppingBag, FiStar, FiClock, FiCamera, FiMonitor, FiChevronRight } from 'react-icons/fi';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
@@ -181,10 +181,38 @@ const VendorDashboard = () => {
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
            <h2 className="text-xl font-bold font-heading mb-4">Quick Actions</h2>
-           <div className="flex flex-wrap gap-3">
+           <div className="flex flex-wrap gap-3 items-stretch">
              <Link to="/vendor/menu" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary hover:text-primary transition text-base max-sm:text-sm">Manage Menu</Link>
              <Link to="/vendor/orders" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary hover:text-primary transition text-base max-sm:text-sm">Live Orders Queue</Link>
-             <Link to="/vendor/kds" className="px-5 py-3 border border-transparent bg-gray-900 text-white rounded-lg font-bold hover:bg-gray-800 transition shadow-lg text-base max-sm:text-sm">🔥 Kitchen Display (KDS)</Link>
+             
+             {/* KDS — Command Center Card */}
+             <Link
+               to="/vendor/kds"
+               className="group relative flex items-center gap-4 px-6 py-4 rounded-xl font-bold text-white overflow-hidden shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-br from-slate-900 via-slate-800 to-orange-900 border border-orange-500/20"
+             >
+               {/* Glow blob */}
+               <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+               
+               {/* Icon with pulse ring */}
+               <div className="relative shrink-0">
+                 <div className="absolute inset-0 bg-orange-500 rounded-full animate-ping opacity-20" />
+                 <div className="relative w-10 h-10 flex items-center justify-center bg-orange-500/20 rounded-full border border-orange-500/30">
+                   <FiMonitor size={20} className="text-orange-400" />
+                 </div>
+               </div>
+
+               {/* Text */}
+               <div className="flex flex-col leading-tight">
+                 <span className="text-[11px] font-black uppercase tracking-[0.15em] text-orange-400">Command Center</span>
+                 <span className="text-base font-black text-white">Kitchen Display (KDS)</span>
+                 <span className="text-[10px] text-slate-400 font-medium mt-0.5">
+                   {data.stats.pendingOrders > 0 ? `🔴 ${data.stats.pendingOrders} active order${data.stats.pendingOrders > 1 ? 's' : ''} in queue` : '✅ All queues clear'}
+                 </span>
+               </div>
+
+               {/* Arrow */}
+               <FiChevronRight size={18} className="ml-auto shrink-0 text-orange-400 group-hover:translate-x-1 transition-transform" />
+             </Link>
            </div>
         </div>
       </div>

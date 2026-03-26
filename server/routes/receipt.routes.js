@@ -20,7 +20,10 @@ router.get('/:id/receipt', protect, asyncHandler(async (req, res) => {
   }
 
   // Authorization: Only the student who placed it or an admin can see it
-  if (order.studentId._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+  const isOwner = order.studentId && order.studentId._id.toString() === req.user._id.toString();
+  const isAdmin = req.user.role === 'admin';
+
+  if (!isOwner && !isAdmin) {
     res.status(403);
     throw new Error('Not authorized to view this receipt');
   }
@@ -45,7 +48,7 @@ router.get('/:id/receipt', protect, asyncHandler(async (req, res) => {
       <body>
         <div style="width: 100%;">
           <div class="no-print" style="max-width: 600px; margin: 0 auto 20px; text-align: right;">
-            <button onclick="window.print()" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">打印收据 / Print Receipt</button>
+            <button onclick="window.print()" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">Print Receipt</button>
           </div>
           ${html}
         </div>

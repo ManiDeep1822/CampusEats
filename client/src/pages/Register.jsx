@@ -15,6 +15,7 @@ const Register = () => {
     password: '',
     role: 'student',
     phone: '',
+    campusId: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -57,7 +58,13 @@ const Register = () => {
       return false;
     }
 
-    // 4. Password Strength Validation
+    // 4. Campus ID Validation
+    if (formData.role === 'student' && !formData.campusId) {
+      toast.error('Campus ID is required for students');
+      return false;
+    }
+
+    // 5. Password Strength Validation
     // Min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special char
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(password)) {
@@ -142,15 +149,15 @@ const Register = () => {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-textSecondary mb-1">Phone Number</label>
+            <label className="block text-sm font-medium text-textSecondary mb-1">Campus ID</label>
             <input 
               type="text" 
-              name="phone" 
-              required
-              value={formData.phone} 
+              name="campusId" 
+              required={formData.role === 'student'}
+              value={formData.campusId} 
               onChange={handleChange} 
               className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" 
-              placeholder="e.g. 9876543210"
+              placeholder="e.g. CE-2024-1234"
             />
           </div>
 

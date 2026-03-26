@@ -78,7 +78,7 @@ const DeliveryDashboard = () => {
           </div>
           
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight leading-tight uppercase italic">{user?.name || 'Rider'}</h1>
+            <h1 className="text-2xl font-black text-white tracking-tight leading-tight uppercase">{user?.name || 'Rider'}</h1>
             <div className="flex items-center justify-center gap-2 mt-1">
               <span className="bg-yellow-500 text-slate-900 px-2 py-0.5 rounded font-black text-[10px] tracking-widest uppercase">PRO RIDER</span>
               <span className="text-slate-400 text-sm font-bold">⭐ {data.profile.rating?.toFixed(1) || '5.0'}</span>
@@ -138,7 +138,7 @@ const DeliveryDashboard = () => {
                         </div>
                         <div>
                             <p className="text-[10px] font-black text-slate-400 leading-none mb-1">NEW DUTY</p>
-                            <h3 className="font-black text-slate-900 text-lg tracking-tight uppercase italic">{order?.vendorId?.shopName}</h3>
+                            <h3 className="font-black text-slate-900 text-lg tracking-tight uppercase">{order?.vendorId?.shopName}</h3>
                         </div>
                     </div>
                     <div className="text-right">

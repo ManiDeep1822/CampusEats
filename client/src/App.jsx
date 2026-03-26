@@ -21,6 +21,7 @@ const CartPage = lazy(() => import('./pages/student/CartPage'));
 const CheckoutPage = lazy(() => import('./pages/student/CheckoutPage'));
 const OrderTracking = lazy(() => import('./pages/student/OrderTracking'));
 const MyOrders = lazy(() => import('./pages/student/MyOrders'));
+const CampusWallet = lazy(() => import('./pages/student/CampusWallet'));
 
 // Vendor Pages
 const VendorDashboard = lazy(() => import('./pages/vendor/VendorDashboard'));
@@ -67,6 +68,7 @@ function App() {
               <Route path="/student/checkout" element={<CheckoutPage />} />
               <Route path="/student/tracking/:id" element={<OrderTracking />} />
               <Route path="/student/orders" element={<MyOrders />} />
+              <Route path="/student/wallet" element={<CampusWallet />} />
             </Route>
             
             <Route element={<ProtectedRoute allowedRoles={['vendor']} />}>

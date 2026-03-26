@@ -30,11 +30,8 @@ const notificationRoutes = require('./routes/notification.routes');
 const app = express();
 const server = http.createServer(app);
 
-// Connect Database
-console.log('⏳ Connecting to MongoDB...');
-connectDB().then(() => {
-  console.log('✅ MongoDB Initialization call complete');
-});
+// Connect Database will happen at the bottom with server.listen
+console.log('⏳ Preparing Server...');
 
 console.log('🚀 Loading routes and middleware...');
 
@@ -55,7 +52,7 @@ const corsOptions = {
     
     // Check if origin is in whitelist or is a vercel.app subdomain
     const isAllowed = allowedOrigins.includes(origin) || 
-                      origin.includes('vercel.app');
+                      origin.endsWith('.vercel.app');
 
     if (isAllowed) {
       callback(null, true);
@@ -126,25 +123,24 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    // 1. Skip explicitly requested admin routes (though they are already separated below, just in case)
-    if (req.path.startsWith('/api/admin')) return true;
+    // 1. Skip explicitly requested admin routes (Check originalUrl because req.path is relative in mounted middleware)
+    const fullPath = req.originalUrl || req.url;
+    if (fullPath.startsWith('/api/admin')) return true;
 
     // 2. Safely peek at the JWT token payload without full verification (just for rate limiting purposes)
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const token = authHeader.split(' ')[1];
-        // JWTs consist of 3 base64url encoded parts separated by dots. The middle part is the payload.
-        const payloadBase64 = token.split('.')[1];
-        if (payloadBase64) {
-          const payloadBuffer = Buffer.from(payloadBase64, 'base64');
-          const payload = JSON.parse(payloadBuffer.toString('utf8'));
-          if (payload.id && payload.exp) { // Basic sanity check to ensure it's a real payload
-            // In our system, the token only encodes the ID. 
-            // However, we can also check if the user is calling from the admin dashboard origin as a fallback,
-            // or we just trust the route separation.
-            // Since our JWT only stores `{ id }`, we cannot check role here without a DB call (which defeats the rate limiter).
-            // Therefore, we rely on the origin header and path if role isn't embedded.
+        if (token) {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const payloadBase64 = parts[1];
+            const payloadBuffer = Buffer.from(payloadBase64, 'base64');
+            const payload = JSON.parse(payloadBuffer.toString('utf8'));
+            if (payload.id && payload.exp) { 
+              // Valid token peek
+            }
           }
         }
       } catch (err) {
@@ -205,20 +201,22 @@ app.use((err, req, res, next) => {
 app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+connectDB().then(() => {
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 
-  // Keep-alive: ping self every 10 mins to prevent Render free tier cold starts
-  if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
-    const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
-    setInterval(() => {
-      if (typeof fetch !== 'undefined') {
-        fetch(keepAliveUrl)
-          .then(() => console.log('[Keep-Alive] Server pinged successfully'))
-          .catch(err => console.warn('[Keep-Alive] Ping failed:', err.message));
-      }
-    }, 10 * 60 * 1000); 
-  }
+    // Keep-alive: ping self every 10 mins to prevent Render free tier cold starts
+    if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
+      const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
+      setInterval(() => {
+        if (typeof fetch !== 'undefined') {
+          fetch(keepAliveUrl)
+            .then(() => console.log('[Keep-Alive] Server pinged successfully'))
+            .catch(err => console.warn('[Keep-Alive] Ping failed:', err.message));
+        }
+      }, 10 * 60 * 1000); 
+    }
+  });
 });
 
 // Handle unhandled promise rejections

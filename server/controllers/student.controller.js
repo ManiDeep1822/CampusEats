@@ -208,6 +208,7 @@ const getFavorites = asyncHandler(async (req, res) => {
   res.json(user.favorites);
 });
 
+
 const cancelOrder = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
   

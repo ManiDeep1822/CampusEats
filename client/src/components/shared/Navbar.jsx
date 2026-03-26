@@ -98,14 +98,16 @@ const Navbar = () => {
             ) : (
               <div className="flex items-center space-x-1 sm:space-x-3">
                 {user.role === 'student' && (
-                  <Link to="/student/cart" className="relative p-2 text-textPrimary hover:text-primary transition-all">
-                    <FiShoppingCart size={24} className="max-sm:w-[22px] max-sm:h-[22px]" />
-                    {totalItems > 0 && (
-                      <span className="absolute top-1 right-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold leading-none text-white bg-accent rounded-full border-2 border-white">
-                        {totalItems}
-                      </span>
-                    )}
-                  </Link>
+                  <div className="flex items-center space-x-2">
+                    <Link to="/student/cart" className="relative p-2 text-textPrimary hover:text-primary transition-all">
+                      <FiShoppingCart size={24} className="max-sm:w-[22px] max-sm:h-[22px]" />
+                      {totalItems > 0 && (
+                        <span className="absolute top-1 right-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold leading-none text-white bg-accent rounded-full border-2 border-white">
+                          {totalItems}
+                        </span>
+                      )}
+                    </Link>
+                  </div>
                 )}
                 
                 {/* Notifications */}
@@ -186,7 +188,7 @@ const Navbar = () => {
                     </div>
                     <span className="hidden lg:block font-bold truncate max-w-[100px]">{user?.name}</span>
                   </button>
-                  <div className={`absolute right-0 w-48 mt-2 py-2 bg-white rounded-xl shadow-xl transition-all duration-300 transform origin-top-right border border-gray-100 ${isProfileOpen ? 'opacity-100 visible scale-100' : 'opacity-0 invisible scale-95'}`}>
+                  <div className={`absolute right-0 w-48 mt-2 py-2 bg-white rounded-xl shadow-xl transition-all duration-300 transform origin-top-right border border-gray-100 z-[100] ${isProfileOpen ? 'opacity-100 visible scale-100' : 'opacity-0 invisible scale-95'}`}>
                     <Link onClick={() => setIsProfileOpen(false)} to={getDashboardLink()} className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Dashboard</Link>
                     <Link onClick={() => setIsProfileOpen(false)} to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Profile Settings</Link>
                     {user?.role === 'student' && (
@@ -210,7 +212,7 @@ const Navbar = () => {
                     <span className={`block w-5 h-0.5 bg-current transition-all ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></span>
                   </button>
 
-                  <div className={`absolute right-0 w-56 mt-2 py-2 bg-white rounded-2xl shadow-2xl transition-all duration-300 transform origin-top-right border border-gray-100 ${isMenuOpen ? 'opacity-100 visible scale-100' : 'opacity-0 invisible scale-95'}`}>
+                  <div className={`absolute right-0 w-56 mt-2 py-2 bg-white rounded-2xl shadow-2xl transition-all duration-300 transform origin-top-right border border-gray-100 z-[100] ${isMenuOpen ? 'opacity-100 visible scale-100' : 'opacity-0 invisible scale-95'}`}>
                     <div className="px-4 py-3 border-b border-gray-100 mb-2">
                        <p className="text-xs font-bold text-gray-400 uppercase">User Account</p>
                        <p className="text-sm font-bold text-gray-800 truncate">{user?.name}</p>

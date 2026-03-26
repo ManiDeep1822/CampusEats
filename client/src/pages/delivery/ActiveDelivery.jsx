@@ -29,6 +29,9 @@ const ActiveDelivery = () => {
   const [deliveryOtp, setDeliveryOtp] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
   const [riderLocation, setRiderLocation] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [waitTimer, setWaitTimer] = useState('00:00');
   const navigate = useNavigate();
   
   const socket = useSocketContext();
@@ -64,6 +67,26 @@ const ActiveDelivery = () => {
     }
     return () => clearInterval(interval);
   }, [resendTimer]);
+
+  const calculateWaitTime = useCallback(() => {
+    if (!data?.arrivedAtVendorAt) return '00:00';
+    const start = new Date(data.arrivedAtVendorAt).getTime();
+    const now = Date.now();
+    const diff = Math.floor((now - start) / 1000);
+    const mins = Math.floor(diff / 60).toString().padStart(2, '0');
+    const secs = (diff % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  }, [data?.arrivedAtVendorAt]);
+
+  useEffect(() => {
+    let interval;
+    if (data?.arrivedAtVendorAt && !data?.pickedUpAt) {
+      interval = setInterval(() => {
+        setWaitTimer(calculateWaitTime());
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [data?.arrivedAtVendorAt, data?.pickedUpAt, calculateWaitTime]);
 
   // Dynamically join the database's specific DeliveryBoy ID room just in case a Student routes there natively
   useEffect(() => {
@@ -148,6 +171,27 @@ const ActiveDelivery = () => {
     }
   };
 
+  const handleCancel = async () => {
+    if (!cancelReason) return toast.error("Please select a reason");
+    try {
+      await api.put(`/delivery/orders/${data._id}/cancel`, { reason: cancelReason });
+      toast.success("Duty dropped successfully.");
+      navigate('/delivery/dashboard');
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Cancellation failed.");
+    }
+  };
+
+  const handleArrive = async () => {
+    try {
+      await api.put(`/delivery/orders/${data._id}/arrive`);
+      toast.success("Arrival recorded!");
+      fetchActiveDelivery();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to record arrival");
+    }
+  };
+
   const handleAction = async (action) => {
     try {
       if (action === 'delivered') {
@@ -181,7 +225,17 @@ const ActiveDelivery = () => {
                 <FiArrowRight className="rotate-180" size={24} />
             </button>
             <p className="text-[10px] font-black tracking-[0.3em] text-primary mb-2 uppercase">Active Duty ID: #{data._id.slice(-6).toUpperCase()}</p>
-            <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">Trip in Progress</h1>
+            <h1 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">Trip in Progress</h1>
+            
+            {/* CANCEL BUTTON */}
+            {!['picked_up', 'delivered'].includes(data.status) && (
+                <button 
+                  onClick={() => setShowCancelModal(true)}
+                  className="mt-4 px-4 py-1.5 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-[0.2em] rounded-full hover:bg-red-500 hover:text-white transition-all active:scale-95"
+                >
+                    Cancel Duty
+                </button>
+            )}
         </div>
       </div>
 
@@ -239,7 +293,7 @@ const ActiveDelivery = () => {
                 <div className="flex justify-between items-start">
                     <div>
                         <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${data.status !== 'picked_up' ? 'text-primary' : 'text-gray-400'}`}>1. Pickup From</p>
-                        <h2 className="text-xl font-black tracking-tight uppercase italic truncate">{data?.vendorId?.shopName}</h2>
+                        <h2 className="text-xl font-black tracking-tight uppercase truncate">{data?.vendorId?.shopName}</h2>
                         <p className="text-sm opacity-60 font-medium">{data?.vendorId?.location}</p>
                     </div>
                     <div className="bg-primary/20 p-3 rounded-2xl text-primary">
@@ -250,7 +304,17 @@ const ActiveDelivery = () => {
                     <button onClick={() => handleAction('picked')} className="w-full bg-primary text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-orange-500/30 active:scale-95 transition-all">Confirm My Pickup</button>
                 )}
                 {['placed', 'confirmed', 'preparing'].includes(data.status) && (
-                    <div className="w-full bg-slate-800 text-slate-400 py-4 rounded-2xl font-black text-center text-sm tracking-widest uppercase">Food is Preparing...</div>
+                    <div className="space-y-3">
+                        {!data.arrivedAtVendorAt ? (
+                            <button onClick={handleArrive} className="w-full bg-slate-800 text-white py-4 rounded-2xl font-black text-sm tracking-widest uppercase hover:bg-slate-700 transition-all active:scale-95 border-b-2 border-primary">Confirm I've Arrived</button>
+                        ) : (
+                            <div className="w-full bg-slate-800 text-slate-400 py-4 rounded-2xl font-black flex items-center justify-between px-6 border-l-4 border-primary">
+                                <span className="text-[10px] tracking-widest uppercase">Waiting at Vendor</span>
+                                <span className="text-white font-mono text-lg">{waitTimer}</span>
+                            </div>
+                        )}
+                        <div className="w-full bg-slate-800/50 text-slate-500 py-4 rounded-2xl font-black text-center text-[10px] tracking-widest uppercase">Food is Preparing...</div>
+                    </div>
                 )}
             </motion.div>
 
@@ -263,7 +327,7 @@ const ActiveDelivery = () => {
                 <div className="flex justify-between items-start">
                     <div>
                         <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${data.status === 'picked_up' ? 'text-primary' : 'text-gray-400'}`}>2. Deliver To</p>
-                        <h2 className="text-xl font-black tracking-tight uppercase italic">{data?.studentId?.name}</h2>
+                        <h2 className="text-xl font-black tracking-tight uppercase">{data?.studentId?.name}</h2>
                         <p className="text-sm opacity-60 font-medium">{data?.deliveryAddress}</p>
                     </div>
                     <div className="bg-accent/20 p-3 rounded-2xl text-accent">
@@ -312,7 +376,7 @@ const ActiveDelivery = () => {
                  >
                     Complete Hand-off
                  </button>
-                 <div className="text-center italic">
+                 <div className="text-center">
                    <button 
                      onClick={() => sendOtpToStudent(true)} 
                      disabled={resendTimer > 0} 
@@ -349,7 +413,7 @@ const ActiveDelivery = () => {
             </span>
           </div>
           <div className="flex-1 p-5 bg-slate-50/50 overflow-y-auto space-y-4 flex flex-col no-scrollbar">
-            {chatHistory.length === 0 && <div className="m-auto text-slate-300 text-[10px] font-black uppercase tracking-widest italic">Maintain radio silence...</div>}
+            {chatHistory.length === 0 && <div className="m-auto text-slate-300 text-[10px] font-black uppercase tracking-widest">Maintain radio silence...</div>}
             {chatHistory.map((msg, i) => (
               <div key={i} className={`max-w-[85%] p-4 rounded-3xl text-sm shadow-sm ${msg.isMe ? 'bg-slate-950 text-white self-end rounded-br-none' : 'bg-white border border-gray-100 text-slate-700 self-start rounded-bl-none'}`}>
                 <p className="font-medium leading-relaxed">{msg.message}</p>
@@ -363,6 +427,59 @@ const ActiveDelivery = () => {
           </form>
         </div>
       </div>
+
+      {/* CANCELLATION MODAL */}
+      <AnimatePresence>
+        {showCancelModal && (
+          <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              className="bg-white w-full max-w-md rounded-[3rem] p-8 shadow-2xl"
+            >
+              <div className="text-center mb-8">
+                <div className="w-16 h-1 w-12 bg-slate-100 rounded-full mx-auto mb-6"></div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tighter uppercase mb-2">Refuse Duty?</h3>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select a professional reason</p>
+              </div>
+
+              <div className="space-y-3 mb-8">
+                {[
+                  "Vehicle Breakdown",
+                  "Personal Emergency",
+                  "Waiting time too high at vendor",
+                  "Unable to find vendor location",
+                  "Other"
+                ].map((reason) => (
+                  <button 
+                    key={reason}
+                    onClick={() => setCancelReason(reason)}
+                    className={`w-full p-5 rounded-2xl font-black text-xs uppercase tracking-widest text-left transition-all border-2 ${cancelReason === reason ? 'bg-slate-950 text-white border-slate-950 scale-105 shadow-xl' : 'bg-slate-50 text-slate-500 border-slate-50 hover:border-slate-200'}`}
+                  >
+                    {reason}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setShowCancelModal(false)}
+                  className="flex-1 py-5 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-400 hover:bg-slate-50"
+                >
+                  Go Back
+                </button>
+                <button 
+                  onClick={handleCancel}
+                  className="flex-1 py-5 bg-red-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-red-500/20 active:scale-95"
+                >
+                  Confirm Drop
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 

@@ -18,6 +18,9 @@ const orderSchema = new mongoose.Schema({
   },
   deliveryAddress: { type: String, required: true },
   totalAmount: { type: Number, required: true },
+  taxAmount: { type: Number, default: 0 },
+  deliveryFee: { type: Number, default: 0 },
+  platformFee: { type: Number, default: 0 },
   paymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment' },
   estimatedTime: { type: Number }, // in minutes
   placedAt: { type: Date, default: Date.now },
@@ -28,6 +31,9 @@ const orderSchema = new mongoose.Schema({
   deliveryOtp: { type: String },
   rating: { type: Number, min: 1, max: 5 },
   review: { type: String },
+  cancellationReason: { type: String },
+  arrivedAtVendorAt: { type: Date },
+  pickedUpAt: { type: Date },
   chatHistory: [{
     sender: { type: String, enum: ['Student', 'Rider'] },
     message: { type: String, required: true },

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getDashboardStats, toggleAvailability, getAvailableOrders, acceptOrder, pickUpOrder, deliverOrder, getOrderById, sendDeliveryOTP } = require('../controllers/delivery.controller');
+const { getDashboardStats, toggleAvailability, getAvailableOrders, acceptOrder, pickUpOrder, deliverOrder, getOrderById, sendDeliveryOTP, cancelOrder, markArrivedAtVendor } = require('../controllers/delivery.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { authorizeRoles } = require('../middleware/role.middleware');
 
@@ -10,8 +10,10 @@ router.put('/toggle-availability', toggleAvailability);
 router.get('/available-orders', getAvailableOrders);
 router.get('/orders/:id', getOrderById);
 router.put('/orders/:id/accept', acceptOrder);
+router.put('/orders/:id/arrive', markArrivedAtVendor);
 router.put('/orders/:id/picked', pickUpOrder);
 router.put('/orders/:id/delivered', deliverOrder);
+router.put('/orders/:id/cancel', cancelOrder);
 router.post('/orders/:id/send-otp', sendDeliveryOTP);
 
 module.exports = router;

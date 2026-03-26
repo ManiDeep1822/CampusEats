@@ -3,9 +3,7 @@ const DeliveryBoy = require('../models/DeliveryBoy');
 const Order = require('../models/Order');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
-const sendEmail = require('../utils/sendEmail');
 const webpush = require('../utils/webpush');
-const { generateReceiptHTML } = require('../utils/receiptTemplate');
 
 const getMyDeliveryId = async (userId) => {
   const boy = await DeliveryBoy.findOne({ userId });
@@ -71,6 +69,7 @@ const pickUpOrder = asyncHandler(async (req, res) => {
     }
 
     order.status = 'picked_up';
+    order.pickedUpAt = Date.now();
     await order.save();
     
     const io = req.app.get('io');
@@ -143,19 +142,8 @@ const deliverOrder = asyncHandler(async (req, res) => {
       io.to(vendorRoom).emit('notification', vendorNotif);
     }
 
-    // --- NEW: Multi-Channel Delivery Status (Push + Email) ---
-    const htmlReceipt = generateReceiptHTML(order);
-
-    // 1. Send Email Receipt
-    if (order.studentId?.email) {
-      console.log(`📧 Dispatching receipt email to: ${order.studentId.email}`);
-      sendEmail({
-        email: order.studentId.email,
-        subject: `Order Delivered: #${order.orderId}`,
-        html: htmlReceipt,
-        message: `Your CampusEats order #${order.orderId} has been delivered! Total: ₹${(order.totalAmount || 0).toFixed(2)}`
-      }).catch(err => console.error('❌ Async Email Failure:', err.message));
-    }
+    // --- NEW: Multi-Channel Delivery Status (Push) ---
+    // (Email Receipt workflow removed per user request)
 
     // 2. Send Web Push Notification
     if (order.studentId?.pushSubscription) {
@@ -237,4 +225,61 @@ const sendDeliveryOTP = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { getDashboardStats, toggleAvailability, getAvailableOrders, acceptOrder, pickUpOrder, deliverOrder, getOrderById, sendDeliveryOTP };
+const markArrivedAtVendor = asyncHandler(async (req, res) => {
+  const deliveryBoyId = await getMyDeliveryId(req.user._id);
+  const order = await Order.findById(req.params.id);
+  
+  if (order && order.deliveryBoyId && order.deliveryBoyId.toString() === deliveryBoyId.toString()) {
+     order.arrivedAtVendorAt = Date.now();
+     await order.save();
+     
+     const io = req.app.get('io');
+     if (io) {
+       const studentRoom = `student:${order.studentId?._id || order.studentId}`;
+       io.to(studentRoom).emit('order:arrived', { orderId: order._id, message: "🛵 Your rider has arrived at the restaurant!" });
+     }
+     
+     res.json(order);
+  } else {
+     res.status(404); throw new Error('Order not found or not assigned to you');
+  }
+});
+
+const cancelOrder = asyncHandler(async (req, res) => {
+  const { reason } = req.body;
+  const deliveryBoyId = await getMyDeliveryId(req.user._id);
+  const order = await Order.findById(req.params.id);
+
+  if (order && order.deliveryBoyId && order.deliveryBoyId.toString() === deliveryBoyId.toString()) {
+    // SECURITY: Cannot cancel if already picked up or beyond
+    if (!['placed', 'confirmed', 'preparing', 'ready'].includes(order.status)) {
+      res.status(400);
+      throw new Error(`Cannot cancel duty. Current status is ${order.status}`);
+    }
+
+    // Unassign Rider from Order & Save Reason
+    order.deliveryBoyId = null;
+    order.cancellationReason = reason || 'Unspecified';
+    await order.save();
+
+    // Reset Rider Profile
+    const deliveryBoy = await DeliveryBoy.findById(deliveryBoyId);
+    deliveryBoy.activeOrderId = null;
+    deliveryBoy.isAvailable = true;
+    await deliveryBoy.save();
+
+    // Notify System (Socket)
+    const io = req.app.get('io');
+    if (io) {
+      // Broadcast that a new duty is available again
+      io.emit('order:new', { orderId: order._id });
+    }
+
+    res.json({ message: 'Duty cancelled successfully. You are now available for other orders.' });
+  } else {
+    res.status(404);
+    throw new Error('Order not found or not assigned to you');
+  }
+});
+
+module.exports = { getDashboardStats, toggleAvailability, getAvailableOrders, acceptOrder, pickUpOrder, deliverOrder, getOrderById, sendDeliveryOTP, cancelOrder, markArrivedAtVendor };

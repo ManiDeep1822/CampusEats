@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema({
   profilePic: { type: String },
   address: { type: String },
   isVerified: { type: Boolean, default: false },
+  campusId: { type: String, sparse: true, unique: true },
   favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' }],
   pushSubscription: { type: Object }
 }, { timestamps: true });
