@@ -76,7 +76,7 @@ const MyOrders = () => {
                   </Link>
                   {order.status === 'delivered' && (
                     <a 
-                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/receipts/${order._id}/receipt`}
+                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/receipts/${order._id}/receipt?token=${localStorage.getItem('token')}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full text-center bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold py-2.5 px-4 rounded-xl transition text-sm"
