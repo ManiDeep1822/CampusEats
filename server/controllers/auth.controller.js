@@ -57,7 +57,7 @@ const sendOTP = asyncHandler(async (req, res) => {
 });
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role, phone, address } = req.body;
+  const { name, email, password, role, phone, address, ...extra } = req.body;
 
   // 1. Basic Field Validation
   if (!name || !email || !password || !phone) {
@@ -238,7 +238,7 @@ const googleAuth = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error('Google Auth Error:', error.message);
     res.status(401);
-    throw new Error('Invalid Google Token or authentication failed');
+    throw new Error('Invalid Google Token or authentication failed', { cause: error });
   }
 });
 

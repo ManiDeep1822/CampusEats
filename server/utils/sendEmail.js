@@ -51,7 +51,7 @@ const sendEmail = async (options) => {
     }
     // We log the full error for high-level debugging
     console.debug('Full SMTP Error Context:', error);
-    throw new Error(`Email delivery failed: ${error.message}`);
+    throw new Error(`Email delivery failed: ${error.message}`, { cause: error });
   }
 };
 

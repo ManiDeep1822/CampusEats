@@ -35,7 +35,7 @@ const RestaurantPage = () => {
       try {
         const { data } = await api.get('/student/favorites');
         setIsFavorite(data.some(f => (f._id || f) === id));
-      } catch(e) {}
+      } catch(e) { console.error('Failed to fetch favorites', e); }
     }
     fetchRestaurant();
     fetchFavs();

@@ -30,7 +30,7 @@ const StudentHome = () => {
       try {
         const { data } = await api.get('/student/favorites');
         setFavorites(data.map(f => f._id || f));
-      } catch (e) {}
+      } catch(e) { console.error('Failed to fetch stats', e); }
     };
     fetchVendors();
     fetchFavs();
@@ -141,6 +141,7 @@ const StudentHome = () => {
             <h3 className="text-2xl font-bold text-gray-800 mb-2">
               {filterMode === 'favorites' ? 'No favorites yet' : 'No restaurants found'}
             </h3>
+            <p className="text-gray-400">You haven&apos;t placed any orders yet. Time to explore!</p>
             <p className="text-gray-500 max-sm:text-sm max-sm:px-4">
               {filterMode === 'favorites' ? 'Click the heart icon on any restaurant to save it here.' : 'Try adjusting your search filters.'}
             </p>

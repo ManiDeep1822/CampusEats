@@ -96,14 +96,14 @@ const VendorDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-textSecondary font-bold">Today's Revenue</h3>
+              <h3 className="text-textSecondary font-bold">Today&apos;s Revenue</h3>
               <div className="p-2 bg-orange-100 text-primary rounded-lg"><FiTrendingUp size={20}/></div>
             </div>
             <p className="text-3xl font-extrabold text-gray-900">₹{data.stats.revenue}</p>
           </div>
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-textSecondary font-bold">Today's Orders</h3>
+              <h3 className="text-textSecondary font-bold">Today&apos;s Orders</h3>
               <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><FiShoppingBag size={20}/></div>
             </div>
             <p className="text-3xl font-extrabold text-gray-900">{data.stats.todaysOrders}</p>

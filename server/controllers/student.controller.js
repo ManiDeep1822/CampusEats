@@ -6,6 +6,11 @@ const Order = require('../models/Order');
 const Notification = require('../models/Notification');
 const { generateReceiptHTML } = require('../utils/receiptTemplate');
 
+// Helper to calculate delivery fees centrally
+const calculateDeliveryFee = (subtotal) => {
+  return subtotal > 200 ? 0 : 15; // Free delivery over 200 INR
+};
+
 const getVendors = asyncHandler(async (req, res) => {
   const vendors = await Vendor.find({ isOpen: true, isApproved: true }).populate('userId', 'name profilePic');
   res.json(vendors);
@@ -48,7 +53,7 @@ const calculateOrderBill = asyncHandler(async (req, res) => {
   }
 
   const distance = 1.2; // Constant distance or calculated via vendor proximity
-  const deliveryFee = subtotal > 200 ? 0 : 15; // Free delivery over 200 INR
+  const deliveryFee = calculateDeliveryFee(subtotal);
   const platformFee = 5;
   const taxes = Number((subtotal * 0.05).toFixed(2));
   const finalTotal = Number((subtotal + deliveryFee + platformFee + taxes).toFixed(2));
@@ -79,7 +84,7 @@ const generateSecureBill = async (vendorId, items) => {
     throw new Error('No valid items found from this vendor. Cart might be corrupted.');
   }
 
-  const deliveryFee = subtotal > 200 ? 0 : 15;
+  const deliveryFee = calculateDeliveryFee(subtotal);
   const platformFee = 5;
   const taxes = Number((subtotal * 0.05).toFixed(2));
   const finalTotal = Number((subtotal + deliveryFee + platformFee + taxes).toFixed(2));
@@ -172,8 +177,15 @@ const createVendorReview = asyncHandler(async (req, res) => {
     };
 
     vendor.reviews.push(review);
+    
+    // Unify rating calculation logic
+    if (!vendor.totalRatings) vendor.totalRatings = vendor.reviews.length - 1; 
+    if (!vendor.ratingSum) vendor.ratingSum = (vendor.rating || 0) * vendor.totalRatings;
+
+    vendor.totalRatings += 1;
+    vendor.ratingSum += Number(rating);
     vendor.numReviews = vendor.reviews.length;
-    vendor.rating = vendor.reviews.reduce((acc, item) => item.rating + acc, 0) / vendor.reviews.length;
+    vendor.rating = Number((vendor.ratingSum / vendor.totalRatings).toFixed(1));
 
     await vendor.save();
     res.status(201).json({ message: 'Review added' });
