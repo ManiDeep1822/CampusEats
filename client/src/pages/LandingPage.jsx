@@ -105,7 +105,8 @@ const LandingPage = () => {
             <motion.div whileHover={{ y: -10 }} className="p-8 rounded-3xl bg-white border border-gray-100 shadow-xl shadow-slate-200/30 transition-all">
               <div className="h-16 w-16 bg-blue-100 text-blue-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-6 shadow-sm">💳</div>
               <h3 className="text-xl font-bold mb-3 text-textPrimary">Pay securely</h3>
-              <p className="text-textSecondary leading-relaxed">Quick and safe checkout options optimized for student wallets and cards.</p>
+              <p className="text-textSecondary leading-relaxed">Quick and safe checkout options optimized for student payment methods.</p>
+
             </motion.div>
             <motion.div whileHover={{ y: -10 }} className="p-8 rounded-3xl bg-white border border-gray-100 shadow-xl shadow-slate-200/30 transition-all">
               <div className="h-16 w-16 bg-green-100 text-green-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-6 shadow-sm">🚀</div>

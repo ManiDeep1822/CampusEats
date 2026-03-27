@@ -28,13 +28,7 @@ const Profile = () => {
         special: false
     });
 
-    // Forgot password modal state
-    const [forgotModal, setForgotModal] = useState(false);
-    const [forgotStep, setForgotStep] = useState(1); 
-    const [forgotEmail, setForgotEmail] = useState(user?.email || '');
-    const [forgotNewPass, setForgotNewPass] = useState('');
-    const [forgotConfirmPass, setForgotConfirmPass] = useState('');
-    const [forgotLoading, setForgotLoading] = useState(false);
+
 
     const validatePassword = (pass) => {
         setStrength({
@@ -78,43 +72,9 @@ const Profile = () => {
         }
     };
 
-    const openForgotModal = () => {
-        setForgotStep(1);
-        setForgotEmail(user?.email || '');
-        setForgotNewPass('');
-        setForgotConfirmPass('');
-        setForgotModal(true);
-    };
 
-    const handleVerifyEmail = async () => {
-        if (!forgotEmail) return toast.error('Please enter your email address');
-        setForgotLoading(true);
-        try {
-            await api.post('/auth/forgot-password', { email: forgotEmail }); 
-            setForgotStep(2);
-        } catch (err) {
-            toast.error(err.response?.data?.message || 'Email not found or error occurred');
-        } finally {
-            setForgotLoading(false);
-        }
-    };
 
-    const handleResetPassword = async () => {
-        if (forgotNewPass !== forgotConfirmPass) return toast.error('Passwords do not match');
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-        if (!passwordRegex.test(forgotNewPass)) return toast.error('Password must be 8+ chars with uppercase, lowercase, number, and special character');
-        
-        setForgotLoading(true);
-        try {
-            await api.post('/auth/reset-password-direct', { email: forgotEmail, newPassword: forgotNewPass });
-            toast.success('Password updated successfully!');
-            setForgotModal(false);
-        } catch (err) {
-            toast.error(err.response?.data?.message || 'Reset failed');
-        } finally {
-            setForgotLoading(false);
-        }
-    };
+
 
     const strengthLabels = [
         { key: 'length', label: '8+ Characters' },
@@ -176,12 +136,7 @@ const Profile = () => {
                                 </div>
                                 <h2 className="text-xl font-bold text-textPrimary">Security Settings</h2>
                             </div>
-                            <button 
-                                onClick={openForgotModal}
-                                className="text-primary text-sm font-bold hover:underline underline-offset-4"
-                            >
-                                Forgot Password?
-                            </button>
+
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
@@ -294,112 +249,7 @@ const Profile = () => {
                 </div>
             </div>
 
-            {/* ─────── Forgot Password Modal (REGISTRATION FORM STYLE) ─────── */}
-            <AnimatePresence>
-                {forgotModal && (
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setForgotModal(false)}>
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            onClick={e => e.stopPropagation()}
-                            className="max-w-lg w-full bg-white rounded-xl shadow-2xl p-8 relative overflow-hidden"
-                        >
-                            <button
-                                onClick={() => setForgotModal(false)}
-                                className="absolute right-6 top-6 text-gray-400 hover:text-primary transition"
-                            >
-                                <FiX size={24} />
-                            </button>
 
-                            <h2 className="text-3xl font-heading font-bold text-center text-textPrimary mb-2">Reset Password</h2>
-                            <p className="text-center text-textSecondary mb-8 text-sm">
-                                Follow the steps below to secure your account.
-                            </p>
-
-                            <div className="flex justify-center items-center gap-2 mb-8">
-                                <div className={`h-1.5 w-16 rounded-full transition-all ${forgotStep >= 1 ? 'bg-primary' : 'bg-gray-200'}`} />
-                                <div className={`h-1.5 w-16 rounded-full transition-all ${forgotStep >= 2 ? 'bg-primary' : 'bg-gray-200'}`} />
-                            </div>
-
-                            {/* Step 1: Email */}
-                            {forgotStep === 1 && (
-                                <div className="space-y-6">
-                                    <div className="space-y-4">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-6">AUTHORIZED EMAIL</label>
-                                        <input
-                                            type="email"
-                                            value={forgotEmail}
-                                            onChange={e => setForgotEmail(e.target.value)}
-                                            required
-                                            className="w-full px-4 py-3.5 text-lg rounded-lg border-2 border-slate-50 bg-slate-50/50 focus:bg-white focus:border-primary/20 outline-none transition-all duration-500 text-slate-900 font-black tracking-tight shadow-inner"
-                                            placeholder="name@university.edu"
-                                        />
-                                    </div>
-                                    <button 
-                                        onClick={handleVerifyEmail} 
-                                        disabled={forgotLoading} 
-                                        className="w-full bg-primary text-white font-bold py-3.5 mt-2 rounded-lg hover:bg-orange-600 transition disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg shadow-orange-500/20 active:scale-95"
-                                    >
-                                        {forgotLoading ? (
-                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        ) : (
-                                            <>Continue <FiArrowRight /></>
-                                        )}
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* Step 2: New Password */}
-                            {forgotStep === 2 && (
-                                <div className="space-y-6">
-                                    <div className="space-y-4">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-6">NEW PRIMARY SECRET</label>
-                                        <input
-                                            type="password"
-                                            value={forgotNewPass}
-                                            onChange={e => setForgotNewPass(e.target.value)}
-                                            required
-                                            className="w-full px-4 py-3.5 text-lg rounded-lg border-2 border-slate-50 bg-slate-50/50 focus:bg-white focus:border-primary/20 outline-none transition-all duration-500 text-slate-900 font-black shadow-inner"
-                                            placeholder="••••••••"
-                                        />
-                                    </div>
-                                    <div className="space-y-4">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-6">CONFIRM SECRET</label>
-                                        <input
-                                            type="password"
-                                            value={forgotConfirmPass}
-                                            onChange={e => setForgotConfirmPass(e.target.value)}
-                                            required
-                                            className="w-full px-4 py-3.5 text-lg rounded-lg border-2 border-slate-50 bg-slate-50/50 focus:bg-white focus:border-primary/20 outline-none transition-all duration-500 text-slate-900 font-black shadow-inner"
-                                            placeholder="••••••••"
-                                        />
-                                    </div>
-
-                                    <button 
-                                        onClick={handleResetPassword} 
-                                        disabled={forgotLoading || !forgotNewPass} 
-                                        className="w-full bg-primary text-white font-bold py-3.5 mt-2 rounded-lg hover:bg-orange-600 transition disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg shadow-orange-500/20 active:scale-95"
-                                    >
-                                        {forgotLoading ? (
-                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        ) : (
-                                            <>Reset Password <FiCheckCircle /></>
-                                        )}
-                                    </button>
-                                    
-                                    <button 
-                                        onClick={() => setForgotStep(1)} 
-                                        className="w-full text-center text-sm text-gray-500 hover:text-primary transition font-medium"
-                                    >
-                                        Back to Email
-                                    </button>
-                                </div>
-                            )}
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
         </div>
     );
 };

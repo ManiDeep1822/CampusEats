@@ -14,7 +14,7 @@ router.post('/refresh-token', refreshToken);
 router.post('/google', googleAuth);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPasswordWithOTP);
-router.post('/reset-password-direct', resetPasswordDirect);
+
 router.get('/me', protect, getMe);
 router.put('/change-password', protect, changePassword);
 

@@ -102,9 +102,9 @@ const registerUser = asyncHandler(async (req, res) => {
     password, 
     role: assignedRole, 
     phone, 
-    address,
-    walletBalance: assignedRole === 'student' ? 500 : 0 // Welcome Credit
+    address
   });
+
 
   if (user) {
     // 8. Create secondary profiles based on role
@@ -352,36 +352,5 @@ const resetPasswordWithOTP = asyncHandler(async (req, res) => {
   res.json({ message: 'Password reset successfully! You can now login with your new password.' });
 });
 
-// @desc    Direct Reset Password (NO OTP)
-// @route   POST /api/auth/reset-password-direct
-// @access  Public
-const resetPasswordDirect = asyncHandler(async (req, res) => {
-  const { email, newPassword } = req.body;
+module.exports = { registerUser, loginUser, getMe, refreshToken, logoutUser, changePassword, sendOTP, googleAuth, forgotPassword, resetPasswordWithOTP };
 
-  if (!email || !newPassword) {
-    res.status(400); throw new Error('Email and new password are required');
-  }
-
-  // 1. Validate new password strength
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-  if (!passwordRegex.test(newPassword)) {
-    res.status(400); throw new Error('Password must be 8+ chars with uppercase, lowercase, number, and special character.');
-  }
-
-  // 2. Update user password
-  const user = await User.findOne({ email });
-  if (!user) { res.status(404); throw new Error('User not found'); }
-
-  // 3. Security: Check if new password is same as old
-  const isMatch = await user.matchPassword(newPassword);
-  if (isMatch) {
-    res.status(400); throw new Error('New password cannot be the same as your old password. Please choose a different one.');
-  }
-
-  user.password = newPassword;
-  await user.save();
-
-  res.json({ message: 'Password reset successfully!' });
-});
-
-module.exports = { registerUser, loginUser, getMe, refreshToken, logoutUser, changePassword, sendOTP, googleAuth, forgotPassword, resetPasswordWithOTP, resetPasswordDirect };
