@@ -141,7 +141,6 @@ const Profile = () => {
 
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="space-y-2">
-                                <p className="text-sm text-gray-500">I&apos;m a student at CampusEats, and I love trying out new food from different vendors.</p>
                                 <label className="text-sm font-bold text-gray-500 uppercase tracking-wider ml-1">Current Password</label>
                                 <div className="relative group/input">
                                     <input 

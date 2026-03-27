@@ -43,7 +43,7 @@ const MyOrders = () => {
           <div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center">
             <span className="text-6xl mb-4 block">🛒</span>
             <h3 className="text-xl font-bold mb-2">No orders yet</h3>
-              <p className="text-gray-400">You haven&apos;t placed any orders yet. Time to explore!</p>
+            <p className="text-gray-500 mb-6">Looks like you haven&apos;t bought anything yet.</p>
             <Link to="/student/home" className="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-600 transition shadow-lg shadow-orange-500/20">Browse Restaurants</Link>
           </div>
         ) : (
