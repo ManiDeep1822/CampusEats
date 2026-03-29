@@ -300,7 +300,7 @@ const Profile = () => {
                                 </div>
                                 <div className="sm:col-span-2 pt-4">
                                   <button type="submit" disabled={loading} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-lg hover:shadow-2xl hover:shadow-slate-500/20 active:scale-95 transition-all">
-                                    {loading ? 'Sacing Changes...' : 'Save Profile Changes'}
+                                    {loading ? 'Saving Changes...' : 'Save Profile Changes'}
                                   </button>
                                 </div>
                               </form>
