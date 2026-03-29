@@ -28,34 +28,38 @@ const LiveOrderTracker = () => {
     fetchActiveOrder();
 
     if (socket) {
-      const handleOrderUpdate = (data) => {
+      const handleStatusUpdate = (data) => {
+        // If the update is for our current order, update it locally for instant feedback
         if (activeOrder && data.orderId === activeOrder._id) {
-            setActiveOrder(prev => ({ ...prev, status: data.status || prev.status }));
+          setActiveOrder(prev => ({ ...prev, status: data.status || prev.status }));
         } else {
-            fetchActiveOrder();
+          // If we don't have an active order loaded yet, or it's a different one, refresh
+          fetchActiveOrder();
         }
       };
 
-      socket.on('order:confirmed', handleOrderUpdate);
-      socket.on('order:preparing', handleOrderUpdate);
-      socket.on('order:ready', handleOrderUpdate);
-      socket.on('order:picked', () => {
-          setActiveOrder(prev => prev ? ({ ...prev, status: 'picked_up' }) : null);
-      });
+      socket.on('order:confirmed', (data) => handleStatusUpdate({ ...data, status: 'confirmed' }));
+      socket.on('order:preparing', (data) => handleStatusUpdate({ ...data, status: 'preparing' }));
+      socket.on('order:ready',     (data) => handleStatusUpdate({ ...data, status: 'ready' }));
+      socket.on('order:rider_assigned', (data) => handleStatusUpdate({ ...data, status: 'confirmed' })); // Show progress
+      socket.on('order:picked_up', (data) => handleStatusUpdate({ ...data, status: 'picked_up' }));
       socket.on('order:delivered', () => setActiveOrder(null));
       socket.on('order:cancelled', (data) => {
           if (activeOrder && data.orderId === activeOrder._id) setActiveOrder(null);
+          else fetchActiveOrder();
       });
 
       return () => {
         socket.off('order:confirmed');
         socket.off('order:preparing');
         socket.off('order:ready');
-        socket.off('order:picked');
+        socket.off('order:rider_assigned');
+        socket.off('order:picked_up');
         socket.off('order:delivered');
         socket.off('order:cancelled');
       };
     }
+    // Only re-run if socket changes; internal state updates handle the rest
   }, [socket, activeOrder?._id]);
 
   if (loading || !activeOrder) return null;

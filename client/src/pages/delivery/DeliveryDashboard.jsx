@@ -42,6 +42,15 @@ const DeliveryDashboard = () => {
     toast.success("An order is ready for pickup!");
   });
 
+  useSocketEvent('rider:stats_update', () => {
+    fetchData();
+    toast.success("Earnings Intel Updated! 🎉");
+  });
+
+  useSocketEvent('order:accepted_by_other', () => {
+    fetchData();
+  });
+
   const toggleAvailability = async () => {
     try {
       const res = await api.put('/delivery/toggle-availability');

@@ -88,6 +88,19 @@ const acceptOrder = asyncHandler(async (req, res) => {
     deliveryBoy.isAvailable = false;
     await deliveryBoy.save();
 
+    const io = req.app.get('io');
+    if (io) {
+      const studentRoom = `student:${order.studentId?._id || order.studentId}`;
+      const vendorRoom = `vendor:${order.vendorId?._id || order.vendorId}`;
+      
+      // Notify other riders to remove this from their radar
+      io.to('role:delivery').emit('order:accepted_by_other', { orderId: order._id });
+      
+      // Notify student & vendor
+      io.to(studentRoom).emit('order:rider_assigned', { orderId: order._id, riderName: req.user.name });
+      io.to(vendorRoom).emit('order:rider_assigned', { orderId: order._id, riderName: req.user.name });
+    }
+
     res.json(order);
   } else { res.status(400); throw new Error('Order not available for acceptance'); }
 });
@@ -171,6 +184,9 @@ const deliverOrder = asyncHandler(async (req, res) => {
       
       io.to(studentRoom).emit('order:delivered', { orderId: order._id, message: studentMsg });
       io.to(vendorRoom).emit('order:delivered', { orderId: order._id, message: vendorMsg });
+      
+      const riderRoom = `delivery:${req.user._id}`;
+      io.to(riderRoom).emit('rider:stats_update', { message: "Earnings Updated! 🎉" });
 
       await Notification.create({ recipient: order.studentId, message: studentMsg, type: 'order_update', orderId: order._id });
       await Notification.create({ recipient: order.vendorId, message: vendorMsg, type: 'order_update', orderId: order._id });
