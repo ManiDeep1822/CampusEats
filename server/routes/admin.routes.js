@@ -11,7 +11,9 @@ const {
   getDeliveryBoys,
   updateDeliveryStatus,
   getDashboardStats,
-  createUser
+  createUser,
+  deleteVendor,
+  deleteDeliveryBoy
 } = require('../controllers/admin.controller');
 
 // Apply middleware to all routes
@@ -27,10 +29,12 @@ router.route('/users/:id/role').put(updateUserRole);
 
 // Vendor routes
 router.route('/vendors').get(getVendors);
+router.route('/vendors/:id').delete(deleteVendor);
 router.route('/vendors/:id/status').put(updateVendorStatus);
 
 // Delivery routes
 router.route('/delivery').get(getDeliveryBoys);
+router.route('/delivery/:id').delete(deleteDeliveryBoy);
 router.route('/delivery/:id/status').put(updateDeliveryStatus);
 
 module.exports = router;

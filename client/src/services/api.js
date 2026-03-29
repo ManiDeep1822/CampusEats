@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { store } from '../store/store';
+import { terminateSession } from '../store/authSlice';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
@@ -22,8 +24,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('userInfo');
-      window.location.href = '/login';
+      const message = error.response.data?.message;
+      
+      if (message === 'Session expired: Logged in from another device') {
+        store.dispatch(terminateSession());
+      } else {
+        localStorage.removeItem('userInfo');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiShoppingBag, FiCheckCircle, FiXCircle, FiStar, FiArrowLeft, FiUserPlus, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiShoppingBag, FiCheckCircle, FiXCircle, FiStar, FiArrowLeft, FiUserPlus, FiEye, FiEyeOff, FiTrash2 } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -67,6 +67,18 @@ const ManageVendors = () => {
       setSelectedVendor(null);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Verification failed. Please check the OTP.');
+    }
+  };
+
+  const handleDeleteVendor = async (id) => {
+    if (window.confirm('Are you sure you want to completely remove this vendor account? This cannot be undone.')) {
+      try {
+        await api.delete(`/admin/vendors/${id}`);
+        toast.success('Vendor account removed successfully');
+        setVendors(vendors.filter(v => v._id !== id));
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Error deleting vendor');
+      }
     }
   };
 
@@ -173,24 +185,33 @@ const ManageVendors = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={() => handleToggleStatus(vendor._id, vendor.isApproved, vendor.userId?.isVerified, vendor.userId?.email)}
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm ${
-                          vendor.isApproved 
-                            ? 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 hover:scale-105' 
-                            : !vendor.userId?.isVerified
-                              ? 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 hover:scale-105'
-                              : 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:scale-105'
-                        }`}
-                      >
-                        {vendor.isApproved ? (
-                          <><FiCheckCircle size={14} /> Approved</>
-                        ) : !vendor.userId?.isVerified ? (
-                          <><FiXCircle size={14} /> Verify & Approve</>
-                        ) : (
-                          <><FiXCircle size={14} /> Needs Approval</>
-                        )}
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => handleToggleStatus(vendor._id, vendor.isApproved, vendor.userId?.isVerified, vendor.userId?.email)}
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm ${
+                            vendor.isApproved 
+                              ? 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 hover:scale-105' 
+                              : !vendor.userId?.isVerified
+                                ? 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 hover:scale-105'
+                                : 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:scale-105'
+                          }`}
+                        >
+                          {vendor.isApproved ? (
+                            <><FiCheckCircle size={14} /> Approved</>
+                          ) : !vendor.userId?.isVerified ? (
+                            <><FiXCircle size={14} /> Verify & Approve</>
+                          ) : (
+                            <><FiXCircle size={14} /> Needs Approval</>
+                          )}
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteVendor(vendor._id)}
+                          className="text-gray-400 hover:text-rose-500 p-2 rounded-full hover:bg-rose-50 transition-all"
+                          title="Delete Vendor"
+                        >
+                          <FiTrash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </motion.tr>
                 ))}

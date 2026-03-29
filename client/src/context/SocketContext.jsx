@@ -1,12 +1,14 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { io } from 'socket.io-client';
+import { terminateSession } from '../store/authSlice';
 
 const SocketContext = createContext();
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const { user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (user) {
@@ -15,6 +17,11 @@ export const SocketProvider = ({ children }) => {
       newSocket.on('connect', () => {
         console.log('Connected to socket');
         newSocket.emit('join_room', { userId: user._id, role: user.role });
+      });
+
+      newSocket.on('session-invalidated', (data) => {
+        console.warn('Session invalidated real-time:', data.message);
+        dispatch(terminateSession());
       });
 
       setSocket(newSocket);

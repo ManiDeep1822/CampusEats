@@ -177,8 +177,24 @@ const loginUser = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
-    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    // Single device logic: Increment tokenVersion to invalidate existing tokens
+    const oldTokenVersion = user.tokenVersion || 0;
+    user.tokenVersion = oldTokenVersion + 1;
     await user.save();
+
+    // PROACTIVE NOTIFICATION: Notify existing sessions to show the "Logged in elsewhere" popup
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`${user.role}:${user._id}`).emit('session-invalidated', { 
+          message: 'You have logged in from another device.',
+          timestamp: Date.now()
+        });
+      }
+    } catch (socketErr) {
+      console.warn('Non-critical: Failed to emit session-invalidation socket event:', socketErr.message);
+    }
+
     res.json({
       _id: user._id,
       name: user.name,
@@ -394,4 +410,3 @@ const resetPasswordWithOTP = asyncHandler(async (req, res) => {
 });
 
 module.exports = { registerUser, loginUser, getMe, refreshToken, logoutUser, changePassword, sendOTP, googleAuth, forgotPassword, resetPasswordWithOTP, verifyAccount };
-

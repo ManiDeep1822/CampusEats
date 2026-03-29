@@ -41,6 +41,46 @@ const deleteUser = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Delete a vendor and its user profile
+// @route   DELETE /api/admin/vendors/:id
+// @access  Private/Admin
+const deleteVendor = asyncHandler(async (req, res) => {
+  const vendor = await Vendor.findById(req.params.id);
+  
+  if (vendor) {
+    // 1. Delete associated user if found
+    if (vendor.userId) {
+      await User.findByIdAndDelete(vendor.userId);
+    }
+    // 2. Delete vendor record
+    await Vendor.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Vendor removed successfully' });
+  } else {
+    res.status(404);
+    throw new Error('Vendor not found');
+  }
+});
+
+// @desc    Delete a delivery boy and its user profile
+// @route   DELETE /api/admin/delivery/:id
+// @access  Private/Admin
+const deleteDeliveryBoy = asyncHandler(async (req, res) => {
+  const deliveryBoy = await DeliveryBoy.findById(req.params.id);
+  
+  if (deliveryBoy) {
+    // 1. Delete associated user if found
+    if (deliveryBoy.userId) {
+      await User.findByIdAndDelete(deliveryBoy.userId);
+    }
+    // 2. Delete delivery boy record
+    await DeliveryBoy.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Delivery personnel removed successfully' });
+  } else {
+    res.status(404);
+    throw new Error('Delivery personnel not found');
+  }
+});
+
 // @desc    Update user role
 // @route   PUT /api/admin/users/:id/role
 // @access  Private/Admin
@@ -248,5 +288,7 @@ module.exports = {
   getDeliveryBoys,
   updateDeliveryStatus,
   getDashboardStats,
-  createUser
+  createUser,
+  deleteVendor,
+  deleteDeliveryBoy
 };

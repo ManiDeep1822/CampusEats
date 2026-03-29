@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiTruck, FiCheckCircle, FiXCircle, FiArrowLeft, FiUserPlus, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiTruck, FiCheckCircle, FiXCircle, FiArrowLeft, FiUserPlus, FiEye, FiEyeOff, FiTrash2 } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -67,6 +67,18 @@ const ManageRiders = () => {
       setSelectedRider(null);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Verification failed. Please check the OTP.');
+    }
+  };
+
+  const handleDeleteRider = async (id) => {
+    if (window.confirm('Are you sure you want to completely remove this delivery personnel? This cannot be undone.')) {
+      try {
+        await api.delete(`/admin/delivery/${id}`);
+        toast.success('Rider account removed successfully');
+        setRiders(riders.filter(r => r._id !== id));
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Error deleting rider');
+      }
     }
   };
 
@@ -168,24 +180,33 @@ const ManageRiders = () => {
                       <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">{rider.vehicleNumber}</p>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={() => handleToggleStatus(rider._id, rider.isAvailable, rider.userId?.isVerified, rider.userId?.email)}
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm ${
-                          rider.isAvailable 
-                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 hover:scale-105' 
-                            : !rider.userId?.isVerified
-                              ? 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 hover:scale-105'
-                              : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100 hover:scale-105'
-                        }`}
-                      >
-                        {rider.isAvailable ? (
-                          <><FiCheckCircle size={14} /> Available / On-Duty</>
-                        ) : !rider.userId?.isVerified ? (
-                          <><FiXCircle size={14} /> Verify & Activate</>
-                        ) : (
-                          <><FiXCircle size={14} /> Off-Duty</>
-                        )}
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => handleToggleStatus(rider._id, rider.isAvailable, rider.userId?.isVerified, rider.userId?.email)}
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm ${
+                            rider.isAvailable 
+                              ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 hover:scale-105' 
+                              : !rider.userId?.isVerified
+                                ? 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 hover:scale-105'
+                                : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100 hover:scale-105'
+                          }`}
+                        >
+                          {rider.isAvailable ? (
+                            <><FiCheckCircle size={14} /> Available / On-Duty</>
+                          ) : !rider.userId?.isVerified ? (
+                            <><FiXCircle size={14} /> Verify & Activate</>
+                          ) : (
+                            <><FiXCircle size={14} /> Off-Duty</>
+                          )}
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteRider(rider._id)}
+                          className="text-gray-400 hover:text-rose-500 p-2 rounded-full hover:bg-rose-50 transition-all"
+                          title="Delete Rider account"
+                        >
+                          <FiTrash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </motion.tr>
                 ))}

@@ -1,11 +1,59 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiAlertCircle } from 'react-icons/fi';
+import { logout } from './store/authSlice';
 import SwipeableToaster from './components/shared/SwipeableToaster';
 import Navbar from './components/shared/Navbar';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 import GlobalNotificationListener from './components/shared/GlobalNotificationListener';
 import CampusEatsAI from './components/shared/CampusEatsAI';
 import PageLoader from './components/shared/PageLoader';
+
+const SessionTerminatedModal = () => {
+  const { isSessionTerminated } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const handleClose = () => {
+    dispatch(logout());
+    navigate('/login');
+  };
+
+  return (
+    <AnimatePresence>
+      {isSessionTerminated && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center border border-orange-100"
+          >
+            <div className="w-20 h-20 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FiAlertCircle size={40} />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Logged in Elsewhere</h2>
+            <p className="text-gray-500 mb-8 leading-relaxed">
+              Your session has ended because you logged in from another device. 
+              <br/><br/>
+              To continue using CampusEats here, please log in again.
+            </p>
+
+            <button 
+              onClick={handleClose}
+              className="w-full py-4 bg-primary text-white font-bold rounded-2xl hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/30 active:scale-95"
+            >
+              Okay, I understand
+            </button>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
 
 // Lazy load pages
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -46,6 +94,7 @@ function App() {
     <div className="min-h-screen bg-background text-textPrimary font-sans">
         <SwipeableToaster />
         <GlobalNotificationListener />
+        <SessionTerminatedModal />
         <Navbar />
         <CampusEatsAI />
         <Suspense fallback={<PageLoader />}>
