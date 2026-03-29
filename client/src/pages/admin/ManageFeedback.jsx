@@ -174,7 +174,7 @@ const ManageFeedback = () => {
                       </h3>
                       
                       <p className="text-gray-600 leading-relaxed italic border-l-4 border-gray-100 pl-4 py-1 my-3">
-                        "{f.message}"
+                        &quot;{f.message}&quot;
                       </p>
 
                       {f.isReplied && (
@@ -251,7 +251,7 @@ const ManageFeedback = () => {
                       <FiUser /> Original Message from {selectedFeedback.name}
                     </div>
                     <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-gray-600 text-sm italic">
-                      "{selectedFeedback.message}"
+                      &quot;{selectedFeedback.message}&quot;
                     </div>
                   </div>
 

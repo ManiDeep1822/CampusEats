@@ -179,7 +179,7 @@ const CartPage = () => {
       <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 text-center">
         <div className="text-6xl mb-4">🛒</div>
         <h2 className="text-2xl font-bold font-heading mb-2">Your cart is empty</h2>
-        <p className="text-textSecondary mb-6">Looks like you haven't added anything yet.</p>
+        <p className="text-textSecondary mb-6">Looks like you haven&apos;t added anything yet.</p>
         <Link to="/student/home" className="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-orange-600 transition">Browse Restaurants</Link>
       </div>
     );

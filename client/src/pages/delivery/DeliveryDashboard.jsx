@@ -101,7 +101,7 @@ const DeliveryDashboard = () => {
       {/* INDUSTRIAL STATS */}
       <div className="max-w-md mx-auto -mt-6 px-4 grid grid-cols-2 gap-4">
         <div className="bg-white p-5 rounded-[2rem] shadow-xl border border-gray-100 flex flex-col items-center justify-center text-center">
-            <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Today's Earnings</p>
+            <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Today&apos;s Earnings</p>
             <p className="text-3xl font-black text-green-600 tracking-tighter">₹{data.stats.earnings}</p>
         </div>
         <div className="bg-white p-5 rounded-[2rem] shadow-xl border border-gray-100 flex flex-col items-center justify-center text-center">

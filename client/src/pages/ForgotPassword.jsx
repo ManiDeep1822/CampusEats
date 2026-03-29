@@ -34,8 +34,8 @@ const ForgotPassword = () => {
         </div>
         
         <h2 className="text-3xl font-heading font-bold text-center text-textPrimary mb-4">Forgot Password?</h2>
-        <p className="text-center text-textSecondary mb-8">
-          No worries! Enter your email address and we'll send you a 6-digit code to reset your password.
+        <p className="text-gray-500 mb-8 whitespace-pre-wrap">
+          Enter the email address you used when you joined and we&apos;ll send you a temporary password.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">

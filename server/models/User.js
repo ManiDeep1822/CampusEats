@@ -24,6 +24,21 @@ const userSchema = new mongoose.Schema({
   campusId: { type: String, sparse: true, unique: true },
   favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' }],
   pushSubscription: { type: Object },
+  dietaryPreference: { 
+    type: String, 
+    enum: ['veg', 'non-veg', 'both'], 
+    default: 'both' 
+  },
+  allergies: [{ type: String }],
+  notificationSettings: {
+    email: { type: Boolean, default: true },
+    push: { type: Boolean, default: false }
+  },
+  provider: { 
+    type: String, 
+    enum: ['local', 'google'], 
+    default: 'local' 
+  },
   tokenVersion: { type: Number, default: 0 }
 }, { timestamps: true });
 

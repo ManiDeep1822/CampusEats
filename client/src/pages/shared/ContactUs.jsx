@@ -42,7 +42,7 @@ const ContactUs = () => {
           <div>
             <h2 className="text-3xl font-extrabold font-heading mb-4">Get in Touch</h2>
             <p className="text-orange-100 mb-8 opacity-90">
-              Have a question about an order? Want to list your restaurant? Or simply found a bug? We'd love to hear from you.
+              Have a question about an order? Want to list your restaurant? Or simply found a bug? We&apos;d love to hear from you.
             </p>
             
             <div className="space-y-6">

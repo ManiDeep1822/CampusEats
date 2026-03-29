@@ -3,7 +3,7 @@ const DeliveryBoy = require('../models/DeliveryBoy');
 const Order = require('../models/Order');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
-const webpush = require('../utils/webpush');
+const { sendPushNotification, sendOrderReceiptEmail } = require('../utils/notification.utils');
 
 const getMyDeliveryId = async (userId) => {
   const boy = await DeliveryBoy.findOne({ userId });
@@ -85,6 +85,9 @@ const pickUpOrder = asyncHandler(async (req, res) => {
         orderId: order._id
       });
       io.to(studentRoom).emit('notification', notification);
+
+      // --- NEW: Mobile Bar Alert ---
+      sendPushNotification(order.studentId, "Out for Delivery! 🛵", "Your rider has picked up your food and is on the way.", order._id);
     }
     
     res.json(order);
@@ -142,31 +145,9 @@ const deliverOrder = asyncHandler(async (req, res) => {
       io.to(vendorRoom).emit('notification', vendorNotif);
     }
 
-    // --- NEW: Multi-Channel Delivery Status (Push) ---
-    // (Email Receipt workflow removed per user request)
-
-    // 2. Send Web Push Notification
-    if (order.studentId?.pushSubscription) {
-      console.log(`🫸 Sending Web Push to student: ${order.studentId._id}`);
-      const pushPayload = JSON.stringify({
-        title: 'Order Delivered! 🎉',
-        body: `Enjoy your meal from ${order.vendorId?.shopName || 'CampusEats'}!`,
-        icon: '/logo192.png',
-        data: {
-            url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/student/orders`,
-            orderId: order._id
-        }
-      });
-
-      webpush.sendNotification(order.studentId.pushSubscription, pushPayload)
-        .then(() => console.log('✅ Web Push delivered successfully'))
-        .catch(err => {
-            console.error('❌ Web Push FAILED:', err.message);
-            if (err.statusCode === 410 || err.statusCode === 404) {
-                User.findByIdAndUpdate(order.studentId._id, { $unset: { pushSubscription: 1 } }).exec();
-            }
-        });
-    }
+    // --- NEW: Multi-Channel Delivery Status (Push & Email) ---
+    sendPushNotification(order.studentId?._id || order.studentId, "Order Delivered! 🎉", `Enjoy your meal from ${order.vendorId?.shopName || 'CampusEats'}!`, order._id);
+    sendOrderReceiptEmail(order.studentId?._id || order.studentId, order._id);
 
     res.json(order);
   } else { 

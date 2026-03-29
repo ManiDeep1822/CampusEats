@@ -3,10 +3,9 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiSearch, FiClock, FiStar, FiHeart } from 'react-icons/fi';
 import api from '../../services/api';
-import Loader from '../../components/shared/Loader';
 import { toast } from 'react-hot-toast';
 import CartFloatingButton from '../../components/student/CartFloatingButton';
-
+import SkeletonLoader from '../../components/shared/SkeletonLoader';
 
 const StudentHome = () => {
   const [vendors, setVendors] = useState([]);
@@ -23,14 +22,15 @@ const StudentHome = () => {
       } catch (error) {
         console.error(error);
       } finally {
-        setLoading(false);
+        // Add a tiny artificial delay to appreciate the beautiful skeleton loaders!
+        setTimeout(() => setLoading(false), 800);
       }
     };
     const fetchFavs = async () => {
       try {
         const { data } = await api.get('/student/favorites');
         setFavorites(data.map(f => f._id || f));
-      } catch(e) { console.error('Failed to fetch stats', e); }
+      } catch(e) { console.error('Failed to fetch favs', e); }
     };
     fetchVendors();
     fetchFavs();
@@ -52,10 +52,8 @@ const StudentHome = () => {
     return matchesSearch;
   });
 
-  if (loading) return <Loader />;
-
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 mt-[1rem]">
       <div className="relative pt-16 pb-24 px-4 overflow-hidden border-b border-gray-100">
         <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-rose-50 -z-10"></div>
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full mix-blend-multiply blur-3xl animate-blob pointer-events-none opacity-50"></div>
@@ -81,60 +79,80 @@ const StudentHome = () => {
         
         {/* View Toggle Tabs */}
         <div className="flex flex-wrap justify-center gap-4 mb-8">
-          <button 
+          <motion.button 
+            whileTap={{ scale: 0.95 }}
             onClick={() => setFilterMode('all')} 
             className={`px-6 py-2.5 rounded-full text-base font-extrabold shadow-sm transition-all duration-300 ${filterMode === 'all' ? 'bg-primary text-white scale-105' : 'bg-white text-gray-500 hover:bg-orange-50'}`}
           >
             All Campus Spots
-          </button>
-          <button 
+          </motion.button>
+          <motion.button 
+            whileTap={{ scale: 0.95 }}
             onClick={() => setFilterMode('favorites')} 
             className={`px-6 py-2.5 rounded-full text-base font-extrabold shadow-sm transition-all duration-300 flex items-center gap-2 ${filterMode === 'favorites' ? 'bg-rose-500 text-white scale-105 shadow-rose-200' : 'bg-white text-gray-500 hover:bg-rose-50'}`}
           >
             <FiHeart className={filterMode === 'favorites' ? 'fill-white text-white' : 'text-rose-400'} /> 
             My Favorites
-          </button>
+          </motion.button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-          {filteredVendors.map((vendor, idx) => (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} key={vendor._id} className="bg-white rounded-[2rem] overflow-hidden shadow-lg shadow-slate-200/40 hover:shadow-2xl hover:shadow-orange-500/10 hover:-translate-y-1.5 transition-all duration-300 border border-gray-100 group">
-              <Link to={`/student/restaurant/${vendor._id}`} className="block relative">
-                <div className="h-48 bg-slate-50 relative overflow-hidden border-b border-gray-100 flex items-center justify-center p-2">
-                  {vendor.shopImage ? (
-                    <img src={vendor.shopImage} alt={vendor.shopName} className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-500 rounded-lg shadow-sm" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-tr from-gray-200 to-gray-100 flex items-center justify-center text-gray-400 group-hover:scale-105 transition-transform duration-500"><span className="text-5xl">🏪</span></div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  
-                  <div className="absolute top-3 left-3 flex flex-col gap-2">
-                    {vendor.isOpen ? (
-                      <span className="bg-white/90 backdrop-blur-sm text-accent px-3 py-1 rounded-full text-[10px] font-bold shadow-sm tracking-wider uppercase">OPEN</span>
+        {loading ? (
+          <SkeletonLoader count={8} />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {filteredVendors.map((vendor, idx) => (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                whileHover={{ y: -5 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.3 }}
+                key={vendor._id} 
+                className="bg-white rounded-[2rem] overflow-hidden shadow-lg shadow-slate-200/40 hover:shadow-2xl hover:shadow-orange-500/10 transition-all duration-300 border border-gray-100 group"
+              >
+                <Link to={`/student/restaurant/${vendor._id}`} className="block relative">
+                  <div className="h-48 bg-slate-50 relative overflow-hidden border-b border-gray-100 flex items-center justify-center p-2">
+                    {vendor.shopImage ? (
+                      <img src={vendor.shopImage} alt={vendor.shopName} className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-500 rounded-lg shadow-sm" />
                     ) : (
-                      <span className="bg-white/90 backdrop-blur-sm text-red-500 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm tracking-wider uppercase">CLOSED</span>
+                      <div className="w-full h-full bg-gradient-to-tr from-gray-200 to-gray-100 flex items-center justify-center text-gray-400 group-hover:scale-105 transition-transform duration-500"><span className="text-5xl">🏪</span></div>
                     )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    
+                    <div className="absolute top-3 left-3 flex flex-col gap-2">
+                      {vendor.isOpen ? (
+                        <span className="bg-white/90 backdrop-blur-sm text-accent px-3 py-1 rounded-full text-[10px] font-bold shadow-sm tracking-wider uppercase">OPEN</span>
+                      ) : (
+                        <span className="bg-white/90 backdrop-blur-sm text-red-500 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm tracking-wider uppercase">CLOSED</span>
+                      )}
+                    </div>
+                    
+                    <motion.button 
+                      whileTap={{ scale: 0.8 }}
+                      onClick={(e) => toggleFav(e, vendor._id)} 
+                      className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm hover:scale-110 hover:bg-white transition-all z-10"
+                    >
+                      <FiHeart className={`text-xl ${favorites.includes(vendor._id) ? 'fill-rose-500 text-rose-500' : 'text-gray-400'}`} />
+                    </motion.button>
                   </div>
                   
-                  <button onClick={(e) => toggleFav(e, vendor._id)} className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm hover:scale-110 hover:bg-white transition-all z-10">
-                    <FiHeart className={`text-xl ${favorites.includes(vendor._id) ? 'fill-rose-500 text-rose-500' : 'text-gray-400'}`} />
-                  </button>
-                </div>
-                
-                <div className="p-6 relative bg-white">
-                  <div className="flex justify-between items-start mb-3">
-                    <h2 className="text-2xl font-bold font-heading text-textPrimary group-hover:text-primary transition-colors truncate pr-2">{vendor.shopName}</h2>
-                    <div className="flex items-center bg-orange-50 px-2.5 py-1 rounded-lg text-primary font-bold text-sm border border-orange-100 shrink-0">
-                      <FiStar className="mr-1 fill-primary" /> {vendor.rating.toFixed(1)}
+                  <div className="p-6 relative bg-white min-h-[160px]">
+                    <div className="flex justify-between items-start gap-2 mb-3 h-16">
+                      <h2 className="text-2xl font-bold font-heading text-textPrimary group-hover:text-primary transition-colors line-clamp-2 leading-tight flex-1">
+                        {vendor.shopName}
+                      </h2>
+                      <div className="flex items-center bg-orange-50 px-2.5 py-1 rounded-lg text-primary font-bold text-sm border border-orange-100 shrink-0">
+                        <FiStar className="mr-1 fill-primary" /> {vendor.rating.toFixed(1)}
+                      </div>
                     </div>
+                    <p className="text-textSecondary text-sm mb-4 line-clamp-1 h-5">{vendor.cuisineType.join(', ')}</p>
+                    <div className="flex items-center text-textSecondary text-sm"><FiClock className="mr-2 shrink-0" /> 20-30 min • {vendor.location}</div>
                   </div>
-                  <p className="text-textSecondary text-sm mb-4 truncate">{vendor.cuisineType.join(', ')}</p>
-                  <div className="flex items-center text-textSecondary text-sm"><FiClock className="mr-2 shrink-0" /> 20-30 min • {vendor.location}</div>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        )}
         {filteredVendors.length === 0 && (
           <div className="text-center py-24 bg-white/50 backdrop-blur-md rounded-3xl border border-gray-100 shadow-sm mt-8 max-sm:mx-4">
             <span className="text-6xl mb-4 block">{filterMode === 'favorites' ? '💔' : '🍽️'}</span>

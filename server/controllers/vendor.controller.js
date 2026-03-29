@@ -4,15 +4,20 @@ const Vendor = require('../models/Vendor');
 const Order = require('../models/Order');
 const MenuItem = require('../models/MenuItem');
 const Notification = require('../models/Notification');
+const { sendPushNotification } = require('../utils/notification.utils');
 const webpush = require('web-push');
 
 // Guard against missing VAPID keys to prevent crashing on startup
 if (process.env.VAPID_EMAIL && process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(
-    `mailto:${process.env.VAPID_EMAIL}`,
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  );
+  try {
+    webpush.setVapidDetails(
+      `mailto:${process.env.VAPID_EMAIL}`,
+      process.env.VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    );
+  } catch (err) {
+    console.error('Error setting VAPID details:', err.message);
+  }
 } else {
   console.warn('⚠️  VAPID keys not configured — web push notifications will be disabled.');
 }
@@ -138,7 +143,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     if (status) order.status = status;
     if (prepTime) order.estimatedTime = prepTime;
     
-    await order.save();
+    await order.save(); // Persist changes
     
     const io = req.app.get('io');
     if (io) {
@@ -160,23 +165,33 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       // --- NEW: Real-time Socket Emission ---
       io.to(`student:${order.studentId}`).emit('notification', notification);
       
+      // --- NEW: Push Notification Support ---
+      if (['confirmed', 'preparing', 'ready'].includes(status)) {
+        const statusTitles = {
+          confirmed: "Order Confirmed! 🎉",
+          preparing: "Preparing Your Food! 🍳",
+          ready: "Order Ready! 🛍️"
+        };
+        const statusBodies = {
+          confirmed: "The vendor has accepted your order.",
+          preparing: "The chef is cooking your meal.",
+          ready: "Your order is ready and waiting for a rider."
+        };
+
+        sendPushNotification(
+          order.studentId, 
+          `CampusEats: ${statusTitles[status]}`, 
+          statusBodies[status], 
+          order._id
+        );
+      }
+      
       if (status === 'ready') {
         const populatedOrder = await Order.findById(order._id).populate('vendorId');
         const vendorName = populatedOrder.vendorId?.shopName || 'Campus Spot';
         
         // --- FIX: Targeted broadcast to all DELIVER boys only, not everyone ---
         io.to('role:delivery').emit('order:ready', { orderId: order._id, message: `🛵 An order is ready for pickup at ${vendorName}` });
-        
-        const student = await User.findById(order.studentId);
-        if (student && student.pushSubscription) {
-          const payload = JSON.stringify({
-            title: 'CampusEats: Order Ready! 🛍️',
-            body: `Fresh and hot! Your order from ${vendorName} is ready for pickup.`,
-            icon: '/pwa-icon.svg',
-            data: { url: `/student/tracking/${order._id}` }
-          });
-          webpush.sendNotification(student.pushSubscription, payload).catch(err => console.error('Push error:', err));
-        }
       }
     }
     

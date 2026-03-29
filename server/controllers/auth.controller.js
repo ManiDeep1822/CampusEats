@@ -409,4 +409,118 @@ const resetPasswordWithOTP = asyncHandler(async (req, res) => {
   res.json({ message: 'Password reset successfully! You can now login with your new password.' });
 });
 
-module.exports = { registerUser, loginUser, getMe, refreshToken, logoutUser, changePassword, sendOTP, googleAuth, forgotPassword, resetPasswordWithOTP, verifyAccount };
+// @desc    Update User Profile
+// @route   PUT /api/auth/profile
+// @access  Private
+const updateProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (user) {
+    user.name = req.body.name || user.name;
+    user.phone = req.body.phone || user.phone;
+    user.dietaryPreference = req.body.dietaryPreference || user.dietaryPreference;
+    user.allergies = req.body.allergies || user.allergies;
+    if (req.body.profilePic !== undefined) {
+      user.profilePic = req.body.profilePic;
+    }
+    
+    if (req.body.notificationSettings) {
+      user.notificationSettings = {
+        ...user.notificationSettings,
+        ...req.body.notificationSettings
+      };
+    }
+
+    if (req.body.pushSubscription) {
+      user.pushSubscription = req.body.pushSubscription;
+    }
+
+    const updatedUser = await user.save();
+    res.json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      phone: updatedUser.phone,
+      profilePic: updatedUser.profilePic,
+      role: updatedUser.role,
+      dietaryPreference: updatedUser.dietaryPreference,
+      allergies: updatedUser.allergies,
+      notificationSettings: updatedUser.notificationSettings,
+      savedAddresses: updatedUser.savedAddresses,
+      provider: updatedUser.provider
+    });
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
+});
+
+// @desc    Add Saved Address
+// @route   POST /api/auth/profile/address
+// @access  Private
+const addAddress = asyncHandler(async (req, res) => {
+  const { tag, address, isDefault } = req.body;
+  const user = await User.findById(req.user._id);
+
+  if (user) {
+    if (isDefault) {
+      user.savedAddresses.forEach(a => a.isDefault = false);
+    }
+    user.savedAddresses.push({ tag, address, isDefault });
+    await user.save();
+    res.status(201).json(user.savedAddresses);
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
+});
+
+// @desc    Remove Saved Address
+// @route   DELETE /api/auth/profile/address/:id
+// @access  Private
+const removeAddress = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (user) {
+    user.savedAddresses = user.savedAddresses.filter(a => a._id.toString() !== req.params.id);
+    await user.save();
+    res.json(user.savedAddresses);
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
+});
+
+// @desc    Set Default Address
+// @route   PUT /api/auth/profile/address/:id/default
+// @access  Private
+const setDefaultAddress = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (user) {
+    user.savedAddresses.forEach(a => {
+      a.isDefault = a._id.toString() === req.params.id;
+    });
+    await user.save();
+    res.json(user.savedAddresses);
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
+});
+
+module.exports = { 
+  registerUser, 
+  loginUser, 
+  getMe, 
+  refreshToken, 
+  logoutUser, 
+  changePassword, 
+  sendOTP, 
+  googleAuth, 
+  forgotPassword, 
+  resetPasswordWithOTP, 
+  verifyAccount,
+  updateProfile,
+  addAddress,
+  removeAddress,
+  setDefaultAddress
+};

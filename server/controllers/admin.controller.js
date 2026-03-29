@@ -213,21 +213,43 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 const createUser = asyncHandler(async (req, res) => {
   const { name, email, password, role, phone, shopName, location, vehicleType } = req.body;
 
-  const userExists = await User.findOne({ email });
-  if (userExists) {
-    res.status(400); throw new Error('User already exists');
-  }
-
-  // Create user with isVerified: false (mandatory onboarding)
-  const user = await User.create({ 
-    name, email, password, role: role || 'student', phone, isVerified: false 
-  });
+  let user = await User.findOne({ email });
 
   if (user) {
+    if (user.isVerified) {
+      res.status(400); 
+      throw new Error('User with this email already exists and is already verified.');
+    }
+    
+    // IF USER EXISTS BUT IS NOT VERIFIED: Update their details and proceed to resend OTP
+    user.name = name || user.name;
+    user.phone = phone || user.phone;
+    user.password = password || user.password; // This will trigger the pre-save hash if changed
+    user.role = role || user.role;
+    await user.save();
+    
+    console.log(`♻️ Resuming onboarding for unverified user: ${email}`);
+  } else {
+    // CREATE NEW USER (Initially unverified)
+    user = await User.create({ 
+      name, email, password, role: role || 'student', phone, isVerified: false 
+    });
+  }
+
+  if (user) {
+    // 2. Ensure secondary profile exists
     if (user.role === 'vendor') {
-      await Vendor.create({ userId: user._id, shopName: shopName || `${name}'s Shop`, location: location || 'Campus', cuisineType: [] });
+      await Vendor.findOneAndUpdate(
+        { userId: user._id },
+        { shopName: shopName || `${name}'s Shop`, location: location || 'Campus' },
+        { upsert: true }
+      );
     } else if (user.role === 'delivery') {
-      await DeliveryBoy.create({ userId: user._id, vehicleType: vehicleType || 'Bicycle' });
+      await DeliveryBoy.findOneAndUpdate(
+        { userId: user._id },
+        { vehicleType: vehicleType || 'Bicycle' },
+        { upsert: true }
+      );
     }
 
     // --- NEW: WELCOME OTP & EMAIL FLOW ---
@@ -240,27 +262,52 @@ const createUser = asyncHandler(async (req, res) => {
 
     const message = `Welcome to CampusEats, ${name}! Your account has been created by the administrator. Please use the following code to verify your account: ${otpCode}`;
     const html = `
-      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
-        <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 40px 20px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px;">CampusEats</h1>
-          <p style="color: #ffedd5; font-size: 16px; margin-top: 8px; font-weight: 400;">Welcome to the Team!</p>
+      <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
+        <div style="background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 1px solid #eef2f6;">
+          
+          <!-- Header with Premium Gradient -->
+          <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 50px 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 36px; font-weight: 900; letter-spacing: -1.5px;">CampusEats</h1>
+            <p style="color: rgba(255,255,255,0.9); font-size: 18px; margin-top: 10px; font-weight: 500;">Your Premium Partner Dashboard</p>
+          </div>
+
+          <div style="padding: 40px 35px;">
+            <h2 style="color: #0f172a; font-size: 26px; font-weight: 800; margin-bottom: 20px; letter-spacing: -0.5px;">Welcome to the Team, ${name}!</h2>
+            <p style="color: #475569; font-size: 17px; line-height: 1.7; margin-bottom: 35px;">
+              Your <strong>${role}</strong> account has been successfully provisioned by the CampusEats administrators. You're just one step away from joining our exclusive network!
+            </p>
+
+            <!-- Credentials Card -->
+            <div style="background-color: #f0f4f8; border-radius: 20px; padding: 25px; margin-bottom: 35px; border: 1px dashed #cbd5e1;">
+              <p style="margin: 0 0 10px 0; color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Temporary Login Details</p>
+              <div style="background-color: #ffffff; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0;">
+                <p style="margin: 0 0 10px 0; color: #1e293b; font-size: 15px;">Email: <strong style="color: #000000;">${email}</strong></p>
+                <p style="margin: 0; color: #1e293b; font-size: 15px;">Password: <strong style="color: #000000;">${password}</strong></p>
+              </div>
+            </div>
+
+            <p style="color: #0f172a; font-size: 16px; margin-bottom: 20px; font-weight: 700;">Account Verification Code:</p>
+            
+            <!-- OTP Visualization -->
+            <div style="background: linear-gradient(to right, #fff7ed, #ffffff); border-radius: 20px; padding: 35px; text-align: center; border: 2px solid #ffedd5; box-shadow: 0 10px 30px rgba(249, 115, 22, 0.08);">
+              <h1 style="margin: 0; font-size: 52px; font-weight: 900; color: #f97316; letter-spacing: 10px; text-shadow: 0 5px 15px rgba(249, 115, 22, 0.15);">${otpCode}</h1>
+              <p style="color: #94a3b8; font-size: 14px; margin-top: 25px; font-weight: 500;">
+                ⏳ <strong>Security Note:</strong> This code expires in exactly 5 minutes.
+              </p>
+            </div>
+
+            <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #f1f5f9; text-align: center;">
+              <p style="color: #94a3b8; font-size: 12px; line-height: 1.5;">
+                If you did not expect this invitation, please contact our support team immediately. 
+                Keep your temporary credentials safe and change your password upon your first successful login.
+              </p>
+            </div>
+          </div>
         </div>
-        <div style="padding: 40px 30px; text-align: center;">
-          <h2 style="color: #1e293b; font-size: 24px; font-weight: 700; margin-bottom: 20px;">Activate Your Account</h2>
-          <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
-            Hello ${name}, your ${role} account has been successfully created. Use the temporary credentials below to get started:
-          </p>
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 30px;">
-            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px;">Email: <strong>${email}</strong></p>
-            <p style="margin: 0; color: #64748b; font-size: 14px;">Password: <strong>${password}</strong></p>
-          </div>
-          <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">Your 6-digit verification code:</p>
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; margin: 0 auto; max-width: 300px;">
-            <h1 style="margin: 0; font-size: 42px; font-weight: 700; color: #f97316; letter-spacing: 8px;">${otpCode}</h1>
-          </div>
-          <p style="color: #94a3b8; font-size: 13px; margin-top: 30px; font-weight: 500;">
-            ⏳ Please verify within 5 minutes.
-          </p>
+        
+        <!-- Clipping Prevention Signature -->
+        <div style="display: none; height: 1px; color: transparent; line-height: 1px;">
+          invitation_ref_${Date.now()}_${Math.random().toString(36).substring(7)}
         </div>
       </div>
     `;

@@ -306,7 +306,7 @@ const ActiveDelivery = () => {
                 {['placed', 'confirmed', 'preparing'].includes(data.status) && (
                     <div className="space-y-3">
                         {!data.arrivedAtVendorAt ? (
-                            <button onClick={handleArrive} className="w-full bg-slate-800 text-white py-4 rounded-2xl font-black text-sm tracking-widest uppercase hover:bg-slate-700 transition-all active:scale-95 border-b-2 border-primary">Confirm I've Arrived</button>
+                            <button onClick={handleArrive} className="w-full bg-slate-800 text-white py-4 rounded-2xl font-black text-sm tracking-widest uppercase hover:bg-slate-700 transition-all active:scale-95 border-b-2 border-primary">Confirm I&apos;ve Arrived</button>
                         ) : (
                             <div className="w-full bg-slate-800 text-slate-400 py-4 rounded-2xl font-black flex items-center justify-between px-6 border-l-4 border-primary">
                                 <span className="text-[10px] tracking-widest uppercase">Waiting at Vendor</span>

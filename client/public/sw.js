@@ -1,3 +1,4 @@
+/* global clients */
 self.addEventListener('push', (event) => {
   const data = event.data.json();
   const options = {

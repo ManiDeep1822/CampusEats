@@ -77,8 +77,14 @@ const CampusEatsAI = () => {
       const { data } = await api.post('/bot/query', { message: userMsg });
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', text: data.reply }]);
     } catch (error) {
-      const errMsg = error.response?.data?.reply || "I'm having trouble connecting to my brain right now. Please try again!";
+      const errMsg = error.response?.data?.reply || "I'm having trouble connecting to my brain right now. Please try again in 1 minute!";
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', text: errMsg }]);
+      
+      // If rate limited, add a longer pause
+      if (error.response?.status === 429) {
+          setTimeout(() => setIsLoading(false), 5000); 
+          return;
+      }
     } finally {
       setIsLoading(false);
     }
