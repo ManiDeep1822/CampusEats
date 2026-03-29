@@ -132,7 +132,7 @@ const registerUser = asyncHandler(async (req, res) => {
       });
     }
 
-    user.tokenVersion += 1;
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
     await user.save();
     const token = generateToken(user._id, user.tokenVersion);
 
@@ -177,7 +177,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
-    user.tokenVersion += 1;
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
     await user.save();
     res.json({
       _id: user._id,
@@ -235,7 +235,7 @@ const googleAuth = asyncHandler(async (req, res) => {
       // User exists, update profile picture and name if they've changed
       user.name = name || user.name;
       user.profilePic = picture || user.profilePic;
-      user.tokenVersion += 1;
+      user.tokenVersion = (user.tokenVersion || 0) + 1;
       await user.save();
 
       res.status(200).json({
@@ -260,7 +260,7 @@ const googleAuth = asyncHandler(async (req, res) => {
       });
 
       if (user) {
-        user.tokenVersion += 1;
+        user.tokenVersion = (user.tokenVersion || 0) + 1;
         await user.save();
         
         res.status(201).json({

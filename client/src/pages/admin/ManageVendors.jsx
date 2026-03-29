@@ -247,7 +247,27 @@ const ManageVendors = () => {
                   >
                     {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                   </button>
-                  {/* OTP Verification Modal */}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t mt-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Shop Name</label>
+                  <input type="text" required value={formData.shopName} onChange={e => setFormData({...formData, shopName: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Campus Location</label>
+                  <input type="text" required value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
+                </div>
+              </div>
+              <button type="submit" className="w-full py-3 mt-6 bg-primary text-white font-bold rounded-xl hover:bg-orange-600 transition shadow-lg shadow-orange-500/30">
+                Grant Vendor Access
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* OTP Verification Modal */}
       {showOtpModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center">
@@ -284,25 +304,6 @@ const ManageVendors = () => {
                   Verify & Approve
                 </button>
               </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-    </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t mt-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Shop Name</label>
-                  <input type="text" required value={formData.shopName} onChange={e => setFormData({...formData, shopName: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Campus Location</label>
-                  <input type="text" required value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
-                </div>
-              </div>
-              <button type="submit" className="w-full py-3 mt-6 bg-primary text-white font-bold rounded-xl hover:bg-orange-600 transition shadow-lg shadow-orange-500/30">
-                Grant Vendor Access
-              </button>
             </form>
           </motion.div>
         </div>
