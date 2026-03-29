@@ -166,7 +166,7 @@ const GlobalNotificationListener = () => {
         });
       };
     }
-  }, [socket, isAuthenticated, dispatch]);
+  }, [socket, isAuthenticated, dispatch, user?.role, location.pathname]);
 
   return null; // Invisible component
 };

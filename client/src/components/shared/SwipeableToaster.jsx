@@ -6,11 +6,11 @@ const SwipeableToaster = () => {
   const { toasts, handlers } = useToaster();
   const { startPause, endPause } = handlers;
   
-  // For collective swipe logic (still available at the bottom area)
+  // For collective swipe logic
   const groupY = useMotionValue(0);
   const groupOpacity = useTransform(groupY, [-150, 0], [0, 1]);
 
-  // Limit visible toasts to 3 to prevent screen clutter
+  // Limit visible toasts to 3 for performance and UI clarity
   const visibleToasts = toasts.slice(0, 3);
   const remainingCount = toasts.length - 3;
 
@@ -59,7 +59,6 @@ const SwipeableToaster = () => {
         <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', height: '80px' }}>
           <AnimatePresence mode="popLayout">
             {visibleToasts.map((t, index) => {
-              // Calculate stack offsets (index 0 is newest/front)
               const scale = 1 - index * 0.05;
               const yOffset = index * 12;
               const zIndex = 100 - index;
@@ -69,16 +68,16 @@ const SwipeableToaster = () => {
                 <motion.div
                   key={t.id}
                   layout
-                  initial={{ opacity: 0, y: -60, scale: 0.8, filter: 'blur(10px)' }}
+                  // Performance: Removed 'filter: blur()'
+                  initial={{ opacity: 0, y: -60, scale: 0.8 }}
                   animate={{ 
                     opacity: opacity, 
                     y: yOffset, 
                     scale: scale, 
                     zIndex: zIndex,
-                    filter: 'blur(0px)',
                     transition: { 
                       type: 'spring', 
-                      stiffness: 400, 
+                      stiffness: 350, 
                       damping: 30,
                     } 
                   }}
@@ -86,8 +85,7 @@ const SwipeableToaster = () => {
                     opacity: 0, 
                     y: -80, 
                     scale: 0.9, 
-                    filter: 'blur(15px)',
-                    transition: { duration: 0.2 } 
+                    transition: { duration: 0.2, ease: "easeIn" } 
                   }}
                   whileHover={index === 0 ? { scale: 1.02, y: -2 } : {}}
                   whileTap={index === 0 ? { scale: 0.98 } : {}}
@@ -102,8 +100,8 @@ const SwipeableToaster = () => {
                   style={{
                     position: 'absolute',
                     cursor: index === 0 ? 'grab' : 'default',
-                    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                    backdropFilter: 'blur(20px)',
+                    // Performance: Using high-opacity solid color instead of backdropFilter: blur()
+                    backgroundColor: 'white',
                     boxShadow: index === 0 
                       ? '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0,0,0,0.05)'
                       : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
@@ -115,11 +113,12 @@ const SwipeableToaster = () => {
                     minWidth: '320px',
                     maxWidth: '420px',
                     width: '90%',
-                    border: '1px solid rgba(255,255,255,0.8)',
+                    border: '1px solid #f1f5f9',
                     pointerEvents: index === 0 ? 'auto' : 'none',
+                    willChange: 'transform, opacity', // Performance hints for the browser
                   }}
                 >
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gray-50/50 shadow-inner">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 shadow-inner">
                     {t.type === 'success' && <span className="text-green-500 text-2xl font-bold">✓</span>}
                     {t.type === 'error' && <span className="text-red-500 text-2xl font-bold">✕</span>}
                     {t.type === 'loading' && <div className="animate-spin h-6 w-6 border-3 border-primary border-t-transparent rounded-full" />}
@@ -146,8 +145,6 @@ const SwipeableToaster = () => {
             })}
           </AnimatePresence>
         </div>
-
-
       </motion.div>
     </div>
   );

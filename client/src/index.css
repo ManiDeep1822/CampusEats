@@ -21,7 +21,16 @@
     @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-rose-500;
   }
   .glass {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl shadow-slate-200/50;
+    @apply bg-white/70 border border-white/20 shadow-xl shadow-slate-200/50;
+    backdrop-filter: blur(12px);
+  }
+
+  /* Disable expensive blur on mobile GPUs */
+  @media (max-width: 768px) {
+    .glass {
+      backdrop-filter: none;
+      @apply bg-white/95;
+    }
   }
   .animation-delay-2000 {
     animation-delay: 2s;
