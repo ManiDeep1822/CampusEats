@@ -147,25 +147,7 @@ const SwipeableToaster = () => {
           </AnimatePresence>
         </div>
 
-        {/* Improved Swipe-Up Area */}
-        {toasts.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 40 + (visibleToasts.length > 1 ? 15 : 0) }}
-            className="flex flex-col items-center gap-2 pointer-events-none"
-          >
-            <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden relative">
-               <motion.div 
-                 animate={{ x: [-20, 100] }}
-                 transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-                 className="absolute inset-0 bg-primary/30 w-1/3"
-               />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-               {toasts.length > 1 ? 'Flick stack to clear' : 'Swipe up to dismiss'}
-            </span>
-          </motion.div>
-        )}
+
       </motion.div>
     </div>
   );
