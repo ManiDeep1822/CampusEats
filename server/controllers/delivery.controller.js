@@ -146,8 +146,16 @@ const deliverOrder = asyncHandler(async (req, res) => {
     }
 
     // --- NEW: Multi-Channel Delivery Status (Push & Email) ---
-    sendPushNotification(order.studentId?._id || order.studentId, "Order Delivered! 🎉", `Enjoy your meal from ${order.vendorId?.shopName || 'CampusEats'}!`, order._id);
-    sendOrderReceiptEmail(order.studentId?._id || order.studentId, order._id);
+    // Wrapped in an async IIFE to avoid blocking, but handled with internal error catching
+    (async () => {
+      try {
+        const userId = order.studentId?._id || order.studentId;
+        await sendPushNotification(userId, "Order Delivered! 🎉", `Enjoy your meal from ${order.vendorId?.shopName || 'CampusEats'}!`, order._id);
+        await sendOrderReceiptEmail(userId, order._id);
+      } catch (err) {
+        console.error('❌ Notification background failure:', err.message);
+      }
+    })();
 
     res.json(order);
   } else { 

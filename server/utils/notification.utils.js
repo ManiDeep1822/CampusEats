@@ -47,11 +47,16 @@ const sendOrderReceiptEmail = async (userId, orderId) => {
        return;
     }
 
+    console.log(`📧 Attempting to send receipt email to UID: ${userId} for Order: ${orderId}...`);
+
     const order = await Order.findById(orderId)
       .populate('vendorId', 'shopName location')
       .populate('items.menuItemId', 'name');
 
-    if (!order) return;
+    if (!order) {
+      console.warn(`⚠️  Order not found for ID: ${orderId}. Skipping email.`);
+      return;
+    }
 
     const itemsHtml = order.items.map(item => `
       <tr>
