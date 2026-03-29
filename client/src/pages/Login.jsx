@@ -82,6 +82,11 @@ const Login = () => {
                 {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
               </button>
             </div>
+            <div className="flex justify-end mt-2">
+              <Link to="/forgot-password" size="sm" className="text-primary hover:underline font-medium text-sm">
+                Forgot Password?
+              </Link>
+            </div>
           </div>
           <button 
             type="submit" 

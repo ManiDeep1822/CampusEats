@@ -57,7 +57,7 @@ const sendOTP = asyncHandler(async (req, res) => {
 });
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role, phone, address, ...extra } = req.body;
+  const { name, email, password, role, phone, address, otp, ...extra } = req.body;
 
   // 1. Basic Field Validation
   if (!name || !email || !password || !phone) {
@@ -89,6 +89,12 @@ const registerUser = asyncHandler(async (req, res) => {
     res.status(400); throw new Error('User with this email already exists');
   }
 
+  // 5.5 Verify OTP (Required for registration)
+  const otpRecord = await OTP.findOne({ email });
+  if (!otpRecord || otpRecord.otp !== otp) {
+    res.status(400); throw new Error('Invalid or expired verification code. Please request a new one.');
+  }
+
   // 6. Security Patch: Prevent Privilege Escalation
   let assignedRole = role || 'student';
   if (assignedRole === 'admin') {
@@ -102,8 +108,12 @@ const registerUser = asyncHandler(async (req, res) => {
     password, 
     role: assignedRole, 
     phone, 
-    address
+    address,
+    isVerified: true
   });
+
+  // 7.5 Delete used OTP
+  await OTP.deleteOne({ email });
 
 
   if (user) {

@@ -3,11 +3,12 @@ const router = express.Router();
 const { 
   registerUser, loginUser, getMe, refreshToken, logoutUser, 
   changePassword, googleAuth, forgotPassword, resetPasswordWithOTP,
-  resetPasswordDirect 
+  resetPasswordDirect, sendOTP 
 } = require('../controllers/auth.controller');
 const { protect } = require('../middleware/auth.middleware');
 
 router.post('/register', registerUser);
+router.post('/send-otp', sendOTP);
 router.post('/login', loginUser);
 router.post('/logout', logoutUser);
 router.post('/refresh-token', refreshToken);

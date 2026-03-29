@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiLock, FiShield, FiUser, FiMail, FiPhone, FiCheckCircle, FiAlertCircle, FiEye, FiEyeOff, FiX, FiArrowRight } from 'react-icons/fi';
 import toast from 'react-hot-toast';
@@ -160,6 +161,11 @@ const Profile = () => {
                                         {showCurrent ? <FiEyeOff size={20} /> : <FiEye size={20} />}
                                     </button>
                                 </div>
+                                <div className="flex justify-end pr-1">
+                                    <Link to="/forgot-password" state={{ email: user?.email }} className="text-primary hover:underline text-xs font-bold">
+                                        Forgot current password?
+                                    </Link>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -231,7 +237,7 @@ const Profile = () => {
                         <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
                             <FiShield className="text-primary" /> Strength Guide
                         </h3>
-                        <div className="space-y-4">
+                        <div className="space-y-4 mb-8">
                             {strengthLabels.map(({ key, label }) => (
                                 <div key={key} className="flex items-center gap-3">
                                     {strength[key] ? (
@@ -244,6 +250,21 @@ const Profile = () => {
                                     </span>
                                 </div>
                             ))}
+                        </div>
+
+                        {/* New Prominent Forgot Password Section */}
+                        <div className="mt-8 pt-8 border-t border-white/10">
+                            <h4 className="text-sm font-bold text-primary uppercase tracking-widest mb-3">Forgot Password?</h4>
+                            <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+                                Don't remember your current password? Click below to receive a reset code via email.
+                            </p>
+                            <Link 
+                                to="/forgot-password" 
+                                state={{ email: user?.email }}
+                                className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition-all border border-white/10 w-full justify-center group"
+                            >
+                                Send Reset Code <FiMail className="group-hover:translate-x-1 transition-transform" />
+                            </Link>
                         </div>
                     </motion.div>
                 </div>
