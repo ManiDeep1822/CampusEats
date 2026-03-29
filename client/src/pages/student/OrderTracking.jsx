@@ -9,7 +9,7 @@ import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
 import toast from 'react-hot-toast';
 import { updateOrderStatus, setActiveOrder } from '../../store/orderSlice';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -215,7 +215,7 @@ const OrderTracking = () => {
             <MapContainer 
               center={riderLocation || [28.7041, 77.1025]} 
               zoom={16} 
-              scrollWheelZoom={false} 
+              scrollWheelZoom={true} 
               style={{ height: '100%', width: '100%' }}
             >
               <TileLayer
@@ -225,6 +225,19 @@ const OrderTracking = () => {
               
               {/* Auto-centering only when rider is moving */}
               {riderLocation && <RecenterMap lat={riderLocation[0]} lng={riderLocation[1]} />}
+
+              {/* Live Route Path (Vendor -> Rider -> Student) */}
+              <Polyline 
+                positions={[
+                  [28.7041, 77.1025], 
+                  ...(riderLocation ? [riderLocation] : []), 
+                  [28.7061, 77.1045]
+                ]} 
+                color="#f97316" 
+                weight={4} 
+                dashArray="10, 10" 
+                opacity={0.6}
+              />
 
               {/* Vendor Marker */}
               <Marker position={[28.7041, 77.1025]} icon={L.divIcon({
