@@ -15,6 +15,15 @@ const ResetPassword = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
+  useEffect(() => {
+    let interval;
+    if (resendTimer > 0) {
+      interval = setInterval(() => setResendTimer((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   useEffect(() => {
     if (location.state?.email) {
@@ -27,6 +36,20 @@ const ResetPassword = () => {
   }, [location, navigate]);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const handleResend = async () => {
+    if (resendTimer > 0) return;
+    setLoading(true);
+    try {
+      await api.post('/auth/forgot-password', { email: email || formData.email });
+      toast.success('New verification code sent!');
+      setResendTimer(60);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to resend code');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const validateForm = () => {
     const { otp, newPassword, confirmPassword } = formData;
@@ -148,6 +171,17 @@ const ResetPassword = () => {
               className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-primary outline-none transition"
               placeholder="••••••••"
             />
+          </div>
+
+          <div className="text-center py-2">
+            <button 
+              type="button" 
+              disabled={resendTimer > 0 || loading} 
+              onClick={handleResend} 
+              className="text-primary font-bold hover:underline disabled:text-gray-400 disabled:no-underline text-sm"
+            >
+              {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend Verification Code'}
+            </button>
           </div>
 
           <button 
