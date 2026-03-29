@@ -1,45 +1,32 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
 const sendEmail = async (options) => {
-  // Check for RESEND_API_KEY
-  if (!process.env.RESEND_API_KEY) {
-    console.log('\n===================================================');
-    console.log('📬 MOCK EMAIL OTP (Add RESEND_API_KEY to .env to send real emails via Resend)');
-    console.log(`To: ${options.email}`);
-    console.log(`Subject: ${options.subject}`);
-    console.log(`Message: ${options.message || '[html body]'}`);
-    console.log('===================================================\n');
-    return;
-  }
+  // Use SMTP (Nodemailer) as the primary transport for development/testing
+  // This avoids Resend's "verified domain only" restrictions.
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+  const mailOptions = {
+    from: `CampusEats <${process.env.EMAIL_USER}>`,
+    to: options.email,
+    subject: options.subject,
+    text: options.message,
+    html: options.html,
+  };
 
-  console.log(`📧 Preparing to send email via Resend...`);
+  console.log(`📧 Preparing to send email via SMTP (Gmail)...`);
 
   try {
-    const data = await resend.emails.send({
-      from: `CampusEats <${fromEmail}>`,
-      to: [options.email],
-      subject: options.subject,
-      html: options.html,
-      text: options.message,
-    });
-
-    if (data.error) {
-      console.error('❌ Resend API Error:', JSON.stringify(data.error, null, 2));
-      throw new Error(data.error.message || 'Resend API error');
-    }
-
-    console.log(`📨 Email sent successfully! ID: ${data.data?.id}`);
-    return data;
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`📨 Email sent successfully via SMTP! ID: ${info.messageId}`);
+    return info;
   } catch (error) {
-    console.error(`❌ Resend Send Error [${options.subject}]:`, error.message);
-    if (error.response) {
-      console.error('Full Resend Error Context:', JSON.stringify(error.response, null, 2));
-    } else {
-      console.debug('Full Resend Error Context:', error);
-    }
+    console.error(`❌ SMTP Send Error [${options.subject}]:`, error.message);
     throw new Error(`Email delivery failed: ${error.message}`, { cause: error });
   }
 };

@@ -23,7 +23,8 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   campusId: { type: String, sparse: true, unique: true },
   favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' }],
-  pushSubscription: { type: Object }
+  pushSubscription: { type: Object },
+  tokenVersion: { type: Number, default: 0 }
 }, { timestamps: true });
 
 // Pre-save hook to hash password

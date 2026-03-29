@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiShoppingBag, FiCheckCircle, FiXCircle, FiStar, FiArrowLeft, FiUserPlus } from 'react-icons/fi';
+import { FiShoppingBag, FiCheckCircle, FiXCircle, FiStar, FiArrowLeft, FiUserPlus, FiEye, FiEyeOff } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -9,6 +9,10 @@ const ManageVendors = () => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [selectedVendor, setSelectedVendor] = useState(null);
   const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', shopName: '', location: '', role: 'vendor' });
 
   useEffect(() => {
@@ -26,13 +30,43 @@ const ManageVendors = () => {
     }
   };
 
-  const handleToggleStatus = async (id, currentStatus) => {
+  const handleToggleStatus = async (id, currentStatus, isVerified, email) => {
+    if (!currentStatus && !isVerified) {
+      // If we are approving a vendor that is not yet verified, show OTP modal
+      setSelectedVendor({ id, email });
+      setShowOtpModal(true);
+      return;
+    }
+
     try {
       const { data } = await api.put(`/admin/vendors/${id}/status`, { isApproved: !currentStatus });
       toast.success(data.isApproved ? 'Vendor Approved' : 'Vendor Suspended');
       setVendors(vendors.map(v => v._id === id ? { ...v, isApproved: data.isApproved } : v));
     } catch (error) {
       toast.error('Error updating vendor status');
+    }
+  };
+
+  const handleOtpVerify = async (e) => {
+    e.preventDefault();
+    try {
+      // 1. Verify OTP first
+      await api.post('/auth/verify-account', { email: selectedVendor.email, otp });
+      
+      // 2. Then approve vendor
+      const { data } = await api.put(`/admin/vendors/${selectedVendor.id}/status`, { isApproved: true });
+      
+      toast.success('Account Verified & Vendor Approved!');
+      setVendors(vendors.map(v => v._id === selectedVendor.id ? { 
+        ...v, 
+        isApproved: true,
+        userId: { ...v.userId, isVerified: true }
+      } : v));
+      setShowOtpModal(false);
+      setOtp('');
+      setSelectedVendor(null);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Verification failed. Please check the OTP.');
     }
   };
 
@@ -140,15 +174,19 @@ const ManageVendors = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button 
-                        onClick={() => handleToggleStatus(vendor._id, vendor.isApproved)}
+                        onClick={() => handleToggleStatus(vendor._id, vendor.isApproved, vendor.userId?.isVerified, vendor.userId?.email)}
                         className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm ${
                           vendor.isApproved 
                             ? 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 hover:scale-105' 
-                            : 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:scale-105'
+                            : !vendor.userId?.isVerified
+                              ? 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 hover:scale-105'
+                              : 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:scale-105'
                         }`}
                       >
                         {vendor.isApproved ? (
                           <><FiCheckCircle size={14} /> Approved</>
+                        ) : !vendor.userId?.isVerified ? (
+                          <><FiXCircle size={14} /> Verify & Approve</>
                         ) : (
                           <><FiXCircle size={14} /> Needs Approval</>
                         )}
@@ -193,7 +231,64 @@ const ManageVendors = () => {
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Temporary Password</label>
-                <input type="password" required minLength="6" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
+                <div className="relative">
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    required 
+                    minLength="6" 
+                    value={formData.password} 
+                    onChange={e => setFormData({...formData, password: e.target.value})} 
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all" 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition-colors"
+                  >
+                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                  </button>
+                  {/* OTP Verification Modal */}
+      {showOtpModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center">
+            <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FiCheckCircle size={32} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Verify Vendor OTP</h2>
+            <p className="text-gray-500 mb-6 text-sm">
+              Enter the 6-digit verification code sent to <br />
+              <span className="font-bold text-gray-800">{selectedVendor?.email}</span>
+            </p>
+            <form onSubmit={handleOtpVerify}>
+              <input 
+                type="text" 
+                maxLength="6" 
+                required 
+                placeholder="000000"
+                value={otp}
+                onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+                className="w-full text-center text-3xl font-bold tracking-[0.5em] py-3 border-2 border-gray-100 rounded-2xl focus:border-primary focus:ring-4 focus:ring-orange-500/10 outline-none transition-all mb-6"
+              />
+              <div className="flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => { setShowOtpModal(false); setOtp(''); }}
+                  className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-50 rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-orange-600 transition shadow-lg shadow-orange-500/30"
+                >
+                  Verify & Approve
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </div>
               </div>
               <div className="grid grid-cols-2 gap-4 pt-2 border-t mt-4">
                 <div>

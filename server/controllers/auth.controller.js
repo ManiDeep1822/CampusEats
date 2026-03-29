@@ -132,7 +132,9 @@ const registerUser = asyncHandler(async (req, res) => {
       });
     }
 
-    const token = generateToken(user._id);
+    user.tokenVersion += 1;
+    await user.save();
+    const token = generateToken(user._id, user.tokenVersion);
 
     res.status(201).json({
       _id: user._id,
@@ -147,18 +149,43 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 });
 
+const verifyAccount = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    res.status(400); throw new Error('Email and OTP are required');
+  }
+
+  const otpRecord = await OTP.findOne({ email });
+  if (!otpRecord || otpRecord.otp !== otp) {
+    res.status(400); throw new Error('Invalid or expired verification code');
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    res.status(404); throw new Error('User not found');
+  }
+
+  user.isVerified = true;
+  await user.save();
+  await OTP.deleteOne({ email });
+
+  res.status(200).json({ message: 'Account verified successfully' });
+});
+
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
+    user.tokenVersion += 1;
+    await user.save();
     res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
       profilePic: user.profilePic,
-      token: generateToken(user._id),
+      token: generateToken(user._id, user.tokenVersion),
     });
   } else {
     res.status(401);
@@ -208,6 +235,7 @@ const googleAuth = asyncHandler(async (req, res) => {
       // User exists, update profile picture and name if they've changed
       user.name = name || user.name;
       user.profilePic = picture || user.profilePic;
+      user.tokenVersion += 1;
       await user.save();
 
       res.status(200).json({
@@ -216,7 +244,7 @@ const googleAuth = asyncHandler(async (req, res) => {
         email: user.email,
         role: user.role,
         profilePic: user.profilePic,
-        token: generateToken(user._id),
+        token: generateToken(user._id, user.tokenVersion),
       });
     } else {
       // Create new user (default role: student)
@@ -232,13 +260,16 @@ const googleAuth = asyncHandler(async (req, res) => {
       });
 
       if (user) {
+        user.tokenVersion += 1;
+        await user.save();
+        
         res.status(201).json({
           _id: user._id,
           name: user.name,
           email: user.email,
           role: user.role,
           profilePic: user.profilePic,
-          token: generateToken(user._id),
+          token: generateToken(user._id, user.tokenVersion),
         });
       } else {
         res.status(400);
@@ -362,5 +393,5 @@ const resetPasswordWithOTP = asyncHandler(async (req, res) => {
   res.json({ message: 'Password reset successfully! You can now login with your new password.' });
 });
 
-module.exports = { registerUser, loginUser, getMe, refreshToken, logoutUser, changePassword, sendOTP, googleAuth, forgotPassword, resetPasswordWithOTP };
+module.exports = { registerUser, loginUser, getMe, refreshToken, logoutUser, changePassword, sendOTP, googleAuth, forgotPassword, resetPasswordWithOTP, verifyAccount };
 

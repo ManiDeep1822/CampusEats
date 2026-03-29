@@ -19,6 +19,14 @@ const protect = asyncHandler(async (req, res, next) => {
         res.status(401);
         throw new Error('Not authorized, user not found');
       }
+
+      // Check for single-device login (session sync)
+      // If the token version doesn't match the current DB version, it means a newer login occurred.
+      if (typeof decoded.tokenVersion !== 'undefined' && decoded.tokenVersion !== req.user.tokenVersion) {
+        res.status(401);
+        throw new Error('Session expired: Logged in from another device');
+      }
+
       return next();
     } catch (error) {
       console.error(error);

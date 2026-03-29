@@ -3,7 +3,7 @@ const router = express.Router();
 const { 
   registerUser, loginUser, getMe, refreshToken, logoutUser, 
   changePassword, googleAuth, forgotPassword, resetPasswordWithOTP,
-  resetPasswordDirect, sendOTP 
+  resetPasswordDirect, sendOTP, verifyAccount
 } = require('../controllers/auth.controller');
 const { protect } = require('../middleware/auth.middleware');
 
@@ -11,6 +11,7 @@ router.post('/register', registerUser);
 router.post('/send-otp', sendOTP);
 router.post('/login', loginUser);
 router.post('/logout', logoutUser);
+router.post('/verify-account', verifyAccount);
 router.post('/refresh-token', refreshToken);
 router.post('/google', googleAuth);
 router.post('/forgot-password', forgotPassword);

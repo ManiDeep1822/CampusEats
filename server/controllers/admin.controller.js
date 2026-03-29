@@ -3,6 +3,8 @@ const User = require('../models/User');
 const Vendor = require('../models/Vendor');
 const DeliveryBoy = require('../models/DeliveryBoy');
 const Order = require('../models/Order');
+const OTP = require('../models/OTP');
+const sendEmail = require('../utils/sendEmail');
 
 // @desc    Get all users
 // @route   GET /api/admin/users
@@ -65,7 +67,7 @@ const updateUserRole = asyncHandler(async (req, res) => {
 // @route   GET /api/admin/vendors
 // @access  Private/Admin
 const getVendors = asyncHandler(async (req, res) => {
-  const vendors = await Vendor.find({}).populate('userId', 'name email phone profilePic');
+  const vendors = await Vendor.find({}).populate('userId', 'name email phone profilePic isVerified');
   res.json(vendors);
 });
 
@@ -92,7 +94,7 @@ const updateVendorStatus = asyncHandler(async (req, res) => {
 // @route   GET /api/admin/delivery
 // @access  Private/Admin
 const getDeliveryBoys = asyncHandler(async (req, res) => {
-  const deliveryBoys = await DeliveryBoy.find({}).populate('userId', 'name email phone profilePic');
+  const deliveryBoys = await DeliveryBoy.find({}).populate('userId', 'name email phone profilePic isVerified');
   res.json(deliveryBoys);
 });
 
@@ -173,11 +175,13 @@ const createUser = asyncHandler(async (req, res) => {
 
   const userExists = await User.findOne({ email });
   if (userExists) {
-    res.status(400);
-    throw new Error('User already exists');
+    res.status(400); throw new Error('User already exists');
   }
 
-  const user = await User.create({ name, email, password, role: role || 'student', phone });
+  // Create user with isVerified: false (mandatory onboarding)
+  const user = await User.create({ 
+    name, email, password, role: role || 'student', phone, isVerified: false 
+  });
 
   if (user) {
     if (user.role === 'vendor') {
@@ -185,10 +189,53 @@ const createUser = asyncHandler(async (req, res) => {
     } else if (user.role === 'delivery') {
       await DeliveryBoy.create({ userId: user._id, vehicleType: vehicleType || 'Bicycle' });
     }
-    res.status(201).json({ _id: user._id, name: user.name, email: user.email, role: user.role });
+
+    // --- NEW: WELCOME OTP & EMAIL FLOW ---
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    await OTP.findOneAndUpdate(
+      { email },
+      { otp: otpCode, createdAt: Date.now() },
+      { upsert: true, returnDocument: 'after' }
+    );
+
+    const message = `Welcome to CampusEats, ${name}! Your account has been created by the administrator. Please use the following code to verify your account: ${otpCode}`;
+    const html = `
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
+        <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px;">CampusEats</h1>
+          <p style="color: #ffedd5; font-size: 16px; margin-top: 8px; font-weight: 400;">Welcome to the Team!</p>
+        </div>
+        <div style="padding: 40px 30px; text-align: center;">
+          <h2 style="color: #1e293b; font-size: 24px; font-weight: 700; margin-bottom: 20px;">Activate Your Account</h2>
+          <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+            Hello ${name}, your ${role} account has been successfully created. Use the temporary credentials below to get started:
+          </p>
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 30px;">
+            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px;">Email: <strong>${email}</strong></p>
+            <p style="margin: 0; color: #64748b; font-size: 14px;">Password: <strong>${password}</strong></p>
+          </div>
+          <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">Your 6-digit verification code:</p>
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; margin: 0 auto; max-width: 300px;">
+            <h1 style="margin: 0; font-size: 42px; font-weight: 700; color: #f97316; letter-spacing: 8px;">${otpCode}</h1>
+          </div>
+          <p style="color: #94a3b8; font-size: 13px; margin-top: 30px; font-weight: 500;">
+            ⏳ Please verify within 5 minutes.
+          </p>
+        </div>
+      </div>
+    `;
+
+    await sendEmail({ email, subject: 'Welcome to CampusEats - Verify Your Account', message, html });
+
+    res.status(201).json({ 
+      message: 'Account created. Verification code sent to the user.',
+      _id: user._id, 
+      name: user.name, 
+      email: user.email, 
+      role: user.role 
+    });
   } else {
-    res.status(400);
-    throw new Error('Invalid user data');
+    res.status(400); throw new Error('Invalid user data');
   }
 });
 
