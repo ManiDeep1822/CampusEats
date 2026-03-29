@@ -26,9 +26,10 @@ export const subscribeToPushNotifications = async () => {
     }
 
     // 3. Subscribe
+    const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BP_nRlLWYFUrGD7CiEitqH8qiMrj1Ua0piy53ReYdzNkS9lthOugtOJ_XeMqBlSW95zLZQl8V5CNR4mIzdfk47Q';
     const subscribeOptions = {
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY)
+      applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
     };
 
     const subscription = await registration.pushManager.subscribe(subscribeOptions);

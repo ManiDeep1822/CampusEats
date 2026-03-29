@@ -25,7 +25,7 @@ const GlobalNotificationListener = () => {
           let subscription = await registration.pushManager.getSubscription();
 
           if (!subscription) {
-            const publicVapidKey = 'BP_nRlLWYFUrGD7CiEitqH8qiMrj1Ua0piy53ReYdzNkS9lthOugtOJ_XeMqBlSW95zLZQl8V5CNR4mIzdfk47Q';
+            const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BP_nRlLWYFUrGD7CiEitqH8qiMrj1Ua0piy53ReYdzNkS9lthOugtOJ_XeMqBlSW95zLZQl8V5CNR4mIzdfk47Q';
             const convertedKey = urlBase64ToUint8Array(publicVapidKey);
 
             subscription = await registration.pushManager.subscribe({

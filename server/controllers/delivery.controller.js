@@ -138,11 +138,10 @@ const deliverOrder = asyncHandler(async (req, res) => {
       io.to(studentRoom).emit('order:delivered', { orderId: order._id, message: studentMsg });
       io.to(vendorRoom).emit('order:delivered', { orderId: order._id, message: vendorMsg });
 
-      const studentNotif = await Notification.create({ recipient: order.studentId, message: studentMsg, type: 'order_update', orderId: order._id });
-      const vendorNotif = await Notification.create({ recipient: order.vendorId, message: vendorMsg, type: 'order_update', orderId: order._id });
-
-      io.to(studentRoom).emit('notification', studentNotif);
-      io.to(vendorRoom).emit('notification', vendorNotif);
+      await Notification.create({ recipient: order.studentId, message: studentMsg, type: 'order_update', orderId: order._id });
+      await Notification.create({ recipient: order.vendorId, message: vendorMsg, type: 'order_update', orderId: order._id });
+      
+      // Removed redundant 'notification' emits as 'order:delivered' already handles the UI toast
     }
 
     // --- NEW: Multi-Channel Delivery Status (Push & Email) ---
@@ -199,13 +198,13 @@ const sendDeliveryOTP = asyncHandler(async (req, res) => {
         message: msg 
       });
 
-      const notification = await Notification.create({
+      await Notification.create({
         recipient: order.studentId,
         message: msg,
         type: 'system',
         orderId: order._id
       });
-      io.to(studentRoom).emit('notification', notification);
+      // io.to(studentRoom).emit('notification', notification); // REMOVED redundant notification emit
     }
 
     res.status(200).json({ message: 'Delivery PIN pushed to Student App Notifications' });
