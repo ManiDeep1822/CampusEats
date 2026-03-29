@@ -10,6 +10,7 @@ import Loader from '../../components/shared/Loader';
 import toast from 'react-hot-toast';
 import { updateOrderStatus, setActiveOrder } from '../../store/orderSlice';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
+import { fetchOSRMRoute } from '../../utils/routeUtils';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -42,6 +43,18 @@ const OrderTracking = () => {
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
   const [riderLocation, setRiderLocation] = useState(null);
+  const [routeCoords, setRouteCoords] = useState([]);
+  
+  const VENDOR_LATLNG = [28.7041, 77.1025];
+  const STUDENT_LATLNG = [28.7061, 77.1045];
+
+  useEffect(() => {
+    const getRoute = async () => {
+       const coords = await fetchOSRMRoute(VENDOR_LATLNG, STUDENT_LATLNG);
+       setRouteCoords(coords);
+    };
+    getRoute();
+  }, []);
 
   const [ratingValue, setRatingValue] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -226,18 +239,26 @@ const OrderTracking = () => {
               {/* Auto-centering only when rider is moving */}
               {riderLocation && <RecenterMap lat={riderLocation[0]} lng={riderLocation[1]} />}
 
-              {/* Live Route Path (Vendor -> Rider -> Student) */}
-              <Polyline 
-                positions={[
-                  [28.7041, 77.1025], 
-                  ...(riderLocation ? [riderLocation] : []), 
-                  [28.7061, 77.1045]
-                ]} 
-                color="#f97316" 
-                weight={4} 
-                dashArray="10, 10" 
-                opacity={0.6}
-              />
+              {/* Live Route Path (OSRM Road Following) */}
+              {routeCoords.length > 0 && (
+                <Polyline 
+                  positions={routeCoords} 
+                  color="#f97316" 
+                  weight={6} 
+                  opacity={0.4} 
+                />
+              )}
+
+              {/* Progressive Path (Rider to Destination) */}
+              {riderLocation && routeCoords.length > 0 && (
+                 <Polyline 
+                    positions={[riderLocation, STUDENT_LATLNG]} 
+                    color="#f97316" 
+                    weight={4} 
+                    dashArray="5, 10" 
+                    opacity={0.8}
+                 />
+              )}
 
               {/* Vendor Marker */}
               <Marker position={[28.7041, 77.1025]} icon={L.divIcon({
