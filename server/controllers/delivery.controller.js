@@ -15,13 +15,47 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   const deliveryBoyId = await getMyDeliveryId(req.user._id);
   const deliveryBoy = await DeliveryBoy.findById(deliveryBoyId).populate('activeOrderId');
   
+  // Fetch overall orders for this delivery boy to calculate weekly stats
+  const orders = await Order.find({ deliveryBoyId, status: 'delivered' });
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todaysOrders = orders.filter(o => o.deliveredAt >= today);
+  const todaysEarnings = todaysOrders.reduce((acc, order) => acc + (order.deliveryFee || 15), 0);
+  
+  // Weekly Data Map Logic (Last 7 Days)
+  const weeklyDataMap = {};
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    weeklyDataMap[dayName] = { name: dayName, earnings: 0, dateStr: d.toDateString() };
+  }
+
+  orders.forEach(order => {
+    const orderDate = new Date(order.deliveredAt || order.createdAt).toDateString();
+    for (const key in weeklyDataMap) {
+      if (weeklyDataMap[key].dateStr === orderDate) {
+        weeklyDataMap[key].earnings += (order.deliveryFee || 15);
+      }
+    }
+  });
+
+  const weeklyData = Object.values(weeklyDataMap);
+  const recentDeliveries = await Order.find({ deliveryBoyId, status: 'delivered' })
+    .populate('vendorId', 'shopName')
+    .sort({ deliveredAt: -1 })
+    .limit(3);
+
   res.json({
     profile: deliveryBoy,
     stats: {
       totalDeliveries: deliveryBoy.totalDeliveries,
       rating: deliveryBoy.rating,
-      earnings: deliveryBoy.earnings
-    }
+      earnings: deliveryBoy.earnings, // Lifetime
+      todaysEarnings,
+      todaysOrders: todaysOrders.length
+    },
+    weeklyData,
+    recentDeliveries
   });
 });
 
