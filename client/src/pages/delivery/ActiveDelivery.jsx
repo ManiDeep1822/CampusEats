@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSocketContext } from '../../context/SocketContext';
 import { useSocketEvent } from '../../hooks/useSocket';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -21,6 +21,14 @@ let DefaultIcon = L.icon({
     iconAnchor: [12, 41]
 });
 L.Marker.prototype.options.icon = DefaultIcon;
+
+const RecenterMap = ({ lat, lng }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView([lat, lng], 16);
+  }, [lat, lng, map]);
+  return null;
+};
 
 const ActiveDelivery = () => {
   const [data, setData] = useState(null);
@@ -392,13 +400,42 @@ const ActiveDelivery = () => {
 
         {/* MINI MAP & CHAT */}
         <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-100 overflow-hidden">
-            <div className="h-48 relative">
-                <MapContainer center={[28.7041, 77.1025]} zoom={15} scrollWheelZoom={false} className="h-full w-full">
+            <div className="h-64 relative">
+                <MapContainer 
+                  center={riderLocation || [28.7041, 77.1025]} 
+                  zoom={16} 
+                  scrollWheelZoom={false} 
+                  className="h-full w-full z-0"
+                >
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                    <Marker position={[28.7041, 77.1025]} />
-                    <Marker position={[28.7061, 77.1045]} />
+                    
+                    {/* Auto-centering component */}
+                    {riderLocation && <RecenterMap lat={riderLocation[0]} lng={riderLocation[1]} />}
+
+                    {/* Rider Marker (Live) */}
+                    {riderLocation && (
+                      <Marker position={riderLocation} icon={L.divIcon({
+                        html: '<div class="text-3xl filter drop-shadow-md">🛵</div>',
+                        className: 'bg-transparent border-none',
+                        iconAnchor: [15, 30]
+                      })}>
+                        <Popup className="font-bold">You (Live)</Popup>
+                      </Marker>
+                    )}
+
+                    {/* Vendor Marker */}
+                    {data.vendorId?.location && (
+                      <Marker position={[28.7041, 77.1025]} icon={L.divIcon({
+                        html: '<div class="text-2xl filter drop-shadow-md">🏪</div>',
+                        className: 'bg-transparent border-none',
+                        iconAnchor: [12, 24]
+                      })}>
+                        <Popup className="font-bold">Restaurant: {data.vendorId.shopName}</Popup>
+                      </Marker>
+                    )}
                 </MapContainer>
-                <div className="absolute top-4 left-4 z-[400] bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest border border-white/20">
+                <div className="absolute top-4 left-4 z-[400] bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest border border-white/20 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
                     Live Route Intel
                 </div>
             </div>

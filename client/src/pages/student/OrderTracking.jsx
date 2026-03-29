@@ -9,7 +9,7 @@ import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
 import toast from 'react-hot-toast';
 import { updateOrderStatus, setActiveOrder } from '../../store/orderSlice';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -22,6 +22,14 @@ let DefaultIcon = L.icon({
     iconAnchor: [12, 41]
 });
 L.Marker.prototype.options.icon = DefaultIcon;
+
+const RecenterMap = ({ lat, lng }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView([lat, lng], 16);
+  }, [lat, lng, map]);
+  return null;
+};
 
 const OrderTracking = () => {
   const { id } = useParams();
@@ -203,21 +211,47 @@ const OrderTracking = () => {
         </div>
 
         {(trackingStatus || activeOrder.status) !== 'delivered' && (
-          <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm relative z-0" style={{ height: '300px' }}>
-            <MapContainer center={[28.7041, 77.1025]} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
+          <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm relative z-0 mb-8" style={{ height: '350px' }}>
+            <MapContainer 
+              center={riderLocation || [28.7041, 77.1025]} 
+              zoom={16} 
+              scrollWheelZoom={false} 
+              style={{ height: '100%', width: '100%' }}
+            >
               <TileLayer
                 attribution='&copy; OpenStreetMap'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <Marker position={[28.7041, 77.1025]}>
-                <Popup>Campus Vendor: {activeOrder?.vendorId?.shopName || 'Vendor'}</Popup>
+              
+              {/* Auto-centering only when rider is moving */}
+              {riderLocation && <RecenterMap lat={riderLocation[0]} lng={riderLocation[1]} />}
+
+              {/* Vendor Marker */}
+              <Marker position={[28.7041, 77.1025]} icon={L.divIcon({
+                html: '<div class="text-2xl filter drop-shadow-md">🏪</div>',
+                className: 'bg-transparent border-none',
+                iconAnchor: [12, 24]
+              })}>
+                <Popup className="font-bold">Restaurant: {activeOrder?.vendorId?.shopName || 'Vendor'}</Popup>
               </Marker>
-              <Marker position={[28.7061, 77.1045]}>
-                <Popup>Delivery Drop: {activeOrder?.deliveryAddress || 'Destination'}</Popup>
+
+              {/* Delivery Drop Marker */}
+              <Marker position={[28.7061, 77.1045]} icon={L.divIcon({
+                html: '<div class="text-2xl filter drop-shadow-md">🏠</div>',
+                className: 'bg-transparent border-none',
+                iconAnchor: [12, 24]
+              })}>
+                <Popup className="font-bold">Your Location: {activeOrder?.deliveryAddress || 'Destination'}</Popup>
               </Marker>
+
+              {/* Rider Marker (Only if active) */}
               {riderLocation && (
-                <Marker position={riderLocation}>
-                  <Popup>🛵 Rider (Live Location)</Popup>
+                <Marker position={riderLocation} icon={L.divIcon({
+                  html: '<div class="text-3xl filter drop-shadow-md animate-bounce">🛵</div>',
+                  className: 'bg-transparent border-none',
+                  iconAnchor: [15, 30]
+                })}>
+                  <Popup className="font-bold">🛵 Your Rider is Here!</Popup>
                 </Marker>
               )}
             </MapContainer>
