@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiClock, FiPackage, FiTruck, FiCheckCircle, FiChevronRight } from 'react-icons/fi';
 import api from '../../services/api';
@@ -9,6 +9,7 @@ const LiveOrderTracker = () => {
   const [activeOrder, setActiveOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const socket = useSocketContext();
+  const navigate = useNavigate();
 
   const fetchActiveOrder = async () => {
     try {
@@ -28,11 +29,9 @@ const LiveOrderTracker = () => {
 
     if (socket) {
       const handleOrderUpdate = (data) => {
-        // Correct way to handle socket updates for the live tracker
         if (activeOrder && data.orderId === activeOrder._id) {
             setActiveOrder(prev => ({ ...prev, status: data.status || prev.status }));
         } else {
-            // Re-fetch to see if a new order was placed/assigned
             fetchActiveOrder();
         }
       };
@@ -40,7 +39,7 @@ const LiveOrderTracker = () => {
       socket.on('order:confirmed', handleOrderUpdate);
       socket.on('order:preparing', handleOrderUpdate);
       socket.on('order:ready', handleOrderUpdate);
-      socket.on('order:picked', (data) => {
+      socket.on('order:picked', () => {
           setActiveOrder(prev => prev ? ({ ...prev, status: 'picked_up' }) : null);
       });
       socket.on('order:delivered', () => setActiveOrder(null));
@@ -82,11 +81,12 @@ const LiveOrderTracker = () => {
         exit={{ opacity: 0, height: 0 }}
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 mb-2"
       >
-        <Link 
-          to={`/student/tracking/${activeOrder._id}`}
-          className="block group bg-white rounded-3xl border border-orange-100 shadow-xl shadow-orange-500/5 hover:shadow-orange-500/10 transition-all overflow-hidden"
+        <motion.div 
+          onClick={() => navigate(`/student/tracking/${activeOrder._id}`)}
+          whileTap={{ scale: 0.98 }}
+          className="cursor-pointer group bg-white rounded-3xl border border-orange-100 shadow-xl shadow-orange-500/5 hover:shadow-orange-500/10 transition-all overflow-hidden"
         >
-          <div className="flex items-center p-4 sm:p-6 gap-4 sm:gap-6">
+          <div className="flex items-center p-4 sm:p-6 gap-4 sm:gap-6 pointer-events-none">
             {/* Status Icon Bubble */}
             <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl ${statusInfo.bg} ${statusInfo.color} flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-inner`}>
               {statusInfo.icon}
@@ -122,7 +122,7 @@ const LiveOrderTracker = () => {
               <FiChevronRight size={20} />
             </div>
           </div>
-        </Link>
+        </motion.div>
       </motion.div>
     </AnimatePresence>
   );

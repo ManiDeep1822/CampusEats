@@ -10,7 +10,7 @@ import {
   addNotification
 } from '../../store/notificationSlice';
 import { useSocketContext } from '../../context/SocketContext';
-import { FiShoppingCart, FiUser, FiBell, FiCheck, FiTrash2 } from 'react-icons/fi';
+import { FiShoppingCart, FiUser, FiBell, FiTrash2 } from 'react-icons/fi';
 
 const Navbar = () => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);

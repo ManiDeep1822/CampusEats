@@ -37,7 +37,7 @@ const SwipeableToaster = () => {
         style={{ 
           y: groupY, 
           opacity: groupOpacity,
-          pointerEvents: 'auto',
+          pointerEvents: toasts.length > 0 ? 'auto' : 'none',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
