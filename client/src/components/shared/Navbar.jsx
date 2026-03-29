@@ -147,28 +147,43 @@ const Navbar = () => {
                           <p className="text-center text-xs font-medium">No notifications yet.</p>
                         </div>
                       ) : (
-                         notifications.map((notif) => (
-                           <div 
-                             key={notif._id} 
-                             onClick={() => {
-                               if (!notif.isRead) dispatch(markNotificationRead(notif._id));
-                               setIsNotifOpen(false);
-                               if (notif.orderId) {
-                                  if (user?.role === 'student') navigate(`/student/tracking/${notif.orderId}`);
-                                  else if (user?.role === 'vendor') navigate('/vendor/orders');
-                               }
-                             }}
-                             className={`cursor-pointer px-4 py-2.5 border-b border-gray-50 flex justify-between items-start gap-3 transition ${!notif.isRead ? 'bg-orange-50/20 hover:bg-orange-100/40' : 'bg-white hover:bg-gray-50'}`}
-                           >
-                             <div className="flex-1">
-                               <p className={`text-[13px] leading-snug ${!notif.isRead ? 'font-bold text-gray-800' : 'text-gray-500'}`}>{notif.message}</p>
-                               <p className="text-[9px] text-gray-400 mt-1 uppercase font-bold">{new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                             </div>
-                             {!notif.isRead && (
-                               <button onClick={(e) => { e.stopPropagation(); dispatch(markNotificationRead(notif._id)); }} className="text-primary mt-0.5 bg-orange-100/50 p-1.5 rounded-full hover:bg-orange-200 transition-colors"><FiCheck size={11} /></button>
-                             )}
-                           </div>
-                         ))
+                          notifications.map((notif) => {
+                            let icon = "🔔";
+                            if (notif.message.includes('chat') || notif.message.includes('💬')) icon = "💬";
+                            if (notif.message.includes('delivered') || notif.message.includes('✅')) icon = "✅";
+                            if (notif.message.includes('preparing') || notif.message.includes('ready')) icon = "🍕";
+                            if (notif.message.includes('picked up') || notif.message.includes('🛵')) icon = "🛵";
+
+                            return (
+                              <div 
+                                key={notif._id} 
+                                onClick={() => {
+                                  if (!notif.isRead) dispatch(markNotificationRead(notif._id));
+                                  setIsNotifOpen(false);
+                                  if (notif.orderId) {
+                                      if (user?.role === 'student') navigate(`/student/tracking/${notif.orderId}`);
+                                      else if (user?.role === 'vendor') navigate('/vendor/orders');
+                                  }
+                                }}
+                                className={`cursor-pointer px-4 py-3 border-b border-gray-50 flex items-start gap-4 transition hover:bg-orange-50/50 ${!notif.isRead ? 'bg-orange-50/20' : 'bg-white'}`}
+                              >
+                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0 ${!notif.isRead ? 'bg-orange-100/50 text-primary' : 'bg-gray-50 text-gray-400'}`}>
+                                  {icon}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-[13px] leading-snug break-words ${!notif.isRead ? 'font-black text-slate-800' : 'text-gray-500 font-medium'}`}>
+                                    {notif.message}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-1.5">
+                                    <span className="text-[9px] text-gray-400 uppercase font-black tracking-widest leading-none">
+                                      {new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    </span>
+                                    {!notif.isRead && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
                       )}
                     </div>
                   </div>

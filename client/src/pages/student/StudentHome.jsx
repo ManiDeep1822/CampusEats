@@ -6,6 +6,7 @@ import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 import CartFloatingButton from '../../components/student/CartFloatingButton';
 import SkeletonLoader from '../../components/shared/SkeletonLoader';
+import LiveOrderTracker from '../../components/student/LiveOrderTracker';
 
 const StudentHome = () => {
   const [vendors, setVendors] = useState([]);
@@ -54,6 +55,7 @@ const StudentHome = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20 mt-[1rem]">
+      <LiveOrderTracker />
       <div className="relative pt-16 pb-24 px-4 overflow-hidden border-b border-gray-100">
         <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-rose-50 -z-10"></div>
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full mix-blend-multiply blur-3xl animate-blob pointer-events-none opacity-50"></div>

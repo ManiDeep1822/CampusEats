@@ -132,7 +132,16 @@ const GlobalNotificationListener = () => {
             }
           } else {
              dispatch(addNotification({ message: text }));
-             toast(text, { icon: '🔔', duration: 4000 });
+             
+             // Smart Toast Suppression:
+             // Only show a toast if the user is NOT on the tracking page AND NOT on the student home (where the LiveTracker is).
+             const isTrackingPage = location.pathname.includes('/student/tracking');
+             const isStudentHome = location.pathname === '/student/home';
+             const isOrderUpdate = eventName.startsWith('order:') || eventName === 'delivery:otp';
+
+             if (!isOrderUpdate || (!isTrackingPage && !isStudentHome)) {
+                toast(text, { icon: '🔔', duration: 4000 });
+             }
           }
         }
       };

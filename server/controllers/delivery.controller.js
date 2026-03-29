@@ -3,7 +3,7 @@ const DeliveryBoy = require('../models/DeliveryBoy');
 const Order = require('../models/Order');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
-const { sendPushNotification, sendOrderReceiptEmail } = require('../utils/notification.utils');
+const { sendPushNotification } = require('../utils/notification.utils');
 
 const getMyDeliveryId = async (userId) => {
   const boy = await DeliveryBoy.findOne({ userId });
@@ -150,7 +150,6 @@ const deliverOrder = asyncHandler(async (req, res) => {
       try {
         const userId = order.studentId?._id || order.studentId;
         await sendPushNotification(userId, "Order Delivered! 🎉", `Enjoy your meal from ${order.vendorId?.shopName || 'CampusEats'}!`, order._id);
-        await sendOrderReceiptEmail(userId, order._id);
       } catch (err) {
         console.error('❌ Notification background failure:', err.message);
       }
