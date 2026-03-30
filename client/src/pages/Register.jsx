@@ -13,11 +13,13 @@ const Register = () => {
     name: '',
     email: '',
     password: '',
+    confirmPassword: '',
     role: 'student',
     phone: '',
     otp: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   
@@ -43,12 +45,13 @@ const Register = () => {
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const validateInfo = () => {
-    const { name, email, password, phone } = formData;
+    const { name, email, password, confirmPassword, phone } = formData;
     if (name.length < 2) return toast.error('Name is too short'), false;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error('Invalid email format'), false;
     if (!/^\d{10}$/.test(phone)) return toast.error('Invalid phone number (10 digits)'), false;
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(password)) return toast.error('Password must meet strength requirements'), false;
+    if (password !== confirmPassword) return toast.error('Passwords do not match'), false;
     return true;
   };
 
@@ -75,7 +78,8 @@ const Register = () => {
 
     setLoading(true);
     try {
-      const { data } = await api.post('/auth/register', formData);
+      const { confirmPassword, ...registerData } = formData;
+      const { data } = await api.post('/auth/register', registerData);
       dispatch(setCredentials({ user: data, token: data.token, role: data.role }));
       toast.success('Registration Successful!');
       const roles = { admin: '/admin/dashboard', student: '/student/home', vendor: '/vendor/dashboard', delivery: '/delivery/dashboard' };
@@ -119,6 +123,15 @@ const Register = () => {
                 <input type={showPassword ? "text" : "password"} name="password" required value={formData.password} onChange={handleChange} className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none pr-10" placeholder="••••••••" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                   {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-textSecondary mb-1">Confirm Password</label>
+              <div className="relative">
+                <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" required value={formData.confirmPassword} onChange={handleChange} className="w-full px-4 py-2 text-lg rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none pr-10" placeholder="••••••••" />
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  {showConfirmPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
                 </button>
               </div>
             </div>

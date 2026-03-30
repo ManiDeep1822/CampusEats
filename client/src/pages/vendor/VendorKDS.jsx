@@ -58,9 +58,8 @@ const COLS = [
     border: 'border-rose-500/30',
     headerBg: 'bg-rose-500/10',
     headerText: 'text-rose-400',
-    bumpColor: 'from-orange-500 to-rose-600 shadow-rose-500/30',
+    bumpColor: 'from-orange-500 to-rose-600 shadow-rose-500/30 hover:shadow-rose-500/50',
     dotColor: 'bg-rose-500',
-    icon: <FiPlayCircle size={18} className="mr-2" />,
   },
   {
     key: 'cooking',
@@ -74,9 +73,8 @@ const COLS = [
     border: 'border-amber-500/30',
     headerBg: 'bg-amber-500/10',
     headerText: 'text-amber-400',
-    bumpColor: 'from-amber-500 to-orange-600 shadow-amber-500/30',
+    bumpColor: 'from-amber-500 to-orange-600 shadow-amber-500/30 hover:shadow-orange-500/50',
     dotColor: 'bg-amber-500',
-    icon: <FiCheckCircle size={18} className="mr-2" />,
   },
   {
     key: 'dispatched',
@@ -92,7 +90,6 @@ const COLS = [
     headerText: 'text-emerald-400',
     bumpColor: 'bg-slate-800 text-slate-500 cursor-not-allowed',
     dotColor: 'bg-emerald-500',
-    icon: <FiTruck size={18} className="mr-2" />,
   },
 ];
 
@@ -337,8 +334,8 @@ const VendorKDS = () => {
                            ))}
                         </div>
                         {col.next && (
-                           <button onClick={() => updateStatus(order._id, col.next)} className={`w-full py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] text-white bg-gradient-to-r ${col.bumpColor} active:scale-95 transition-all`}>
-                             {col.icon} {col.nextLabel} ➔
+                           <button onClick={() => updateStatus(order._id, col.next)} className={`w-full py-4 mt-2 rounded-xl font-bold text-[13px] uppercase tracking-widest text-white bg-gradient-to-r ${col.bumpColor} shadow-[0_8px_16px_-6px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_20px_-6px_rgba(0,0,0,0.6)] hover:-translate-y-0.5 active:scale-95 transition-all duration-200 border border-white/10 flex items-center justify-center`}>
+                             {col.nextLabel}
                            </button>
                         )}
                       </div>

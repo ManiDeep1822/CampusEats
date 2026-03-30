@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiClock, FiPackage, FiTruck, FiCheckCircle, FiChevronRight } from 'react-icons/fi';
@@ -6,63 +6,87 @@ import api from '../../services/api';
 import { useSocketContext } from '../../context/SocketContext';
 
 const LiveOrderTracker = () => {
-  const [activeOrder, setActiveOrder] = useState(null);
+  const [activeOrders, setActiveOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const trackRef = useRef(null);
+
   const socket = useSocketContext();
   const navigate = useNavigate();
 
-  const fetchActiveOrder = async () => {
+  const fetchActiveOrders = async () => {
     try {
       const { data } = await api.get('/student/orders');
-      // Find the most recent order that is not delivered or cancelled
-      const active = data.find(order => !['delivered', 'cancelled'].includes(order.status));
-      setActiveOrder(active);
+      const active = data.filter(order => !['delivered', 'cancelled'].includes(order.status));
+      setActiveOrders(active);
     } catch (error) {
-      console.error('Error fetching active order:', error);
+      console.error('Error fetching active orders:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchActiveOrder();
+    fetchActiveOrders();
 
     if (socket) {
-      const handleStatusUpdate = (data) => {
-        // If the update is for our current order, update it locally for instant feedback
-        if (activeOrder && data.orderId === activeOrder._id) {
-          setActiveOrder(prev => ({ ...prev, status: data.status || prev.status }));
-        } else {
-          // If we don't have an active order loaded yet, or it's a different one, refresh
-          fetchActiveOrder();
-        }
+      const handleStatusUpdate = () => {
+        fetchActiveOrders(); // Refresh safely on any update
       };
 
-      socket.on('order:confirmed', (data) => handleStatusUpdate({ ...data, status: 'confirmed' }));
-      socket.on('order:preparing', (data) => handleStatusUpdate({ ...data, status: 'preparing' }));
-      socket.on('order:ready',     (data) => handleStatusUpdate({ ...data, status: 'ready' }));
-      socket.on('order:rider_assigned', (data) => handleStatusUpdate({ ...data, status: 'confirmed' })); // Show progress
-      socket.on('order:picked_up', (data) => handleStatusUpdate({ ...data, status: 'picked_up' }));
-      socket.on('order:delivered', () => setActiveOrder(null));
-      socket.on('order:cancelled', (data) => {
-          if (activeOrder && data.orderId === activeOrder._id) setActiveOrder(null);
-          else fetchActiveOrder();
-      });
+      socket.on('order:confirmed', handleStatusUpdate);
+      socket.on('order:preparing', handleStatusUpdate);
+      socket.on('order:ready',     handleStatusUpdate);
+      socket.on('order:rider_assigned', handleStatusUpdate);
+      socket.on('order:picked_up', handleStatusUpdate);
+      socket.on('order:delivered', handleStatusUpdate);
+      socket.on('order:cancelled', handleStatusUpdate);
 
       return () => {
-        socket.off('order:confirmed');
-        socket.off('order:preparing');
-        socket.off('order:ready');
-        socket.off('order:rider_assigned');
-        socket.off('order:picked_up');
-        socket.off('order:delivered');
-        socket.off('order:cancelled');
+        socket.off('order:confirmed', handleStatusUpdate);
+        socket.off('order:preparing', handleStatusUpdate);
+        socket.off('order:ready', handleStatusUpdate);
+        socket.off('order:rider_assigned', handleStatusUpdate);
+        socket.off('order:picked_up', handleStatusUpdate);
+        socket.off('order:delivered', handleStatusUpdate);
+        socket.off('order:cancelled', handleStatusUpdate);
       };
     }
-    // Only re-run if socket changes; internal state updates handle the rest
-  }, [socket, activeOrder?._id]);
+  }, [socket]);
 
-  if (loading || !activeOrder) return null;
+  // Dot Pagination Logic
+  useEffect(() => {
+    if (!trackRef.current || activeOrders.length <= 1) return;
+    
+    // Find valid order cards
+    const cards = Array.from(trackRef.current.children).filter(el => el.getAttribute('data-is-card') === 'true');
+    if (cards.length === 0) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const index = cards.indexOf(entry.target);
+          if (index !== -1) setActiveIndex(index);
+        }
+      });
+    }, {
+      root: trackRef.current,
+      threshold: 0.6
+    });
+
+    cards.forEach(card => observer.observe(card));
+    return () => observer.disconnect();
+  }, [activeOrders]);
+
+  const scrollToCard = (index) => {
+    if (!trackRef.current) return;
+    const cards = Array.from(trackRef.current.children).filter(el => el.getAttribute('data-is-card') === 'true');
+    if (cards[index]) {
+      cards[index].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  };
+
+  if (loading || activeOrders.length === 0) return null;
 
   const getStatusInfo = (status) => {
     switch (status) {
@@ -75,58 +99,70 @@ const LiveOrderTracker = () => {
     }
   };
 
-  const statusInfo = getStatusInfo(activeOrder.status);
-
   return (
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, height: 0 }}
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 mb-2"
+        className="w-full relative group mt-4 mb-2 max-w-7xl mx-auto"
       >
-        <motion.div 
-          onClick={() => navigate(`/student/tracking/${activeOrder._id}`)}
-          whileTap={{ scale: 0.98 }}
-          className="cursor-pointer group bg-white rounded-3xl border border-orange-100 shadow-xl shadow-orange-500/5 hover:shadow-orange-500/10 transition-all overflow-hidden"
+        {/* Horizonally Scrolling Track */}
+        <div 
+          ref={trackRef}
+          className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide py-2 px-4 sm:px-[calc(50vw-190px)] gap-3"
         >
-          <div className="flex items-center p-4 sm:p-6 gap-4 sm:gap-6 pointer-events-none">
-            {/* Status Icon Bubble */}
-            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl ${statusInfo.bg} ${statusInfo.color} flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-inner`}>
-              {statusInfo.icon}
-            </div>
+          {activeOrders.map(order => {
+             const statusInfo = getStatusInfo(order.status);
+             return (
+               <div key={order._id} data-is-card="true" className="snap-center xl:snap-align-none shrink-0 w-[85vw] sm:w-[380px] cursor-pointer group/card" onClick={() => navigate(`/student/tracking/${order._id}`)}>
+                 <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-3 active:scale-[0.98] transition-transform">
+                    {/* Icon */}
+                    <div className={`w-10 h-10 ${statusInfo.bg} ${statusInfo.color} rounded-xl flex items-center justify-center shrink-0 group-hover/card:scale-105 transition-transform`}>
+                       {statusInfo.icon}
+                    </div>
+                    {/* Info */}
+                    <div className="flex-grow min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shrink-0"></span>
+                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest truncate">{order.vendorId?.shopName || 'Restaurant'}</span>
+                      </div>
+                      <h3 className="text-xs font-bold text-slate-800 truncate">{statusInfo.label}</h3>
+                      <div className="mt-1.5 flex items-center gap-2 pr-2">
+                        <div className="h-1 bg-slate-100 flex-grow rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${statusInfo.progress}%` }}
+                            className="h-full bg-gradient-to-r from-orange-400 to-primary rounded-full"
+                          />
+                        </div>
+                        <span className="text-[9px] font-black text-primary shrink-0">{new Date(order.estimatedDeliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </div>
+                    {/* Arrow */}
+                    <div className="w-7 h-7 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 shrink-0 group-hover/card:bg-orange-50 group-hover/card:text-primary transition-colors">
+                       <FiChevronRight size={14} />
+                    </div>
+                 </div>
+               </div>
+             )
+          })}
+        </div>
 
-            {/* Info Text */}
-            <div className="flex-grow min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Live Order Status</span>
-              </div>
-              <h3 className="text-lg sm:text-xl font-black text-slate-800 truncate">
-                {statusInfo.label} from {activeOrder.vendorId?.shopName || 'Restaurant'}
-              </h3>
-              
-              {/* Progress Bar Container */}
-              <div className="mt-3 flex items-center gap-4">
-                <div className="flex-grow h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${statusInfo.progress}%` }}
-                    className="h-full bg-gradient-to-r from-orange-400 to-primary"
-                  />
-                </div>
-                <span className="text-xs font-bold text-primary shrink-0 opacity-80 whitespace-nowrap">
-                   Estimated: {new Date(activeOrder.estimatedDeliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            </div>
-
-            {/* Action Arrow */}
-            <div className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-slate-50 text-slate-400 group-hover:bg-primary group-hover:text-white transition-all">
-              <FiChevronRight size={20} />
-            </div>
+        {/* The Dots Pagination Track */}
+        {activeOrders.length > 1 && (
+          <div className="flex items-center justify-center w-full gap-1.5 mt-2 h-4">
+            {activeOrders.map((_, idx) => (
+              <div 
+                key={idx}
+                onClick={() => scrollToCard(idx)}
+                className={`rounded-full transition-all duration-300 cursor-pointer ${
+                  idx === activeIndex ? 'w-4 h-1.5 bg-slate-800' : 'w-1.5 h-1.5 bg-slate-300 hover:bg-slate-400'
+                }`}
+              />
+            ))}
           </div>
-        </motion.div>
+        )}
       </motion.div>
     </AnimatePresence>
   );
