@@ -56,9 +56,11 @@ const handleBotQuery = asyncHandler(async (req, res) => {
       dbContext = { role: req.user.role, name: req.user.name };
     }
 
-    // Call Gemini with explicit safety settings to prevent false-positive blocks
+    // --- MODEL SELECTION ---
+    // Using gemini-1.5-flash which is much more stable and has higher free-tier limits (15 RPM)
+    // compared to the experimental 2.0 version.
     const model = ai.getGenerativeModel({ 
-      model: 'gemini-2.0-flash',
+      model: 'gemini-1.5-flash',
       safetySettings: [
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
         { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },

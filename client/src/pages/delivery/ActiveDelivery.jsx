@@ -40,6 +40,8 @@ const ActiveDelivery = () => {
   const [riderLocation, setRiderLocation] = useState(null);
   const [routeCoords, setRouteCoords] = useState([]);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [locationStatus, setLocationStatus] = useState('idle'); // idle, active, denied, error
+  const [locationError, setLocationError] = useState(null);
   
   const VENDOR_LATLNG = [28.7041, 77.1025];
   const STUDENT_LATLNG = [28.7061, 77.1045];
@@ -120,11 +122,14 @@ const ActiveDelivery = () => {
   // Live GPS Tracking Core Implementation
   useEffect(() => {
     let watchId;
-    if (data?.status === 'picked_up' && navigator.geolocation) {
+    if (data?.status && data.status !== 'delivered' && navigator.geolocation) {
+      setLocationStatus('active');
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
            const { latitude, longitude } = pos.coords;
            setRiderLocation([latitude, longitude]);
+           setLocationStatus('active');
+           setLocationError(null);
            
            if (socket && data.studentId) {
              const targetUserId = typeof data.studentId === 'string' ? data.studentId : (data.studentId._id || data.studentId.userId);
@@ -138,9 +143,24 @@ const ActiveDelivery = () => {
              }
            }
         },
-        (err) => console.log('Geolocation error:', err),
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+        (err) => {
+          console.log('Geolocation error:', err);
+          if (err.code === 1) { // PERMISSION_DENIED
+            setLocationStatus('denied');
+            toast.error("Location permission denied. Please enable GPS to share your progress.");
+          } else {
+            setLocationStatus('error');
+            setLocationError(err.message);
+          }
+        },
+        { 
+          enableHighAccuracy: true, 
+          maximumAge: 0, 
+          timeout: 10000 
+        }
       );
+    } else {
+      setLocationStatus('idle');
     }
     return () => {
       if (watchId) navigator.geolocation.clearWatch(watchId);
@@ -261,6 +281,32 @@ const ActiveDelivery = () => {
       </div>
 
       <div className="max-w-md mx-auto -mt-12 px-4 space-y-6">
+        {/* GPS STATUS INDICATOR */}
+        <AnimatePresence>
+          {locationStatus === 'denied' && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="bg-red-500/10 border border-red-500/20 p-4 rounded-3xl flex items-center gap-3"
+            >
+              <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 shrink-0">
+                 <FiTarget className="animate-pulse" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">GPS Warning</p>
+                <p className="text-xs text-red-700/80 font-medium">Location access is disabled. Please enable it in browser settings.</p>
+              </div>
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-3 py-1.5 bg-red-500 text-white text-[9px] font-black uppercase tracking-widest rounded-full"
+              >
+                Retry
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* TRIP STEPPER */}
         <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-gray-100">
             <div className="flex justify-between items-center relative px-2">
@@ -466,9 +512,13 @@ const ActiveDelivery = () => {
                       <Popup className="font-bold">Restaurant Point</Popup>
                     </Marker>
                 </MapContainer>
-                <div className="absolute top-4 right-4 z-[400] bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest border border-white/20 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
-                    Live Route Intel
+                <div className="absolute top-4 right-4 z-[400] overflow-hidden flex items-center gap-2">
+                    <div className={`px-3 py-1.5 rounded-full backdrop-blur-md border flex items-center gap-2 transition-all duration-500 ${locationStatus === 'active' ? 'bg-green-500/20 border-green-500/30 text-green-500' : locationStatus === 'error' ? 'bg-red-500/20 border-red-500/30 text-red-500' : 'bg-slate-900/80 border-white/20 text-white'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${locationStatus === 'active' ? 'bg-green-500 animate-pulse' : locationStatus === 'error' ? 'bg-red-500' : 'bg-gray-400'}`}></span>
+                        <span className="text-[9px] font-black uppercase tracking-widest">
+                          {locationStatus === 'active' ? 'RIDER TRACKING LIVE' : locationStatus === 'denied' ? 'GPS OFFLINE' : 'LINKING GPS...'}
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>

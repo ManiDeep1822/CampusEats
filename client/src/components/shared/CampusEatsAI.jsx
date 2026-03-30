@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiMessageSquare, FiX, FiSend, FiCpu } from 'react-icons/fi';
+import toast from 'react-hot-toast';
 import api from '../../services/api';
 
 const CampusEatsAI = () => {
@@ -12,6 +13,7 @@ const CampusEatsAI = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCooldown, setIsCooldown] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const messagesEndRef = useRef(null);
@@ -77,16 +79,18 @@ const CampusEatsAI = () => {
       const { data } = await api.post('/bot/query', { message: userMsg });
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', text: data.reply }]);
     } catch (error) {
+      if (error.response?.status === 429) {
+        toast.error("AI is catching its breath! Please wait 30-60 seconds.", { icon: '🚦' });
+      }
+      
       const errMsg = error.response?.data?.reply || "I'm having trouble connecting to my brain right now. Please try again in 1 minute!";
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', text: errMsg }]);
-      
-      // If rate limited, add a longer pause
-      if (error.response?.status === 429) {
-          setTimeout(() => setIsLoading(false), 5000); 
-          return;
-      }
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Hide the "typing" dots immediately
+      setIsCooldown(true); // START the cooldown lock
+      
+      // Auto-unlock the button after 2 seconds
+      setTimeout(() => setIsCooldown(false), 2000);
     }
   };
 
@@ -194,14 +198,18 @@ const CampusEatsAI = () => {
                 type="text" 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about your order, menus..."
-                disabled={isLoading}
+                placeholder={isCooldown ? "Waiting for AI..." : "Ask about your order, menus..."}
+                disabled={isLoading || isCooldown}
                 className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm disabled:opacity-50"
               />
               <button 
                 type="submit" 
-                disabled={!input.trim() || isLoading}
-                className="absolute right-5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-primary text-white rounded-lg disabled:opacity-50 disabled:bg-gray-400 transition-all hover:bg-orange-600 active:scale-95"
+                disabled={!input.trim() || isLoading || isCooldown}
+                className={`absolute right-5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-95 ${
+                  isLoading || isCooldown 
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                    : 'bg-primary text-white hover:bg-orange-600'
+                }`}
               >
                 <FiSend size={14} />
               </button>

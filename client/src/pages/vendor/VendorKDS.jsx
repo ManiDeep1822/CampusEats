@@ -76,6 +76,7 @@ const VendorKDS = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [nextRefresh, setNextRefresh] = useState(30);
 
   const fetchOrders = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -94,7 +95,22 @@ const VendorKDS = () => {
   useEffect(() => {
     fetchOrders();
     const clock = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(clock);
+    
+    // Auto-refresh every 30 seconds as requested
+    const autoRefresh = setInterval(() => {
+      setNextRefresh(prev => {
+        if (prev <= 1) {
+          fetchOrders(true);
+          return 30;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(clock);
+      clearInterval(autoRefresh);
+    };
   }, []);
 
   useSocketEvent('order:new', () => {
@@ -144,8 +160,13 @@ const VendorKDS = () => {
             {activeCount} Active {activeCount === 1 ? 'Order' : 'Orders'}
           </div>
 
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-500">
+            <span className="text-[9px] font-black uppercase tracking-widest leading-none">Sync in</span>
+            <span className="text-sm font-mono font-black text-slate-300 leading-none w-5">{nextRefresh}s</span>
+          </div>
+
           <button 
-            onClick={() => fetchOrders(true)}
+            onClick={() => { fetchOrders(true); setNextRefresh(30); }}
             disabled={refreshing}
             className={`flex items-center justify-center p-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:text-white hover:border-slate-500 hover:bg-slate-700 transition-all active:scale-90 ${refreshing ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
             title="Force Sync Board"

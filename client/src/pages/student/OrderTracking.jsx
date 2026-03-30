@@ -193,9 +193,16 @@ const OrderTracking = () => {
         
         {activeOrder.deliveryBoyId && (
            <div className="mt-8 pt-6 border-t bg-gray-50/50 p-4 rounded-xl flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <p className="text-[10px] sm:text-xs text-textSecondary uppercase font-bold tracking-wider mb-1">Delivery Partner</p>
-                <p className="font-bold text-gray-800 text-sm sm:text-base">{activeOrder.deliveryBoyId.vehicleType} Rider Assigned</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-bold text-gray-800 text-sm sm:text-base">{activeOrder.deliveryBoyId.vehicleType} Rider Assigned</p>
+                  {riderLocation && (trackingStatus || activeOrder.status) !== 'picked_up' && (
+                    <span className="bg-green-100 text-green-600 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter animate-pulse border border-green-200">
+                      En Route to Restaurant
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="text-xl bg-orange-100/50 p-2 sm:p-3 rounded-full">🛵</div>
            </div>
@@ -282,11 +289,14 @@ const OrderTracking = () => {
               {/* Rider Marker (Only if active) */}
               {riderLocation && (
                 <Marker position={riderLocation} icon={L.divIcon({
-                  html: '<div class="text-3xl filter drop-shadow-md animate-bounce">🛵</div>',
+                  html: `<div class="relative">
+                           <div class="text-3xl filter drop-shadow-md animate-bounce">🛵</div>
+                           ${(trackingStatus || activeOrder.status) !== 'picked_up' ? '<div class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>' : ''}
+                         </div>`,
                   className: 'bg-transparent border-none',
                   iconAnchor: [15, 30]
                 })}>
-                  <Popup className="font-bold">🛵 Your Rider is Here!</Popup>
+                  <Popup className="font-bold">🛵 {(trackingStatus || activeOrder.status) === 'picked_up' ? 'Your Rider is Coming!' : 'Rider is Heading to Restaurant'}</Popup>
                 </Marker>
               )}
             </MapContainer>
