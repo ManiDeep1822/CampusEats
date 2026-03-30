@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiAlertCircle } from 'react-icons/fi';
@@ -90,13 +91,19 @@ const ManageRiders = lazy(() => import('./pages/admin/ManageRiders'));
 const ManageFeedback = lazy(() => import('./pages/admin/ManageFeedback'));
 
 function App() {
+  const location = useLocation();
+  const hideActionBarRoutes = ['/vendor/kds'];
+  const shouldHideNavbar = hideActionBarRoutes.includes(location.pathname);
+
   return (
     <div className="min-h-screen bg-background text-textPrimary font-sans">
         <SwipeableToaster />
         <GlobalNotificationListener />
         <SessionTerminatedModal />
-        <Navbar />
+        {!shouldHideNavbar && <Navbar />}
         <CampusEatsAI />
+
+
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<LandingPage />} />

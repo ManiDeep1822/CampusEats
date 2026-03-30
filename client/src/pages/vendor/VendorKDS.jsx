@@ -5,8 +5,10 @@ import toast from 'react-hot-toast';
 import { useSocketEvent } from '../../hooks/useSocket';
 import { 
   FiClock, FiAlertCircle, FiCheckSquare, FiRefreshCw, 
-  FiUser, FiShoppingBag, FiTruck, FiCheckCircle, FiPlayCircle 
+  FiUser, FiShoppingBag, FiTruck, FiCheckCircle, FiPlayCircle,
+  FiMapPin, FiCamera, FiTrash2, FiZap
 } from 'react-icons/fi';
+
 
 // --- Helper: Elapsed time since order was placed ---
 const ElapsedTimer = ({ createdAt, isUrgentThreshold = 10 }) => {
@@ -96,6 +98,8 @@ const COLS = [
 
 const VendorKDS = () => {
   const [orders, setOrders] = useState([]);
+  const [shopDetails, setShopDetails] = useState(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -107,6 +111,8 @@ const VendorKDS = () => {
     try {
       const { data } = await api.get('/vendor/orders');
       setOrders(data);
+      const statsRes = await api.get('/vendor/dashboard');
+      setShopDetails(statsRes.data.shopDetails);
     } catch {
       toast.error('Failed to sync board');
     } finally {
@@ -114,6 +120,33 @@ const VendorKDS = () => {
       setRefreshing(false);
     }
   }, []);
+
+  const toggleStatus = async () => {
+    try {
+      const res = await api.put('/vendor/toggle-status');
+      setShopDetails(prev => ({ ...prev, isOpen: res.data.isOpen }));
+      toast.success(`Restaurant is now ${res.data.isOpen ? 'OPEN' : 'CLOSED'}`);
+    } catch {
+      toast.error('Failed to toggle status');
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('image', file);
+    const uploadToast = toast.loading('Updating restaurant image...');
+    try {
+      const uploadRes = await api.post('/upload', formData);
+      const imageUrl = uploadRes.data.imageUrl;
+      await api.put('/vendor/profile', { shopImage: imageUrl });
+      setShopDetails(prev => ({ ...prev, shopImage: imageUrl }));
+      toast.success('Image updated!', { id: uploadToast });
+    } catch (error) {
+      toast.error('Failed to upload', { id: uploadToast });
+    }
+  };
 
   useEffect(() => {
     fetchOrders();
@@ -127,7 +160,6 @@ const VendorKDS = () => {
     return () => { clearInterval(clock); clearInterval(autoRefresh); };
   }, [fetchOrders]);
 
-  // Reliable Real-time Listeners
   useSocketEvent('order:new', () => {
     fetchOrders(true);
     toast('🔔 New Order Arrived!', { icon: '🍱', style: { background: '#1e293b', color: '#fff' } });
@@ -146,132 +178,155 @@ const VendorKDS = () => {
     }
   };
 
-  // --- KDS Live Metrics ---
   const stats = useMemo(() => {
     const active = orders.filter(o => ['placed', 'preparing', 'ready'].includes(o.status)).length;
     const completedToday = orders.filter(o => 
       o.status === 'delivered' && 
       new Date(o.updatedAt).toDateString() === new Date().toDateString()
     ).length;
-    
-    // Simple Kitchen Efficiency Logic
     const avgPrep = orders.filter(o => o.estimatedTime).reduce((acc, curr) => acc + curr.estimatedTime, 0);
     const avgLoad = active > 0 ? Math.round(avgPrep / active) : 15;
-
     return { active, completedToday, avgLoad };
   }, [orders]);
 
   if (loading) return <Loader />;
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 font-sans selection:bg-primary/30">
+    <div className="min-h-screen bg-[#020617] text-slate-200 font-sans selection:bg-primary/30 relative">
       
-      {/* 🍱 DYNAMIC HUB HEADER */}
-      <div className="bg-[#0f172a] border-b border-slate-800/60 sticky top-0 z-50 backdrop-blur-xl">
-        <div className="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
-              <FiShoppingBag className="text-primary text-2xl" />
-            </div>
-            <div>
-              <h1 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
-                🍳 Kitchen Center
-                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">LIVE</span>
+      {/* 🚀 FULL-SCREEN FLOATING COMMAND OVERLAYS */}
+      <div className="fixed top-0 left-0 right-0 z-50 pointer-events-none p-6 flex flex-col md:flex-row items-start justify-between gap-6">
+        
+        {/* 🍱 PROFILE CARD (FLOATING ON KDS) */}
+        <div className="flex items-center gap-5 relative pointer-events-auto bg-[#0f172a]/90 backdrop-blur-2xl border border-white/10 p-4 rounded-3xl shadow-2xl shadow-black ring-1 ring-white/5">
+          <div 
+            className="relative group/profile w-14 h-14 shrink-0 cursor-pointer"
+            onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+          >
+             <div className={`w-full h-full rounded-2xl overflow-hidden border-2 transition-all duration-300 ${showProfileDropdown ? 'border-primary ring-4 ring-primary/20 scale-105' : 'border-white/10 hover:border-primary/50'}`}>
+                {shopDetails?.shopImage ? (
+                  <img src={shopDetails.shopImage} alt="Shop" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xl bg-gradient-to-br from-slate-800 to-slate-900 font-black">🏪</div>
+                )}
+             </div>
+             {shopDetails?.isOpen && (
+               <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#020617] animate-pulse z-10" />
+             )}
+          </div>
+
+          <div className="cursor-pointer group/name pr-2" onClick={() => setShowProfileDropdown(!showProfileDropdown)}>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-black tracking-tight text-white group-hover/name:text-primary transition-colors">
+                {shopDetails?.shopName || 'Kitchen Hub'}
               </h1>
-              <p className="text-slate-500 text-[11px] font-bold uppercase tracking-widest leading-none mt-1">Operational Excellence Dashboard</p>
+              <div className={`w-2 h-2 rounded-full ${shopDetails?.isOpen ? 'bg-emerald-400' : 'bg-slate-600'}`} />
             </div>
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none mt-1.5 flex items-center gap-1.5">
+              <FiMapPin className="text-primary/70" /> {shopDetails?.location || 'Live Hub'}
+            </p>
           </div>
 
-          <div className="flex-1 max-w-2xl hidden lg:grid grid-cols-3 gap-4">
-            {[
-              { label: 'Active Queue', val: stats.active, icon: <FiClock />, color: 'text-orange-400' },
-              { label: 'Avg Prep Time', val: `${stats.avgLoad}m`, icon: <FiZap className="inline -mt-1" />, color: 'text-blue-400' },
-              { label: 'Completed Today', val: stats.completedToday, icon: <FiCheckCircle />, color: 'text-emerald-400' },
-            ].map((s, i) => (
-              <div key={i} className="bg-slate-900/50 border border-slate-800 rounded-2xl px-4 py-2.5 flex items-center justify-between group hover:border-slate-700 transition-all">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{s.label}</p>
-                <p className={`text-lg font-black font-mono ${s.color}`}>{s.val}</p>
+          {showProfileDropdown && (
+            <>
+              <div className="fixed inset-0 z-[60]" onClick={() => setShowProfileDropdown(false)} />
+              <div className="absolute top-24 left-0 w-80 bg-[#0f172a]/95 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-2xl shadow-black p-6 z-[70] animate-in fade-in slide-in-from-top-4 duration-200">
+                 <div className="flex flex-col gap-5">
+                    <div className="flex items-center gap-4">
+                       <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-white/10">
+                          {shopDetails?.shopImage ? (
+                             <img src={shopDetails.shopImage} alt="Shop" className="w-full h-full object-cover" />
+                          ) : (
+                             <div className="w-full h-full flex items-center justify-center text-3xl font-black">🏪</div>
+                          )}
+                       </div>
+                       <div className="flex-1">
+                          <h2 className="text-lg font-black text-white leading-tight">{shopDetails?.shopName}</h2>
+                          <div className="flex items-center gap-2 mt-1">
+                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{shopDetails?.location}</span>
+                             <div className={`w-1.5 h-1.5 rounded-full ${shopDetails?.isOpen ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                          </div>
+                       </div>
+                    </div>
+                    <div className="h-px bg-white/5" />
+                    <div className="space-y-4">
+                       <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Status</span>
+                          <button onClick={toggleStatus} className={`px-4 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${shopDetails?.isOpen ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'}`}>{shopDetails?.isOpen ? 'ONLINE' : 'OFFLINE'}</button>
+                       </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <button onClick={() => window.location.href='/vendor/dashboard'} className="w-full py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Go to Dashboard</button>
+                      <label className="w-full py-4 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-center cursor-pointer">Update Photo<input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} /></label>
+                    </div>
+                 </div>
               </div>
-            ))}
-          </div>
+            </>
+          )}
+        </div>
 
-          <div className="flex items-center gap-3">
-             <div className="hidden sm:flex items-center gap-3 bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-2.5">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Next Sync</span>
-                <span className="text-base font-mono font-black text-primary w-8">{nextRefresh}s</span>
-                <button onClick={() => { fetchOrders(true); setNextRefresh(30); }} className={`p-1.5 hover:bg-slate-800 rounded-lg transition-all ${refreshing ? 'animate-spin text-primary' : 'text-slate-500'}`}>
-                  <FiRefreshCw size={16} />
-                </button>
+        {/* 📊 STATS CARD (FLOATING ON KDS) */}
+        <div className="hidden lg:flex items-center gap-4 pointer-events-auto bg-[#0f172a]/90 backdrop-blur-2xl border border-white/10 p-2.5 rounded-[2rem] shadow-2xl shadow-black ring-1 ring-white/5">
+          <div className="flex items-center gap-3 px-4 py-2 bg-white/5 rounded-2xl border border-white/5">
+             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active queue</span>
+             <span className="text-xl font-black font-mono text-orange-400">{stats.active}</span>
+          </div>
+          <div className="flex items-center gap-3 px-4 py-2 bg-white/5 rounded-2xl border border-white/5">
+             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Completed</span>
+             <span className="text-xl font-black font-mono text-emerald-400">{stats.completedToday}</span>
+          </div>
+          <div className="flex items-center gap-2 ml-2 pl-4 border-l border-white/10">
+             <div className="flex flex-col items-end">
+               <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Next Sync</span>
+               <span className="text-sm font-mono font-black text-primary">{nextRefresh}s</span>
              </div>
-             
-             <div className="bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-2.5 hidden md:block">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Station Time</p>
-                <p className="text-base font-mono font-black text-white">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
-             </div>
+             <button onClick={() => { fetchOrders(true); setNextRefresh(30); }} className={`p-2.5 hover:bg-white/5 rounded-xl transition-all ${refreshing ? 'animate-spin text-primary' : 'text-slate-400'}`}>
+                <FiRefreshCw size={18} />
+             </button>
           </div>
         </div>
       </div>
 
-      {/* 🚀 ELITE KANBAN BOARD */}
-      <div className="max-w-[1800px] mx-auto p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[calc(100vh-180px)]">
+      {/* 🚀 FULL-SCREEN KANBAN BOARD */}
+      <div className="max-w-[1800px] mx-auto px-6 h-screen overflow-hidden pt-32">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full pb-8">
           {COLS.map(col => {
             const colOrders = orders.filter(o => col.statuses.includes(o.status));
             return (
-              <div key={col.key} className={`flex flex-col rounded-[2rem] border ${col.border} bg-slate-900/20 backdrop-blur-md overflow-hidden relative group`}>
-                
-                {/* Lane Header */}
-                <div className={`${col.headerBg} border-b ${col.border} px-6 py-5 flex items-center justify-between shrink-0 relative overflow-hidden`}>
-                   <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">{col.emoji}</div>
-                   <div className="flex items-center gap-4 relative z-10">
-                      <div className={`w-3 h-3 rounded-full ${col.dotColor} ${colOrders.length > 0 ? 'animate-pulse' : 'opacity-20'}`} />
+              <div key={col.key} className={`flex flex-col h-full rounded-[2rem] border ${col.border} bg-slate-900/20 backdrop-blur-md overflow-hidden relative group`}>
+                <div className={`${col.headerBg} border-b ${col.border} px-6 py-5 flex items-center justify-between shrink-0`}>
+                   <div className="flex items-center gap-4">
+                      <div className={`w-3 h-3 rounded-full ${col.dotColor}`} />
                       <div>
                         <h2 className={`font-black text-sm uppercase tracking-[0.2em] ${col.headerText}`}>{col.title}</h2>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">{col.subtitle}</p>
                       </div>
                    </div>
-                   <div className={`text-xs font-black px-3 py-1 rounded-full ${col.headerBg} ${col.headerText} border ${col.border}`}>
-                     {colOrders.length}
-                   </div>
+                   <div className={`text-xs font-black px-3 py-1 rounded-full ${col.headerBg} ${col.headerText} border ${col.border}`}>{colOrders.length}</div>
                 </div>
-
-                {/* Card Container */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-800/60 pb-10">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-800 pb-20">
                   {colOrders.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center gap-4 opacity-20 py-24 grayscale">
-                      <FiCheckSquare size={48} />
-                      <p className="text-xs font-black uppercase tracking-[0.2em]">Queue Neutral</p>
-                    </div>
+                    <div className="h-full flex flex-col items-center justify-center gap-4 opacity-20 py-24"><FiCheckSquare size={48} /><p className="text-xs font-black uppercase tracking-[0.2em]">Queue Neutral</p></div>
                   ) : (
                     colOrders.map(order => (
-                      <div key={order._id} className="group/card bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 px-5 py-5 rounded-2xl transition-all duration-300 hover:border-slate-600 hover:shadow-2xl hover:shadow-black/50 active:scale-[0.98]">
-                        
-                        {/* Status Bar for Dispatched Lane */}
+                      <div key={order._id} className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 px-5 py-5 rounded-2xl transition-all duration-300 hover:border-slate-600 shadow-xl">
                         {col.key === 'dispatched' && (
-                           <div className={`mb-3 py-1.5 px-3 rounded-lg border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
-                              order.deliveryBoyId ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-orange-500/10 border-orange-500/30 text-orange-400 animate-pulse'
-                           }`}>
+                           <div className={`mb-3 py-1.5 px-3 rounded-lg border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${order.deliveryBoyId ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-orange-500/10 border-orange-500/30 text-orange-400 animate-pulse'}`}>
                               {order.deliveryBoyId ? <FiTruck /> : <FiClock />}
-                              {order.deliveryBoyId ? `Rider ${order.deliveryBoyId.userId?.name || 'Assigned'} is on the way` : '🔍 Searching for nearby rider...'}
+                              {order.deliveryBoyId ? `Rider Assigned` : 'Searching for Rider'}
                            </div>
                         )}
-
                         <div className="flex items-start justify-between mb-4">
                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xl font-black font-mono text-white leading-none">#{order.orderId?.slice(-6).toUpperCase()}</span>
-                                {order.scheduledFor && <span className="text-[9px] font-black uppercase tracking-widest bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-1 rounded-lg">SCHEDULED</span>}
-                              </div>
+                              <span className="text-xl font-black font-mono text-white leading-none">#{order.orderId?.slice(-6).toUpperCase()}</span>
                               <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
                                 <FiUser className="text-primary/70" /> {order.studentId?.name || 'Anonymous Guest'}
                               </p>
                            </div>
                            <ElapsedTimer createdAt={order.createdAt} isUrgentThreshold={col.key === 'new' ? 5 : 15} />
                         </div>
-
-                        {/* Item Breakdown (High Contrast) */}
                         <div className="space-y-2 mb-4">
-                           {order.items.map((item, idx) => (
+                           {order.items?.map((item, idx) => (
                              <div key={idx} className="flex items-center justify-between group-hover/card:translate-x-1 transition-transform">
                                 <div className="flex items-center gap-2.5">
                                    <div className="w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
@@ -281,31 +336,9 @@ const VendorKDS = () => {
                              </div>
                            ))}
                         </div>
-
-                        {/* Special Instructions & Scheduling */}
-                        {(order.specialInstructions || order.scheduledFor) && (
-                          <div className="bg-slate-950/50 rounded-xl p-3 mb-4 space-y-2 border border-slate-800/40">
-                             {order.scheduledFor && (
-                               <p className="text-[11px] font-bold text-blue-400 flex items-center gap-2">
-                                 ⏰ Prepare for pickup: <span className="font-mono">{new Date(order.scheduledFor).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                               </p>
-                             )}
-                             {order.specialInstructions && (
-                               <div className="flex items-start gap-2 text-[11px] text-orange-200 leading-relaxed italic">
-                                 <FiAlertCircle size={14} className="shrink-0 mt-0.5 text-orange-400" />
-                                 <span>{order.specialInstructions}</span>
-                               </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* ACTION CALL-TO-ACTION */}
                         {col.next && (
-                           <button 
-                             onClick={() => updateStatus(order._id, col.next)}
-                             className={`w-full group/btn flex items-center justify-center py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] text-white bg-gradient-to-r ${col.bumpColor} overflow-hidden relative active:scale-95 transition-all outline-none`}
-                           >
-                             <span className="relative z-10 flex items-center group-hover/btn:translate-x-1 transition-transform">{col.icon} {col.nextLabel} ➔</span>
+                           <button onClick={() => updateStatus(order._id, col.next)} className={`w-full py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] text-white bg-gradient-to-r ${col.bumpColor} active:scale-95 transition-all`}>
+                             {col.icon} {col.nextLabel} ➔
                            </button>
                         )}
                       </div>
@@ -322,12 +355,3 @@ const VendorKDS = () => {
 };
 
 export default VendorKDS;
-
-// Dummy icon for stats since FiZap was used
-const FiZap = ({ className, size=16 }) => {
-  return (
-    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height={size} width={size} xmlns="http://www.w3.org/2000/svg">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-    </svg>
-  );
-};

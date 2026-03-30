@@ -28,7 +28,8 @@ const getVendorById = asyncHandler(async (req, res) => {
 });
 
 const searchItems = asyncHandler(async (req, res) => {
-  const keyword = req.query.query ? { name: { $regex: req.query.query, $options: 'i' } } : {};
+  const queryTerm = String(req.query.query || ''); 
+  const keyword = queryTerm ? { name: { $regex: queryTerm, $options: 'i' } } : {};
   // Find all matching items
   const items = await MenuItem.find({ ...keyword }).populate('vendorId', 'shopName location rating isOpen isApproved');
   
@@ -111,6 +112,9 @@ const placeOrder = asyncHandler(async (req, res) => {
     estimatedDeliveryTime.setMinutes(estimatedDeliveryTime.getMinutes() + prepMinutes);
   }
 
+  // Security Patch: Verification Code for delivery
+  const deliveryOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
   const orderId = 'ORD' + Date.now();
   const order = new Order({
     orderId, 
@@ -126,6 +130,7 @@ const placeOrder = asyncHandler(async (req, res) => {
     specialInstructions,
     scheduledFor,
     estimatedDeliveryTime,
+    deliveryOtp, // Persist initial OTP
     status: 'pending_payment' // Will remain hidden from vendors until payment verifies
   });
   

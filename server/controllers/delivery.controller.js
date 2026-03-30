@@ -76,16 +76,19 @@ const getAvailableOrders = asyncHandler(async (req, res) => {
 
 const acceptOrder = asyncHandler(async (req, res) => {
   const deliveryBoyId = await getMyDeliveryId(req.user._id);
-  const order = await Order.findById(req.params.id);
+  // Use an atomic update to prevent race conditions during order acceptance
+  const updatedOrder = await Order.findOneAndUpdate(
+    { _id: req.params.id, status: { $in: ['placed', 'confirmed', 'preparing', 'ready'] }, deliveryBoyId: null },
+    { $set: { deliveryBoyId: deliveryBoyId } },
+    { new: true }
+  );
   
-  if (order && ['placed', 'confirmed', 'preparing', 'ready'].includes(order.status) && !order.deliveryBoyId) {
-    order.deliveryBoyId = deliveryBoyId;
-    await order.save();
-    
-    const deliveryBoy = await DeliveryBoy.findById(deliveryBoyId);
-    deliveryBoy.activeOrderId = order._id;
-    deliveryBoy.isAvailable = false;
-    await deliveryBoy.save();
+  if (updatedOrder) {
+    const deliveryBoy = await DeliveryBoy.findByIdAndUpdate(
+      deliveryBoyId,
+      { $set: { activeOrderId: updatedOrder._id, isAvailable: false } },
+      { new: true }
+    );
 
     const io = req.app.get('io');
     if (io) {

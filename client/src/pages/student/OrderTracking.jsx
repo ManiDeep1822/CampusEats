@@ -101,25 +101,33 @@ const OrderTracking = () => {
     if (!chatMessage.trim() || !activeOrder.deliveryBoyId) return;
 
     const getTargetId = () => {
-      // Sometimes Mongoose populats DeliveryBoy id but leaves userId as a string, or unpopulated.
+      // Safety: Sometimes Mongoose populates DeliveryBoy id but leaves userId as a string, or unpopulated.
       // We must explicitly match what the Rider used to join: 'delivery:USER_ID'.
-      const targetUserId = activeOrder.deliveryBoyId?.userId?._id || activeOrder.deliveryBoyId?.userId || activeOrder.deliveryBoyId;
+      const targetUser = activeOrder.deliveryBoyId?.userId;
+      const targetUserId = targetUser?._id || targetUser || activeOrder.deliveryBoyId;
+      
+      if (!targetUserId) throw new Error('Could not identify target rider ID for chat');
       return targetUserId.toString();
     };
 
-    const targetRoom = `delivery:${getTargetId()}`;
-    const packet = { 
-       orderId: activeOrder._id, 
-       to: targetRoom, 
-       replyTo: `student:${activeOrder.studentId?._id || activeOrder.studentId || ''}`,
-       message: chatMessage, 
-       sender: 'Student', 
-       timestamp: Date.now() 
-    };
-    
-    socket?.emit('send_message', packet);
-    setChatHistory(prev => [...prev, { ...packet, isMe: true }]);
-    setChatMessage('');
+    try {
+      const targetRoom = `delivery:${getTargetId()}`;
+      const packet = { 
+         orderId: activeOrder._id, 
+         to: targetRoom, 
+         replyTo: `student:${activeOrder.studentId?._id || activeOrder.studentId || ''}`,
+         message: chatMessage, 
+         sender: 'Student', 
+         timestamp: Date.now() 
+      };
+      
+      socket?.emit('send_message', packet);
+      setChatHistory(prev => [...prev, { ...packet, isMe: true }]);
+      setChatMessage('');
+    } catch (err) {
+      console.warn('Chat failure:', err.message);
+      toast.error('Could not send message. Rider might be offline.');
+    }
   };
 
   const handleCancelOrder = async () => {
@@ -191,12 +199,12 @@ const OrderTracking = () => {
           })}
         </div>
         
-        {activeOrder.deliveryBoyId && (
+        {activeOrder?.deliveryBoyId && (
            <div className="mt-8 pt-6 border-t bg-gray-50/50 p-4 rounded-xl flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs text-textSecondary uppercase font-bold tracking-wider mb-1">Delivery Partner</p>
                 <div className="flex items-center gap-2">
-                  <p className="font-bold text-gray-800 text-sm sm:text-base">{activeOrder.deliveryBoyId.vehicleType} Rider Assigned</p>
+                  <p className="font-bold text-gray-800 text-sm sm:text-base">{activeOrder.deliveryBoyId?.vehicleType || 'Courier'} Rider Assigned</p>
                   {riderLocation && (trackingStatus || activeOrder.status) !== 'picked_up' && (
                     <span className="bg-green-100 text-green-600 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter animate-pulse border border-green-200">
                       En Route to Restaurant
@@ -303,7 +311,7 @@ const OrderTracking = () => {
           </div>
         )}
 
-        {activeOrder.deliveryBoyId && (trackingStatus || activeOrder.status) !== 'delivered' && (
+        {activeOrder?.deliveryBoyId && (trackingStatus || activeOrder.status) !== 'delivered' && (
           <div className="mt-8 border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col" style={{ height: '350px' }}>
             <div className="bg-gray-100 p-4 font-bold border-b text-gray-700 flex justify-between">
               <span>Chat with Rider</span>
@@ -311,7 +319,7 @@ const OrderTracking = () => {
             </div>
             <div className="flex-1 p-4 bg-gray-50 overflow-y-auto space-y-3 flex flex-col">
               {chatHistory.length === 0 && <div className="m-auto text-gray-400 text-sm">Send a message to your delivery partner.</div>}
-              {chatHistory.map((msg, i) => (
+              {chatHistory?.map((msg, i) => (
                 <div key={i} className={`max-w-[75%] p-3 rounded-xl shadow-sm text-sm ${msg.isMe ? 'bg-primary text-white self-end rounded-br-none' : 'bg-white border text-gray-800 self-start rounded-bl-none'}`}>
                    {msg.message}
                 </div>

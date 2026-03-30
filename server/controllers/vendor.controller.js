@@ -88,7 +88,11 @@ const getMenu = asyncHandler(async (req, res) => {
 
 const addMenuItem = asyncHandler(async (req, res) => {
   const vendorId = await getMyVendorId(req.user._id);
-  const item = new MenuItem({ ...req.body, vendorId });
+  const { name, description, price, category, image, isAvailable, preparationTime } = req.body;
+  const item = new MenuItem({ 
+    name, description, price, category, image, isAvailable, preparationTime,
+    vendorId 
+  });
   res.status(201).json(await item.save());
 });
 
@@ -96,7 +100,15 @@ const updateMenuItem = asyncHandler(async (req, res) => {
   const vendorId = await getMyVendorId(req.user._id);
   const item = await MenuItem.findById(req.params.id);
   if (item && item.vendorId.toString() === vendorId.toString()) {
-    Object.assign(item, req.body);
+    const { name, description, price, category, image, isAvailable, preparationTime } = req.body;
+    if (name !== undefined) item.name = name;
+    if (description !== undefined) item.description = description;
+    if (price !== undefined) item.price = price;
+    if (category !== undefined) item.category = category;
+    if (image !== undefined) item.image = image;
+    if (isAvailable !== undefined) item.isAvailable = isAvailable;
+    if (preparationTime !== undefined) item.preparationTime = preparationTime;
+    
     res.json(await item.save());
   } else { res.status(404); throw new Error('Menu item not found'); }
 });
@@ -203,6 +215,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       
       // Push Notification Support
       if (['preparing', 'ready'].includes(status)) {
+        const studentId = order.studentId?._id || order.studentId;
         const statusTitles = {
           preparing: "Cooking Started! 🍳",
           ready: "Order Ready! 🛍️"
@@ -213,7 +226,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
         };
 
         sendPushNotification(
-          order.studentId, 
+          studentId, 
           `CampusEats: ${statusTitles[status]}`, 
           statusBodies[status], 
           order._id
