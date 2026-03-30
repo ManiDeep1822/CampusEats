@@ -2,7 +2,6 @@ const asyncHandler = require('express-async-handler');
 const DeliveryBoy = require('../models/DeliveryBoy');
 const Order = require('../models/Order');
 const Notification = require('../models/Notification');
-const User = require('../models/User');
 const { sendPushNotification } = require('../utils/notification.utils');
 
 const getMyDeliveryId = async (userId) => {

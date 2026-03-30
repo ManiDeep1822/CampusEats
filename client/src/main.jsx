@@ -28,3 +28,12 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>
 );
 
+// Manual Service Worker Registration for PWA Reliability
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(_reg => console.log('✅ SW Registered!'))
+      .catch(_err => console.error('❌ SW Registration Failed', _err));
+  });
+}
+

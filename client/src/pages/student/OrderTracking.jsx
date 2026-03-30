@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useSocketContext } from '../../context/SocketContext';
 import { useSocketEvent } from '../../hooks/useSocket';
@@ -32,12 +32,14 @@ const RecenterMap = ({ lat, lng }) => {
   return null;
 };
 
+const VENDOR_LATLNG = [28.7041, 77.1025];
+const STUDENT_LATLNG = [28.7061, 77.1045];
+
 const OrderTracking = () => {
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
   const { activeOrder, trackingStatus } = useSelector(state => state.order);
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   
   const socket = useSocketContext();
   const [chatMessage, setChatMessage] = useState('');
@@ -45,9 +47,6 @@ const OrderTracking = () => {
   const [riderLocation, setRiderLocation] = useState(null);
   const [routeCoords, setRouteCoords] = useState([]);
   
-  const VENDOR_LATLNG = [28.7041, 77.1025];
-  const STUDENT_LATLNG = [28.7061, 77.1045];
-
   useEffect(() => {
     const getRoute = async () => {
        const coords = await fetchOSRMRoute(VENDOR_LATLNG, STUDENT_LATLNG);

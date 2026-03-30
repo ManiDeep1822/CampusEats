@@ -21,3 +21,8 @@ self.addEventListener('notificationclick', (event) => {
     );
   }
 });
+
+// Basic fetch handler (REQUIRED for PWA installability in some browsers)
+self.addEventListener('fetch', (event) => {
+  // Pass through (standard implementation)
+});

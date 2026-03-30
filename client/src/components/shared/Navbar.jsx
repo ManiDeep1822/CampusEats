@@ -10,7 +10,8 @@ import {
   addNotification
 } from '../../store/notificationSlice';
 import { useSocketContext } from '../../context/SocketContext';
-import { FiShoppingCart, FiUser, FiBell, FiTrash2 } from 'react-icons/fi';
+import { FiShoppingCart, FiUser, FiBell, FiTrash2, FiDownload } from 'react-icons/fi';
+import InstallPWA from './InstallPWA';
 
 const Navbar = () => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
@@ -83,6 +84,7 @@ const Navbar = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             <Link to="/contact" className="text-textPrimary hover:text-primary font-bold transition-colors text-sm">Contact</Link>
+            <InstallPWA buttonStyle="navbar" className="ml-2" />
             {user?.role === 'admin' && (
               <Link to="/admin/dashboard" className="text-primary hover:text-orange-600 font-bold transition-colors text-sm bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100">🛡️ Admin Panel</Link>
             )}
@@ -235,6 +237,9 @@ const Navbar = () => {
                     <Link onClick={() => setIsMenuOpen(false)} to={getDashboardLink()} className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Dashboard</Link>
                     <Link onClick={() => setIsMenuOpen(false)} to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Profile Settings</Link>
                     <Link onClick={() => setIsMenuOpen(false)} to="/contact" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Contact Us</Link>
+                    <div className="px-4 py-2 border-t border-gray-50 bg-orange-50/10">
+                      <InstallPWA buttonStyle="navbar" className="w-full justify-center py-2.5" />
+                    </div>
                     {user?.role === 'student' && (
                       <Link onClick={() => setIsMenuOpen(false)} to="/student/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">My Orders</Link>
                     )}

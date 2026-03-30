@@ -2,7 +2,6 @@ const asyncHandler = require('express-async-handler');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Order = require('../models/Order');
 const Vendor = require('../models/Vendor');
-const User = require('../models/User');
 const MenuItem = require('../models/MenuItem');
 
 let ai = null;

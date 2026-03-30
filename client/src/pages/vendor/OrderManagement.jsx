@@ -35,7 +35,6 @@ const OrderManagement = () => {
       if (prepTime) payload.prepTime = prepTime;
       const { data } = await api.put(`/vendor/orders/${orderId}/status`, payload);
       setOrders(orders.map(o => o._id === orderId ? data : o));
-      toast.success(`Order marked as ${newStatus}`);
     } catch(e) { toast.error("Failed to update status"); }
   };
 

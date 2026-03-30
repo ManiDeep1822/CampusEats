@@ -67,7 +67,6 @@ const MenuManagement = () => {
   const handleToggle = async (id) => {
     try {
       await api.put(`/vendor/menu/${id}/toggle`);
-      toast.success("Stock status updated");
       fetchMenu();
     } catch (err) { toast.error("Toggle failed"); }
   };

@@ -142,6 +142,7 @@ const registerUser = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       profilePic: user.profilePic,
+      provider: user.provider || 'local',
       token: token,
     });
   } else {
@@ -201,6 +202,7 @@ const loginUser = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       profilePic: user.profilePic,
+      provider: user.provider || 'local',
       token: generateToken(user._id, user.tokenVersion),
     });
   } else {
@@ -242,7 +244,7 @@ const googleAuth = asyncHandler(async (req, res) => {
     });
 
     const payload = ticket.getPayload();
-    const { email, name, picture, sub: googleId } = payload;
+    const { email, name, picture } = payload;
 
     // Check if user exists by email
     let user = await User.findOne({ email });
@@ -251,6 +253,7 @@ const googleAuth = asyncHandler(async (req, res) => {
       // User exists, update profile picture and name if they've changed
       user.name = name || user.name;
       user.profilePic = picture || user.profilePic;
+      user.provider = 'google'; // Explicitly set provider
       user.tokenVersion = (user.tokenVersion || 0) + 1;
       await user.save();
 
@@ -260,6 +263,7 @@ const googleAuth = asyncHandler(async (req, res) => {
         email: user.email,
         role: user.role,
         profilePic: user.profilePic,
+        provider: 'google',
         token: generateToken(user._id, user.tokenVersion),
       });
     } else {
@@ -277,6 +281,7 @@ const googleAuth = asyncHandler(async (req, res) => {
 
       if (user) {
         user.tokenVersion = (user.tokenVersion || 0) + 1;
+        user.provider = 'google'; // Explicitly set provider
         await user.save();
         
         res.status(201).json({
@@ -285,6 +290,7 @@ const googleAuth = asyncHandler(async (req, res) => {
           email: user.email,
           role: user.role,
           profilePic: user.profilePic,
+          provider: 'google',
           token: generateToken(user._id, user.tokenVersion),
         });
       } else {

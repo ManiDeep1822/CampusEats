@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   FiMinus, FiPlus, FiMapPin, FiPlusCircle, FiSettings, FiCheck, 
-  FiClock, FiCheckCircle, FiChevronDown, FiArrowRight, FiShield, FiTag, FiSmartphone, FiTruck, FiInfo, FiDownload
+  FiClock, FiCheckCircle, FiChevronDown, FiArrowRight, FiDownload
 } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { addToCart, removeFromCart, clearCart } from '../../store/cartSlice';
@@ -25,13 +25,11 @@ const CartPage = () => {
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [saveThisAddress, setSaveThisAddress] = useState(false);
   const [addressTag, setAddressTag] = useState('Other');
-  const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [isManageMode, setIsManageMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [scheduledFor, setScheduledFor] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [placedOrder, setPlacedOrder] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('razorpay');
 
   const getTimeSlots = () => {
     const slots = [];
@@ -65,7 +63,6 @@ const CartPage = () => {
 
   useEffect(() => {
     const fetchSavedAddresses = async () => {
-      setLoadingAddresses(true);
       try {
         const { data } = await api.get('/student/addresses');
         setSavedAddresses(data);
@@ -76,8 +73,6 @@ const CartPage = () => {
         }
       } catch (error) {
         console.error("Error fetching saved addresses", error);
-      } finally {
-        setLoadingAddresses(false);
       }
     };
     fetchSavedAddresses();

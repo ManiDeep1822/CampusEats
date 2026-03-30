@@ -25,14 +25,12 @@ const VendorDashboard = () => {
   const dismissProfile = () => {
     setShowProfile(false);
     localStorage.setItem('vendor_show_profile', 'false');
-    toast.success('Header section removed from dashboard');
   };
 
   const toggleStatus = async () => {
     try {
       const res = await api.put('/vendor/toggle-status');
       setData({ ...data, shopDetails: { ...data.shopDetails, isOpen: res.data.isOpen } });
-      toast.success(res.data.isOpen ? 'Shop is now OPEN' : 'Shop is now CLOSED');
     } catch (error) { toast.error('Failed to toggle status'); }
   };
 

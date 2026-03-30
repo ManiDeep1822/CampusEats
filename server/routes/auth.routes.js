@@ -3,7 +3,7 @@ const router = express.Router();
 const { 
   registerUser, loginUser, getMe, refreshToken, logoutUser, 
   changePassword, googleAuth, forgotPassword, resetPasswordWithOTP,
-  resetPasswordDirect, sendOTP, verifyAccount, updateProfile,
+  sendOTP, verifyAccount, updateProfile,
   addAddress, removeAddress, setDefaultAddress
 } = require('../controllers/auth.controller');
 const { protect } = require('../middleware/auth.middleware');

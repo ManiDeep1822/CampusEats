@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
+import InstallPWA from '../components/shared/InstallPWA';
 
 const defaultAnimations = {
   hidden: { opacity: 0, y: 30 },
@@ -54,6 +55,7 @@ const LandingPage = () => {
             <Link to="/login" className="w-full sm:w-auto bg-primary hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-bold transition-all shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-1 flex items-center justify-center gap-2">
               Start Ordering <span>→</span>
             </Link>
+            <InstallPWA buttonStyle="hero" className="w-full sm:w-auto" />
           </motion.div>
         </motion.div>
 
