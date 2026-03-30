@@ -125,7 +125,15 @@ const toggleMenuItemStatus = asyncHandler(async (req, res) => {
 
 const getOrders = asyncHandler(async (req, res) => {
   const vendorId = await getMyVendorId(req.user._id);
-  res.json(await Order.find({ vendorId }).populate('studentId', 'name phone').sort({ createdAt: -1 }));
+  const orders = await Order.find({ vendorId })
+    .populate('studentId', 'name phone')
+    .populate({
+      path: 'deliveryBoyId',
+      populate: { path: 'userId', select: 'name' }
+    })
+    .populate('items.menuItemId')
+    .sort({ createdAt: -1 });
+  res.json(orders);
 });
 
 const updateOrderStatus = asyncHandler(async (req, res) => {
@@ -160,7 +168,11 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     // Re-populate for consistent UI response (Matching getOrders population)
     await order.populate([
       { path: 'studentId', select: 'name phone' },
-      { path: 'items.menuItemId' }
+      { path: 'items.menuItemId' },
+      { 
+        path: 'deliveryBoyId',
+        populate: { path: 'userId', select: 'name' }
+      }
     ]);
     
     const io = req.app.get('io');
