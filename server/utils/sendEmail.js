@@ -1,83 +1,47 @@
-const nodemailer = require('nodemailer');
-const { Resend } = require('resend');
-
 /**
- * sendEmail - Utility to send emails via Resend (Production) or SMTP (Fallback)
+ * sendEmail - Utility to send emails via Brevo HTTPS API (Replaces Nodemailer)
  * @param {Object} options - {email, subject, message, html}
  */
 const sendEmail = async (options) => {
-  const RESEND_KEY = process.env.RESEND_API_KEY;
-  
-  const EMAIL_FROM = process.env.EMAIL_FROM || 'campuseats124@gmail.com';
-  const isGmailSender = EMAIL_FROM.toLowerCase().includes('gmail.com');
+  const BREVO_API_KEY = process.env.BREVO_API_KEY; 
+  const EMAIL_FROM = process.env.EMAIL_FROM || 'campuseats124@gmail.com'; 
 
-  // STRATEGY: 
-  // 1. If the sender is a @gmail.com address, we MUST use SMTP (Resend blocks public domains).
-  // 2. If RESEND_API_KEY is present and it's NOT a Gmail sender, try Resend first.
-  if (RESEND_KEY && !isGmailSender) {
-    console.log(`📧 Attempting email via Resend API [To: ${options.email}]...`);
-    const resend = new Resend(RESEND_KEY);
-    
-    try {
-      const { data, error } = await resend.emails.send({
-        from: EMAIL_FROM,
-        to: options.email,
-        subject: options.subject,
-        text: options.message,
-        html: options.html,
-      });
-
-      if (error) {
-        console.warn(`⚠️ Resend rejected the request: ${error.message}. Falling back to SMTP...`);
-        // Fall through to SMTP logic below
-      } else {
-        console.log(`📨 Email sent successfully via Resend! ID: ${data.id}`);
-        return data;
-      }
-    } catch (err) {
-      console.error(`❌ Resend critical failure:`, err.message);
-      console.log(`📡 Falling back to SMTP for reliability...`);
-      // Fall through to SMTP logic below
-    }
+  if (!BREVO_API_KEY || BREVO_API_KEY === 'YOUR_BREVO_API_KEY_HERE') {
+    console.warn(`⚠️ Warning: BREVO_API_KEY is not set in .env. Email to ${options.email} will be skipped.`);
+    return;
   }
 
-  // FALLBACK: SMTP (Gmail) - Mostly for legacy or local environments where Resend isn't configured.
-  console.log(`📧 Falling back to SMTP (Gmail) [To: ${options.email}]...`);
-  
-  // Using explicit port 587 and STARTTLS since many production hosting environments block port 465.
-  // We also force IPv4 if possible to avoid node DNS timeout issues with smtp.gmail.com.
-  const transporter = nodemailer.createTransport({
-    service: 'gmail', // Let nodemailer automatically select the best connection strategy
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // Use STARTTLS
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false
-    },
-    connectionTimeout: 30000, // increased from 10s to 30s to allow slow cross-datacenter handshakes
-    greetingTimeout: 20000,
-    socketTimeout: 30000,
-  });
-
-  const mailOptions = {
-    from: `CampusEats <${process.env.EMAIL_USER}>`,
-    to: options.email,
-    subject: options.subject,
-    text: options.message,
-    html: options.html,
-  };
+  console.log(`📧 Dispatching email payload via Brevo HTTPS API [To: ${options.email}]...`);
 
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`📨 Email sent successfully via SMTP! ID: ${info.messageId}`);
-    return info;
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'api-key': BREVO_API_KEY
+      },
+      body: JSON.stringify({
+        sender: { name: 'CampusEats', email: EMAIL_FROM },
+        to: [{ email: options.email }],
+        subject: options.subject,
+        htmlContent: options.html || `<p>${options.message}</p>`,
+        textContent: options.message,
+      })
+    });
+
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.message || 'Brevo API rejection');
+    }
+
+    const data = await response.json();
+    console.log(`📨 Secure Email dispatched instantly! MessageID: ${data.messageId}`);
+    return data;
+    
   } catch (error) {
-    console.error(`❌ SMTP Send Error:`, error.message);
-    throw new Error(`Email delivery failed: ${error.message}`, { cause: error });
+    console.error(`❌ Brevo API Delivery Failed:`, error.message);
+    throw new Error(`Email delivery blocked by gateway: ${error.message}`);
   }
 };
 
