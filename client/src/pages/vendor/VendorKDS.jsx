@@ -3,7 +3,7 @@ import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
 import toast from 'react-hot-toast';
 import { useSocketEvent } from '../../hooks/useSocket';
-import { FiClock, FiAlertCircle, FiCheckSquare } from 'react-icons/fi';
+import { FiClock, FiAlertCircle, FiCheckSquare, FiRefreshCw } from 'react-icons/fi';
 
 // --- Helper: Elapsed time since order was placed ---
 const ElapsedTimer = ({ createdAt }) => {
@@ -43,45 +43,31 @@ const ElapsedTimer = ({ createdAt }) => {
 const COLS = [
   {
     key: 'incoming',
-    title: 'Incoming',
+    title: 'Incoming Orders',
     emoji: '🛎️',
-    statuses: ['placed', 'confirmed'],
-    next: 'preparing',
-    nextLabel: 'Start Cooking',
-    accent: 'from-red-500/10 to-rose-900/10',
-    border: 'border-red-500/30',
-    headerBg: 'bg-red-500/10',
-    headerText: 'text-red-400',
-    bumpColor: 'from-red-500 to-rose-600 shadow-red-500/30',
-    dotColor: 'bg-red-400',
+    statuses: ['placed'],
+    next: 'confirmed',
+    nextLabel: 'Accept & Start Cooking',
+    accent: 'from-orange-500/10 to-rose-900/10',
+    border: 'border-orange-500/30',
+    headerBg: 'bg-orange-500/10',
+    headerText: 'text-orange-400',
+    bumpColor: 'from-blue-600 to-indigo-600 shadow-blue-500/30',
+    dotColor: 'bg-orange-400',
   },
   {
     key: 'preparing',
-    title: 'Preparing',
+    title: 'Cooking Now',
     emoji: '🍳',
     statuses: ['preparing'],
     next: 'ready',
-    nextLabel: 'Mark Ready',
-    accent: 'from-yellow-500/10 to-amber-900/10',
-    border: 'border-yellow-500/30',
-    headerBg: 'bg-yellow-500/10',
-    headerText: 'text-yellow-400',
-    bumpColor: 'from-yellow-500 to-amber-500 shadow-yellow-500/30',
-    dotColor: 'bg-yellow-400',
-  },
-  {
-    key: 'ready',
-    title: 'Ready for Pickup',
-    emoji: '🛍️',
-    statuses: ['ready'],
-    next: null,
-    nextLabel: null,
-    accent: 'from-green-500/10 to-emerald-900/10',
-    border: 'border-green-500/30',
-    headerBg: 'bg-green-500/10',
-    headerText: 'text-green-400',
-    bumpColor: null,
-    dotColor: 'bg-green-400',
+    nextLabel: 'Mark Ready & Notify',
+    accent: 'from-amber-500/10 to-yellow-900/10',
+    border: 'border-amber-500/30',
+    headerBg: 'bg-amber-500/10',
+    headerText: 'text-amber-400',
+    bumpColor: 'from-emerald-500 to-green-600 shadow-green-500/30',
+    dotColor: 'bg-amber-400',
   },
 ];
 
@@ -115,6 +101,13 @@ const VendorKDS = () => {
     fetchOrders(true);
     toast.success('🔔 New order received!', { style: { background: '#1e293b', color: '#fff', border: '1px solid #f97316' } });
   });
+
+  // Keep KDS Synced with Status Changes (Rider Pickup, Student Cancellation, etc.)
+  useSocketEvent('order:status_update', () => { fetchOrders(true); });
+  useSocketEvent('order:cancelled', () => { fetchOrders(true); toast.error("An order was cancelled by the student"); });
+  useSocketEvent('order:ready', () => { fetchOrders(true); });
+  useSocketEvent('order:picked', () => { fetchOrders(true); });
+  useSocketEvent('order:delivered', () => { fetchOrders(true); });
 
   const updateStatus = async (id, status) => {
     try {
@@ -150,11 +143,20 @@ const VendorKDS = () => {
             <span className={`w-2 h-2 rounded-full ${activeCount > 0 ? 'bg-primary animate-pulse' : 'bg-slate-600'}`} />
             {activeCount} Active {activeCount === 1 ? 'Order' : 'Orders'}
           </div>
+
+          <button 
+            onClick={() => fetchOrders(true)}
+            disabled={refreshing}
+            className={`flex items-center justify-center p-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:text-white hover:border-slate-500 hover:bg-slate-700 transition-all active:scale-90 ${refreshing ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+            title="Force Sync Board"
+          >
+            <FiRefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
+          </button>
         </div>
       </div>
 
       {/* ── KANBAN BOARD ── */}
-      <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-3 gap-4 min-h-[calc(100vh-130px)]">
+      <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[calc(100vh-130px)] max-w-7xl mx-auto w-full">
         {COLS.map(col => {
           const colOrders = orders.filter(o => col.statuses.includes(o.status));
           return (

@@ -130,8 +130,8 @@ const getOrders = asyncHandler(async (req, res) => {
 
 const updateOrderStatus = asyncHandler(async (req, res) => {
   const vendorId = await getMyVendorId(req.user._id);
-  const { status, prepTime } = req.body;
-  const order = await Order.findById(req.params.id);
+  let { status, prepTime } = req.body;
+  const order = await Order.findById(req.params.id).populate('items.menuItemId');
   
   if (order && order.vendorId.toString() === vendorId.toString()) {
     if (order.status === 'cancelled' || order.status === 'delivered') {
@@ -139,19 +139,45 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       throw new Error(`Cannot update order because it is already ${order.status}`);
     }
 
+    // --- SWIGGY/ZOMATO STYLE WORKFLOW ---
+    // If vendor clicks ACCEPT (status: confirmed), we auto-trigger PREPARING
+    if (status === 'confirmed' || status === 'preparing') {
+      const originalStatus = status;
+      status = 'preparing'; // Final target status
+
+      // Auto-calculate prepTime if not provided
+      if (!prepTime) {
+        const itemPrepTimes = order.items.map(i => i.menuItemId?.preparationTime || 15);
+        prepTime = Math.max(...itemPrepTimes) + (order.items.length > 1 ? (order.items.length - 1) * 2 : 0);
+      }
+    }
+
     if (status) order.status = status;
     if (prepTime) order.estimatedTime = prepTime;
     
     await order.save(); // Persist changes
     
+    // Re-populate for consistent UI response (Matching getOrders population)
+    await order.populate([
+      { path: 'studentId', select: 'name phone' },
+      { path: 'items.menuItemId' }
+    ]);
+    
     const io = req.app.get('io');
     if (io) {
       let studentMsg = `Your order status changed to ${status}`;
-      if (status === 'confirmed') studentMsg = "🎉 Great news! The vendor just accepted your order!";
-      else if (status === 'preparing') studentMsg = "🍳 The chef is firing up the stove! Your food is being prepared.";
+      if (status === 'preparing') studentMsg = "🍳 Great news! The vendor has accepted and started preparing your food.";
       else if (status === 'ready') studentMsg = "🛍️ Piping hot! Your order is packed and waiting for a rider.";
 
-      io.to(`student:${order.studentId}`).emit(`order:${status}`, { orderId: order._id, message: studentMsg });
+      // Notify student of the final status
+      io.to(`student:${order.studentId?._id || order.studentId}`).emit(`order:${status}`, { 
+        orderId: order._id, 
+        message: studentMsg,
+        estimatedTime: order.estimatedTime 
+      });
+
+      // Notify vendor (self and other sessions)
+      io.to(`vendor:${order.vendorId?._id || order.vendorId}`).emit('order:status_update', { orderId: order._id, status });
       
       // Persist Notification to DB
       const notification = await Notification.create({
@@ -161,19 +187,16 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
         orderId: order._id
       });
 
-      // --- NEW: Real-time Socket Emission ---
-      io.to(`student:${order.studentId}`).emit('notification', notification);
+      io.to(`student:${order.studentId?._id || order.studentId}`).emit('notification', notification);
       
-      // --- NEW: Push Notification Support ---
-      if (['confirmed', 'preparing', 'ready'].includes(status)) {
+      // Push Notification Support
+      if (['preparing', 'ready'].includes(status)) {
         const statusTitles = {
-          confirmed: "Order Confirmed! 🎉",
-          preparing: "Preparing Your Food! 🍳",
+          preparing: "Cooking Started! 🍳",
           ready: "Order Ready! 🛍️"
         };
         const statusBodies = {
-          confirmed: "The vendor has accepted your order.",
-          preparing: "The chef is cooking your meal.",
+          preparing: `The chef is preparing your meal. Est. time: ${order.estimatedTime} mins.`,
           ready: "Your order is ready and waiting for a rider."
         };
 
@@ -186,10 +209,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       }
       
       if (status === 'ready') {
-        const populatedOrder = await Order.findById(order._id).populate('vendorId');
-        const vendorName = populatedOrder.vendorId?.shopName || 'Campus Spot';
-        
-        // --- FIX: Targeted broadcast to all DELIVER boys only, not everyone ---
+        const vendorName = (await order.populate('vendorId')).vendorId?.shopName || 'Campus Spot';
         io.to('role:delivery').emit('order:ready', { orderId: order._id, message: `🛵 An order is ready for pickup at ${vendorName}` });
       }
     }

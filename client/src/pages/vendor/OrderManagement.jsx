@@ -24,10 +24,12 @@ const OrderManagement = () => {
     toast.success("New Order Arrived!", { duration: 5000, icon: '🔔' });
   });
 
-  useSocketEvent('order:cancelled', () => {
-    fetchOrders();
-    toast.error("An order was cancelled by the student", { duration: 4000 });
-  });
+  // Keep the Dashboard Synced with Status Changes (Rider Pickup, Student Cancellation, etc.)
+  useSocketEvent('order:status_update', () => { fetchOrders(); });
+  useSocketEvent('order:cancelled', () => { fetchOrders(); toast.error("An order was cancelled by the student"); });
+  useSocketEvent('order:ready', () => { fetchOrders(); });
+  useSocketEvent('order:picked', () => { fetchOrders(); });
+  useSocketEvent('order:delivered', () => { fetchOrders(); });
 
   const handleUpdateStatus = async (orderId, newStatus, prepTime = null) => {
     try {
@@ -76,9 +78,8 @@ const OrderManagement = () => {
               </div>
 
               <div className="mt-auto border-t pt-4 flex gap-2">
-                {order.status === 'placed' && <button onClick={() => handleUpdateStatus(order._id, 'confirmed')} className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-bold hover:bg-blue-600 flex items-center justify-center gap-1"><FiCheck/> Accept</button>}
-                {order.status === 'confirmed' && <button onClick={() => handleUpdateStatus(order._id, 'preparing', 20)} className="flex-1 bg-yellow-500 text-white py-2 rounded-lg font-bold hover:bg-yellow-600 flex items-center justify-center gap-1"><FiPlay/> Start Prep</button>}
-                {order.status === 'preparing' && <button onClick={() => handleUpdateStatus(order._id, 'ready')} className="flex-1 bg-accent text-white py-2 rounded-lg font-bold hover:bg-green-600 flex items-center justify-center gap-1"><FiCheckCircle/> Mark Ready</button>}
+                {order.status === 'placed' && <button onClick={() => handleUpdateStatus(order._id, 'confirmed')} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2 shadow-blue-100 border-b-4 border-blue-800 active:border-b-0 active:mt-1"><FiCheck className="text-xl "/> Accept & Start Cooking</button>}
+                {order.status === 'preparing' && <button onClick={() => handleUpdateStatus(order._id, 'ready')} className="flex-1 bg-gradient-to-r from-emerald-500 to-green-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2 shadow-green-100 border-b-4 border-green-800 active:border-b-0 active:mt-1"><FiCheckCircle className="text-xl"/> Mark as Ready for Pickup</button>}
                 {order.status === 'ready' && <div className="w-full text-center py-2 text-orange-500 font-bold bg-orange-50 rounded-lg">Waiting for Rider Pickup</div>}
                 {order.status === 'picked_up' && <div className="w-full text-center py-2 text-blue-500 font-bold bg-blue-50 rounded-lg">Out for Delivery 🛵</div>}
                 {order.status === 'delivered' && <div className="w-full text-center py-2 text-green-500 font-bold bg-green-50 rounded-lg">Delivered Successfully 🎉</div>}

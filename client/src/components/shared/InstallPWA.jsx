@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiDownload, FiArrowRight } from 'react-icons/fi';
 
-const InstallPWA = ({ className, buttonStyle = 'navbar', showOnDesktop = true }) => {
+const InstallPWA = ({ className, containerClass, buttonStyle = 'navbar', showOnDesktop = true }) => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
 
@@ -52,9 +52,11 @@ const InstallPWA = ({ className, buttonStyle = 'navbar', showOnDesktop = true })
     return null;
   }
 
+  let button = null;
+
   // Navbar Style (Sleek button)
   if (buttonStyle === 'navbar') {
-    return (
+    button = (
       <button
         onClick={handleInstallClick}
         className={`flex items-center gap-2 group px-4 py-2 bg-orange-50 text-primary rounded-xl font-bold border border-orange-100 hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95 ${className}`}
@@ -67,8 +69,8 @@ const InstallPWA = ({ className, buttonStyle = 'navbar', showOnDesktop = true })
   }
 
   // Hero Style (Large CTA)
-  if (buttonStyle === 'hero') {
-    return (
+  else if (buttonStyle === 'hero') {
+    button = (
       <button
         onClick={handleInstallClick}
         className={`flex items-center justify-center gap-3 px-8 py-4 bg-white text-primary rounded-2xl font-black text-lg shadow-xl shadow-orange-500/10 hover:shadow-orange-500/20 hover:-translate-y-1 transition-all active:scale-95 border-2 border-primary/5 ${className}`}
@@ -86,8 +88,8 @@ const InstallPWA = ({ className, buttonStyle = 'navbar', showOnDesktop = true })
   }
 
   // Profile Style (List item)
-  if (buttonStyle === 'profile') {
-    return (
+  else if (buttonStyle === 'profile') {
+    button = (
       <button
         onClick={handleInstallClick}
         className={`w-full flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-gray-100 hover:bg-orange-50 hover:border-orange-200 transition-all group ${className}`}
@@ -108,7 +110,11 @@ const InstallPWA = ({ className, buttonStyle = 'navbar', showOnDesktop = true })
     );
   }
 
-  return null;
+  if (button && containerClass) {
+    return <div className={containerClass}>{button}</div>;
+  }
+
+  return button;
 };
 
 export default InstallPWA;

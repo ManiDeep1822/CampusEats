@@ -22,6 +22,14 @@ const Profile = () => {
     const [uploading, setUploading] = useState(false);
     const [activeTab, setActiveTab] = useState('general');
     const fileInputRef = useRef(null);
+    const contentRef = useRef(null);
+
+    useEffect(() => {
+      // Auto-scroll to content on mobile when tab changes
+      if (window.innerWidth < 1024) { // Only for mobile/tablet where content is below tabs
+        contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, [activeTab]);
 
     // General Profile Form
     const [profileForm, setProfileForm] = useState({
@@ -262,7 +270,7 @@ const Profile = () => {
                     </div>
 
                     {/* Main Content Pane */}
-                    <div className="lg:w-2/3">
+                    <div ref={contentRef} className="lg:w-2/3">
                       <AnimatePresence mode="wait">
                         <motion.div
                           key={activeTab}

@@ -121,8 +121,11 @@ const pickUpOrder = asyncHandler(async (req, res) => {
     const io = req.app.get('io');
     if (io) {
       const studentRoom = `student:${order.studentId?._id || order.studentId}`;
+      const vendorRoom = `vendor:${order.vendorId?._id || order.vendorId}`;
       const msg = '🛵 Zoom zoom! Your rider just picked up your food and is on the way!';
       io.to(studentRoom).emit('order:picked', { orderId: order._id, message: msg });
+      io.to(vendorRoom).emit('order:status_update', { orderId: order._id, status: 'picked_up' });
+      io.to(vendorRoom).emit('order:picked', { orderId: order._id });
 
       const notification = await Notification.create({
         recipient: order.studentId,

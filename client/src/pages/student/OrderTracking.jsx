@@ -83,8 +83,8 @@ const OrderTracking = () => {
     setChatHistory(prev => [...prev, msg]);
   }, []);
 
-  useSocketEvent('order:confirmed', (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'confirmed' })); });
-  useSocketEvent('order:preparing', (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'preparing' })); });
+  useSocketEvent('order:confirmed', (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'confirmed', estimatedTime: data.estimatedTime })); });
+  useSocketEvent('order:preparing', (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'preparing', estimatedTime: data.estimatedTime })); });
   useSocketEvent('order:ready',     (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'ready' })); });
   useSocketEvent('order:picked',    (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'picked_up' })); });
   useSocketEvent('order:delivered', (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'delivered' })); });
@@ -205,15 +205,17 @@ const OrderTracking = () => {
         <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200 rounded-2xl p-6 mb-8 mt-8 flex flex-row items-center justify-between shadow-sm gap-6 max-sm:flex-col max-sm:items-start max-sm:p-5">
            <div className="max-sm:w-full">
              <h3 className="text-orange-800 font-bold mb-1 text-xs uppercase tracking-widest flex items-center gap-2 max-sm:text-[10px]">
-               {activeOrder.scheduledFor ? '🗓️ Scheduled' : '⚡ Est. Arrival'}
+               {activeOrder.status === 'preparing' ? '🍳 Cooking In Progress' : activeOrder.scheduledFor ? '🗓️ Scheduled' : '⚡ Est. Arrival'}
              </h3>
              <p className="text-orange-950 font-black text-4xl max-sm:text-3xl">
-               {activeOrder?.estimatedDeliveryTime 
-                 ? Math.max(0, Math.ceil((new Date(activeOrder.estimatedDeliveryTime) - new Date()) / 60000)) + " mins"
-                 : 'Calculating...'}
+               {activeOrder.status === 'preparing' 
+                 ? `${activeOrder.estimatedTime || 15} mins`
+                 : activeOrder?.estimatedDeliveryTime 
+                   ? Math.max(0, Math.ceil((new Date(activeOrder.estimatedDeliveryTime) - new Date()) / 60000)) + " mins"
+                   : 'Calculating...'}
              </p>
              <p className="text-orange-800/60 text-[10px] font-bold mt-1 uppercase">
-               Expected by {activeOrder?.estimatedDeliveryTime && new Date(activeOrder.estimatedDeliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+               {activeOrder.status === 'preparing' ? 'Estimated time to be ready' : `Expected by ${activeOrder?.estimatedDeliveryTime && new Date(activeOrder.estimatedDeliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
              </p>
            </div>
            <div className="text-right border-l border-orange-200/50 pl-6 max-sm:w-full max-sm:text-left max-sm:border-l-0 max-sm:pl-0">

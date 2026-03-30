@@ -1,8 +1,11 @@
+const Vendor = require('../models/Vendor');
+const DeliveryBoy = require('../models/DeliveryBoy');
+
 const socketHandler = (io) => {
   io.on('connection', (socket) => {
     console.log('⚡ New client connected:', socket.id);
 
-    socket.on('join_room', ({ userId, role }) => {
+    socket.on('join_room', async ({ userId, role }) => {
       if (!userId) {
          console.log(`❌ Socket ${socket.id} tried to join without userId`);
          return;
@@ -13,8 +16,30 @@ const socketHandler = (io) => {
       // Join a role-wide room for broad broadcasts (e.g., all riders see ready orders)
       const roleRoom = `role:${role}`;
       socket.join(roleRoom);
+
+      // --- Multi-Room Strategy: Join Entity ID Rooms ---
+      // This allows controllers to notify a vendor via their VendorID OR UserID.
+      try {
+        if (role === 'vendor') {
+          const vendor = await Vendor.findOne({ userId });
+          if (vendor) {
+            const vendorEntityRoom = `vendor:${vendor._id}`;
+            socket.join(vendorEntityRoom);
+            console.log(`🏢 Vendor joined entity room: ${vendorEntityRoom}`);
+          }
+        } else if (role === 'delivery') {
+          const boy = await DeliveryBoy.findOne({ userId });
+          if (boy) {
+            const deliveryEntityRoom = `delivery:${boy._id}`;
+            socket.join(deliveryEntityRoom);
+            console.log(`🛵 Rider joined entity room: ${deliveryEntityRoom}`);
+          }
+        }
+      } catch (err) {
+        console.error(`❌ Error joining entity rooms for socket ${socket.id}:`, err.message);
+      }
       
-      console.log(`✅ Socket ${socket.id} joined rooms: [${room}, ${roleRoom}]`);
+      console.log(`✅ Socket ${socket.id} (User: ${userId}) joined rooms: [${room}, ${roleRoom}]`);
     });
 
     socket.on('send_message', async (data) => {

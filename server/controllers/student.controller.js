@@ -241,7 +241,7 @@ const cancelOrder = asyncHandler(async (req, res) => {
   const io = req.app.get('io');
   if (io) {
     const msg = `❌ Heads up! Order #${order.orderId} was cancelled by the student.`;
-    io.to(`vendor:${order.vendorId}`).emit('order:cancelled', { orderId: order._id, message: msg });
+    io.to(`vendor:${order.vendorId?._id || order.vendorId}`).emit('order:cancelled', { orderId: order._id, message: msg });
 
     // Persist
     const notification = await Notification.create({
@@ -252,7 +252,7 @@ const cancelOrder = asyncHandler(async (req, res) => {
     });
 
     // --- NEW: Real-time Socket Emission ---
-    io.to(`vendor:${order.vendorId}`).emit('notification', notification);
+    io.to(`vendor:${order.vendorId?._id || order.vendorId}`).emit('notification', notification);
   }
 
   res.json({ message: 'Order cancelled successfully' });

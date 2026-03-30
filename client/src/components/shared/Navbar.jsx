@@ -236,13 +236,15 @@ const Navbar = () => {
                     </div>
                     <Link onClick={() => setIsMenuOpen(false)} to={getDashboardLink()} className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Dashboard</Link>
                     <Link onClick={() => setIsMenuOpen(false)} to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Profile Settings</Link>
-                    <Link onClick={() => setIsMenuOpen(false)} to="/contact" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Contact Us</Link>
-                    <div className="px-4 py-2 border-t border-gray-50 bg-orange-50/10">
-                      <InstallPWA buttonStyle="navbar" className="w-full justify-center py-2.5" />
-                    </div>
                     {user?.role === 'student' && (
                       <Link onClick={() => setIsMenuOpen(false)} to="/student/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">My Orders</Link>
                     )}
+                    <Link onClick={() => setIsMenuOpen(false)} to="/contact" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Contact Us</Link>
+                    <InstallPWA 
+                      buttonStyle="navbar" 
+                      className="w-full justify-center py-2.5" 
+                      containerClass="px-4 py-2 border-t border-gray-50 bg-orange-50/10"
+                    />
                     <div className="mt-2 pt-2 border-t border-gray-100">
                       <button onClick={() => { setIsMenuOpen(false); handleLogout(); }} className="block w-full text-left px-4 py-2 text-sm text-red-600 font-bold">Logout</button>
                     </div>

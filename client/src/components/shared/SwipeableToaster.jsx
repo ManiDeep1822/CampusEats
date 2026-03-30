@@ -42,9 +42,9 @@ const SwipeableToaster = () => {
           flexDirection: 'column',
           alignItems: 'center',
           position: 'relative',
-          padding: '24px',
+          padding: '16px',
           width: '100%',
-          maxWidth: '500px',
+          maxWidth: '380px',
         }}
         drag={toasts.length > 0 ? "y" : false}
         dragConstraints={{ top: -500, bottom: 0 }}
@@ -103,30 +103,30 @@ const SwipeableToaster = () => {
                     // Performance: Using high-opacity solid color instead of backdropFilter: blur()
                     backgroundColor: 'white',
                     boxShadow: index === 0 
-                      ? '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0,0,0,0.05)'
+                      ? '0 15px 35px -8px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0,0,0,0.05)'
                       : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                    padding: '14px 24px',
-                    borderRadius: '24px',
+                    padding: '10px 18px',
+                    borderRadius: '20px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 16,
-                    minWidth: '320px',
-                    maxWidth: '420px',
+                    gap: 12,
+                    minWidth: '260px',
+                    maxWidth: '350px',
                     width: '90%',
                     border: '1px solid #f1f5f9',
                     pointerEvents: index === 0 ? 'auto' : 'none',
-                    willChange: 'transform, opacity', // Performance hints for the browser
+                    willChange: 'transform, opacity',
                   }}
                 >
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 shadow-inner">
-                    {t.type === 'success' && <span className="text-green-500 text-2xl font-bold">✓</span>}
-                    {t.type === 'error' && <span className="text-red-500 text-2xl font-bold">✕</span>}
-                    {t.type === 'loading' && <div className="animate-spin h-6 w-6 border-3 border-primary border-t-transparent rounded-full" />}
-                    {t.type === 'blank' && <span className="text-orange-500 text-2xl">🔔</span>}
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-gray-50 shadow-inner">
+                    {t.type === 'success' && <span className="text-green-500 text-lg font-bold">✓</span>}
+                    {t.type === 'error' && <span className="text-red-500 text-lg font-bold">✕</span>}
+                    {t.type === 'loading' && <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />}
+                    {t.type === 'blank' && <span className="text-orange-500 text-lg">🔔</span>}
                   </div>
-                  <div className="flex-grow flex flex-col overflow-hidden">
-                    <span className="text-[9px] uppercase tracking-[0.2em] text-gray-400 font-black mb-0.5">Notification</span>
-                    <div className="text-sm font-bold text-slate-800 leading-tight truncate">
+                  <div className="flex-grow flex flex-col overflow-hidden py-0.5">
+                    <span className="text-[8px] uppercase tracking-[0.2em] text-gray-400 font-black mb-0.5">Notification</span>
+                    <div className="text-[13px] font-bold text-slate-800 leading-[1.3] whitespace-normal">
                       {typeof t.message === 'function' ? t.message(t) : t.message}
                     </div>
                   </div>

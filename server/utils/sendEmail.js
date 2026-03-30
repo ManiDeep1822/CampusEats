@@ -8,13 +8,19 @@ const { Resend } = require('resend');
 const sendEmail = async (options) => {
   const RESEND_KEY = process.env.RESEND_API_KEY;
   
-  if (RESEND_KEY) {
-    console.log(`📧 Sending email via Resend API [To: ${options.email}]...`);
+  const EMAIL_FROM = process.env.EMAIL_FROM || 'campuseats124@gmail.com';
+  const isGmailSender = EMAIL_FROM.toLowerCase().includes('gmail.com');
+
+  // STRATEGY: 
+  // 1. If the sender is a @gmail.com address, we MUST use SMTP (Resend blocks public domains).
+  // 2. If RESEND_API_KEY is present and it's NOT a Gmail sender, try Resend first.
+  if (RESEND_KEY && !isGmailSender) {
+    console.log(`📧 Attempting email via Resend API [To: ${options.email}]...`);
     const resend = new Resend(RESEND_KEY);
     
     try {
       const { data, error } = await resend.emails.send({
-        from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+        from: EMAIL_FROM,
         to: options.email,
         subject: options.subject,
         text: options.message,
@@ -22,16 +28,16 @@ const sendEmail = async (options) => {
       });
 
       if (error) {
-        console.error(`❌ Resend Error [${options.subject}]:`, error.message);
-        // If Resend fails, we don't fallback to SMTP automatically to avoid confusion
-        throw new Error(`Resend API failed: ${error.message}`);
+        console.warn(`⚠️ Resend rejected the request: ${error.message}. Falling back to SMTP...`);
+        // Fall through to SMTP logic below
+      } else {
+        console.log(`📨 Email sent successfully via Resend! ID: ${data.id}`);
+        return data;
       }
-
-      console.log(`📨 Email sent successfully via Resend! ID: ${data.id}`);
-      return data;
     } catch (err) {
-      console.error(`❌ Resend Send Error:`, err.message);
-      throw err;
+      console.error(`❌ Resend critical failure:`, err.message);
+      console.log(`📡 Falling back to SMTP for reliability...`);
+      // Fall through to SMTP logic below
     }
   }
 
