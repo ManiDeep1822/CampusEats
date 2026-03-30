@@ -207,11 +207,11 @@ const updateVendorProfile = asyncHandler(async (req, res) => {
   const vendor = await Vendor.findById(vendorId);
 
   if (vendor) {
-    if (req.body.shopImage) vendor.shopImage = req.body.shopImage;
+    if (req.body.shopImage !== undefined) vendor.shopImage = req.body.shopImage;
     if (req.body.shopName) vendor.shopName = req.body.shopName;
     if (req.body.location) vendor.location = req.body.location;
-    if (req.body.cuisineType) vendor.cuisineType = req.body.cuisineType;
-    if (req.body.operatingHours) vendor.operatingHours = req.body.operatingHours;
+    if (req.body.cuisineType !== undefined) vendor.cuisineType = req.body.cuisineType;
+    if (req.body.operatingHours !== undefined) vendor.operatingHours = req.body.operatingHours;
 
     const updatedVendor = await vendor.save();
     res.json(updatedVendor);
