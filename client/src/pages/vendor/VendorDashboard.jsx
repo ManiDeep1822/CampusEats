@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiTrendingUp, FiShoppingBag, FiStar, FiClock, FiCamera, FiMonitor, FiChevronRight } from 'react-icons/fi';
+import { FiTrendingUp, FiShoppingBag, FiStar, FiClock, FiCamera, FiMonitor, FiChevronRight, FiTrash2 } from 'react-icons/fi';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
@@ -9,6 +9,9 @@ import toast from 'react-hot-toast';
 const VendorDashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showProfile, setShowProfile] = useState(() => {
+    return localStorage.getItem('vendor_show_profile') !== 'false';
+  });
 
   const fetchStats = async () => {
     try {
@@ -18,6 +21,12 @@ const VendorDashboard = () => {
   };
 
   useEffect(() => { fetchStats(); }, []);
+
+  const dismissProfile = () => {
+    setShowProfile(false);
+    localStorage.setItem('vendor_show_profile', 'false');
+    toast.success('Header section removed from dashboard');
+  };
 
   const toggleStatus = async () => {
     try {
@@ -52,13 +61,32 @@ const VendorDashboard = () => {
     }
   };
 
+  const handleImageRemove = async () => {
+    if (!window.confirm('Remove shop image?')) return;
+    try {
+      await api.put('/vendor/profile', { shopImage: null });
+      setData({ ...data, shopDetails: { ...data.shopDetails, shopImage: null } });
+      toast.success('Shop image removed');
+    } catch (error) {
+      toast.error('Failed to remove image');
+    }
+  };
+
   if (loading) return <Loader />;
   if (!data || !data.stats) return <div className="text-center py-20 text-red-500 font-bold">Error loading dashboard. Please refresh.</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-6xl mx-auto space-y-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
+        {showProfile && (
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6 relative group">
+            <button 
+              onClick={dismissProfile}
+              className="absolute top-2 right-2 p-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+              title="Remove profile section"
+            >
+              <FiTrash2 size={18} />
+            </button>
           <div className="flex items-center gap-6 w-full md:w-auto">
             <div className="relative group">
               <div className="w-24 h-24 rounded-2xl overflow-hidden bg-orange-100 border-4 border-white shadow-md flex-shrink-0">
@@ -72,6 +100,15 @@ const VendorDashboard = () => {
                 <FiCamera className="text-white text-2xl" />
                 <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
               </label>
+              {data.shopDetails.shopImage && (
+                <button 
+                  onClick={handleImageRemove}
+                  className="absolute top-1 left-1 bg-white p-1.5 rounded-full shadow-md text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 hover:scale-110 active:scale-95 z-20"
+                  title="Remove shop image"
+                >
+                  <FiTrash2 size={14} />
+                </button>
+              )}
             </div>
             <div>
               <h1 className="text-3xl font-bold font-heading text-gray-900">{data.shopDetails.shopName}</h1>
@@ -92,6 +129,7 @@ const VendorDashboard = () => {
             <Link to="/vendor/orders" className="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-orange-600 transition">View Orders</Link>
           </div>
         </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
