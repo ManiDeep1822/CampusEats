@@ -43,16 +43,24 @@ const sendEmail = async (options) => {
 
   // FALLBACK: SMTP (Gmail) - Mostly for legacy or local environments where Resend isn't configured.
   console.log(`📧 Falling back to SMTP (Gmail) [To: ${options.email}]...`);
+  
+  // Using explicit port 587 and STARTTLS since many production hosting environments block port 465.
+  // We also force IPv4 if possible to avoid node DNS timeout issues with smtp.gmail.com.
   const transporter = nodemailer.createTransport({
+    service: 'gmail', // Let nodemailer automatically select the best connection strategy
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
+    port: 587,
+    secure: false, // Use STARTTLS
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    connectionTimeout: 10000,
-    socketTimeout: 15000,
+    tls: {
+      rejectUnauthorized: false
+    },
+    connectionTimeout: 30000, // increased from 10s to 30s to allow slow cross-datacenter handshakes
+    greetingTimeout: 20000,
+    socketTimeout: 30000,
   });
 
   const mailOptions = {
