@@ -59,14 +59,14 @@ const handleBotQuery = asyncHandler(async (req, res) => {
     // Using gemini-1.5-flash which is much more stable and has higher free-tier limits (15 RPM)
     // compared to the experimental 2.0 version.
     const model = ai.getGenerativeModel({ 
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       safetySettings: [
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
         { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
         { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
       ]
-    }, { apiVersion: 'v1' });
+    }, { apiVersion: 'v1beta' });
 
     const fullPrompt = `
       System: You are CampusEats Bot. Friendly, helpful.
