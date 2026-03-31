@@ -266,56 +266,55 @@ const createUser = asyncHandler(async (req, res) => {
         <div style="background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 1px solid #eef2f6;">
           
           <!-- Header with Premium Gradient -->
-          <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 50px 30px; text-align: center;">
+          <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 50px 30px; text-align: center;">
             <h1 style="color: #ffffff; margin: 0; font-size: 36px; font-weight: 900; letter-spacing: -1.5px;">CampusEats</h1>
-            <p style="color: rgba(255,255,255,0.9); font-size: 18px; margin-top: 10px; font-weight: 500;">Your Premium Partner Dashboard</p>
+            <p style="color: rgba(255,255,255,0.7); font-size: 18px; margin-top: 10px; font-weight: 500;">Official Partner Invitation</p>
           </div>
 
           <div style="padding: 40px 35px;">
-            <h2 style="color: #0f172a; font-size: 26px; font-weight: 800; margin-bottom: 20px; letter-spacing: -0.5px;">Welcome to the Team, ${name}!</h2>
-            <p style="color: #475569; font-size: 17px; line-height: 1.7; margin-bottom: 35px;">
-              Your <strong>${role}</strong> account has been successfully provisioned by the CampusEats administrators. You're just one step away from joining our exclusive network!
+            <div style="text-align: center; margin-bottom: 30px;">
+              <span style="background-color: #fef3c7; color: #d97706; padding: 8px 16px; border-radius: 100px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">New Registration</span>
+            </div>
+            
+            <h2 style="color: #0f172a; font-size: 26px; font-weight: 800; margin-bottom: 20px; letter-spacing: -0.5px; text-align: center;">You're Invited, ${name}!</h2>
+            <p style="color: #475569; font-size: 17px; line-height: 1.7; margin-bottom: 35px; text-align: center;">
+              Your <strong>${role}</strong> profile has been provisioned by the CampusEats administrators. You are now part of our exclusive delivery and dining network.
             </p>
 
             <!-- Credentials Card -->
-            <div style="background-color: #f0f4f8; border-radius: 20px; padding: 25px; margin-bottom: 35px; border: 1px dashed #cbd5e1;">
-              <p style="margin: 0 0 10px 0; color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Temporary Login Details</p>
-              <div style="background-color: #ffffff; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0;">
-                <p style="margin: 0 0 10px 0; color: #1e293b; font-size: 15px;">Email: <strong style="color: #000000;">${email}</strong></p>
-                <p style="margin: 0; color: #1e293b; font-size: 15px;">Password: <strong style="color: #000000;">${password}</strong></p>
+            <div style="background-color: #f1f5f9; border-radius: 20px; padding: 25px; margin-bottom: 35px; border: 1px dashed #cbd5e1;">
+              <p style="margin: 0 0 10px 0; color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Access Details</p>
+              <div style="background-color: #ffffff; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0;">
+                <p style="margin: 0 0 12px 0; color: #1e293b; font-size: 15px;">Email: <strong style="color: #000000; font-family: monospace;">${email}</strong></p>
+                <p style="margin: 0; color: #1e293b; font-size: 15px;">Temporary Password: <strong style="color: #000000; font-family: monospace;">${password}</strong></p>
               </div>
             </div>
 
-            <p style="color: #0f172a; font-size: 16px; margin-bottom: 20px; font-weight: 700;">Account Verification Code:</p>
+            <p style="color: #0f172a; font-size: 16px; margin-bottom: 20px; font-weight: 700; text-align: center;">Registration Verification Code:</p>
             
             <!-- OTP Visualization -->
-            <div style="background: linear-gradient(to right, #fff7ed, #ffffff); border-radius: 20px; padding: 35px; text-align: center; border: 2px solid #ffedd5; box-shadow: 0 10px 30px rgba(249, 115, 22, 0.08);">
-              <h1 style="margin: 0; font-size: 52px; font-weight: 900; color: #f97316; letter-spacing: 10px; text-shadow: 0 5px 15px rgba(249, 115, 22, 0.15);">${otpCode}</h1>
-              <p style="color: #94a3b8; font-size: 14px; margin-top: 25px; font-weight: 500;">
-                ⏳ <strong>Security Note:</strong> This code expires in exactly 5 minutes.
+            <div style="background: #ffffff; border-radius: 20px; padding: 35px; text-align: center; border: 2px solid #f1f5f9; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);">
+              <h1 style="margin: 0; font-size: 52px; font-weight: 900; color: #f97316; letter-spacing: 12px; text-shadow: 0 5px 15px rgba(249, 115, 22, 0.1);">${otpCode}</h1>
+              <p style="color: #94a3b8; font-size: 13px; margin-top: 25px; font-weight: 500;">
+                ⏳ This code is valid for <strong>5 minutes</strong>.
               </p>
             </div>
 
             <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #f1f5f9; text-align: center;">
-              <p style="color: #94a3b8; font-size: 12px; line-height: 1.5;">
-                If you did not expect this invitation, please contact our support team immediately. 
-                Keep your temporary credentials safe and change your password upon your first successful login.
+              <p style="color: #94a3b8; font-size: 12px; line-height: 1.6;">
+                Please secure your credentials and change your password upon your first successful login. 
+                If you did not expect this invitation, please ignore this email.
               </p>
             </div>
           </div>
         </div>
-        
-        <!-- Clipping Prevention Signature -->
-        <div style="display: none; height: 1px; color: transparent; line-height: 1px;">
-          invitation_ref_${Date.now()}_${Math.random().toString(36).substring(7)}
-        </div>
       </div>
     `;
 
-    await sendEmail({ email, subject: 'Welcome to CampusEats - Verify Your Account', message, html });
+    await sendEmail({ email, subject: 'Invite: Verify Your New CampusEats Account', message, html });
 
     res.status(201).json({ 
-      message: 'Account created. Verification code sent to the user.',
+      message: 'Account created. Invitation sent to the user.',
       _id: user._id, 
       name: user.name, 
       email: user.email, 
@@ -325,6 +324,60 @@ const createUser = asyncHandler(async (req, res) => {
     res.status(400); throw new Error('Invalid user data');
   }
 });
+
+// @desc    Resend registration OTP for admin-created users
+// @route   POST /api/admin/users/resend-otp
+// @access  Private/Admin
+const resendStaffOTP = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    res.status(400); throw new Error('Email is required');
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    res.status(404); throw new Error('User not found');
+  }
+
+  if (user.isVerified) {
+    res.status(400); throw new Error('User is already verified');
+  }
+
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  await OTP.findOneAndUpdate(
+    { email },
+    { otp: otpCode, createdAt: Date.now() },
+    { upsert: true, returnDocument: 'after' }
+  );
+
+  const message = `Your new CampusEats registration verification code is: ${otpCode}`;
+  const html = `
+    <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
+      <div style="background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 1px solid #eef2f6;">
+        <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 40px 30px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -1px;">CampusEats</h1>
+          <p style="color: rgba(255,255,255,0.7); font-size: 16px; margin-top: 8px;">Verification Code Reset</p>
+        </div>
+        <div style="padding: 40px 35px; text-align: center;">
+          <p style="color: #475569; font-size: 16px; margin-bottom: 30px;">
+            A new verification code has been requested for your account registration.
+          </p>
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 25px; margin: 0 auto; max-width: 280px; text-align: center;">
+            <h1 style="margin: 0; font-size: 42px; font-weight: 800; color: #f97316; letter-spacing: 8px;">${otpCode}</h1>
+          </div>
+          <p style="color: #94a3b8; font-size: 13px; margin-top: 30px;">
+            This code expires in <strong>5 minutes</strong>.
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  await sendEmail({ email, subject: 'New Verification Code - CampusEats', message, html });
+
+  res.json({ message: 'A fresh verification code has been dispatched.' });
+});
+
 
 module.exports = {
   getUsers,

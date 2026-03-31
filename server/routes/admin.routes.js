@@ -24,6 +24,7 @@ router.route('/stats').get(getDashboardStats);
 
 // User routes
 router.route('/users').get(getUsers).post(createUser);
+router.route('/users/resend-otp').post(resendStaffOTP);
 router.route('/users/:id').delete(deleteUser);
 router.route('/users/:id/role').put(updateUserRole);
 

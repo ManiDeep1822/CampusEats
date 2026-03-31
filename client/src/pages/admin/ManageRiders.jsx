@@ -70,6 +70,15 @@ const ManageRiders = () => {
     }
   };
 
+  const handleResendOtp = async () => {
+    try {
+      const { data } = await api.post('/admin/users/resend-otp', { email: selectedRider.email });
+      toast.success(data.message || 'New verification code sent!');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to resend OTP');
+    }
+  };
+
   const handleDeleteRider = async (id) => {
     if (window.confirm('Are you sure you want to completely remove this delivery personnel? This cannot be undone.')) {
       try {
@@ -300,8 +309,18 @@ const ManageRiders = () => {
                 placeholder="000000"
                 value={otp}
                 onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
-                className="w-full text-center text-3xl font-bold tracking-[0.5em] py-3 border-2 border-gray-100 rounded-2xl focus:border-primary focus:ring-4 focus:ring-orange-500/10 outline-none transition-all mb-6"
+                className="w-full text-center text-3xl font-bold tracking-[0.5em] py-3 border-2 border-gray-100 rounded-2xl focus:border-primary focus:ring-4 focus:ring-orange-500/10 outline-none transition-all mb-4"
               />
+              <div className="text-sm text-gray-500 mb-6">
+                Didn't receive the code?{' '}
+                <button 
+                  type="button" 
+                  onClick={handleResendOtp}
+                  className="text-primary font-bold hover:underline"
+                >
+                  Resend Code
+                </button>
+              </div>
               <div className="flex gap-3">
                 <button 
                   type="button"

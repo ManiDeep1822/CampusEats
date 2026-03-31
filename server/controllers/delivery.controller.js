@@ -92,18 +92,18 @@ const acceptOrder = asyncHandler(async (req, res) => {
 
     const io = req.app.get('io');
     if (io) {
-      const studentRoom = `student:${order.studentId?._id || order.studentId}`;
-      const vendorRoom = `vendor:${order.vendorId?._id || order.vendorId}`;
+      const studentRoom = `student:${updatedOrder.studentId?._id || updatedOrder.studentId}`;
+      const vendorRoom = `vendor:${updatedOrder.vendorId?._id || updatedOrder.vendorId}`;
       
       // Notify other riders to remove this from their radar
-      io.to('role:delivery').emit('order:accepted_by_other', { orderId: order._id });
+      io.to('role:delivery').emit('order:accepted_by_other', { orderId: updatedOrder._id });
       
       // Notify student & vendor
-      io.to(studentRoom).emit('order:rider_assigned', { orderId: order._id, riderName: req.user.name });
-      io.to(vendorRoom).emit('order:rider_assigned', { orderId: order._id, riderName: req.user.name });
+      io.to(studentRoom).emit('order:rider_assigned', { orderId: updatedOrder._id, riderName: req.user.name });
+      io.to(vendorRoom).emit('order:rider_assigned', { orderId: updatedOrder._id, riderName: req.user.name });
     }
 
-    res.json(order);
+    res.json(updatedOrder);
   } else { res.status(400); throw new Error('Order not available for acceptance'); }
 });
 
