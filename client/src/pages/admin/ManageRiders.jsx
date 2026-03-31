@@ -15,6 +15,7 @@ const ManageRiders = () => {
   const [selectedRider, setSelectedRider] = useState(null);
   const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', vehicleType: 'Bicycle', role: 'delivery' });
   const [isCreating, setIsCreating] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     fetchRiders();
@@ -50,6 +51,7 @@ const ManageRiders = () => {
 
   const handleOtpVerify = async (e) => {
     e.preventDefault();
+    setIsVerifying(true);
     try {
       // 1. Verify OTP first
       await api.post('/auth/verify-account', { email: selectedRider.email, otp });
@@ -68,6 +70,8 @@ const ManageRiders = () => {
       setSelectedRider(null);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Verification failed. Please check the OTP.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -100,7 +104,7 @@ const ManageRiders = () => {
       toast.success('Delivery Personnel Created Successfully!');
       
       // Auto-transition to OTP verification
-      setSelectedRider({ id: data.profileId, email: data.email });
+      setSelectedRider({ id: data.profileId, email: data.email, tempPassword: data.password });
       setShowModal(false);
       setShowOtpModal(true);
       
@@ -341,19 +345,47 @@ const ManageRiders = () => {
                   Resend Code
                 </button>
               </div>
+              {/* Credentials Persistence Card */}
+              {selectedRider?.tempPassword && (
+                <div className="mb-6 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedRider.tempPassword);
+                        toast.success('Password copied!');
+                      }}
+                      className="p-1.5 bg-white shadow-sm border rounded-lg text-primary hover:bg-primary hover:text-white transition-all active:scale-95"
+                      title="Copy Password"
+                    >
+                      <FiCheckCircle size={14} />
+                    </button>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Temporary Password</p>
+                  <p className="font-mono text-slate-700 font-bold break-all select-all">{selectedRider.tempPassword}</p>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button 
                   type="button"
+                  disabled={isVerifying}
                   onClick={() => { setShowOtpModal(false); setOtp(''); }}
-                  className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-50 rounded-xl transition"
+                  className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-50 rounded-xl transition disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-orange-600 transition shadow-lg shadow-orange-500/30"
+                  disabled={isVerifying}
+                  className="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-orange-600 transition shadow-lg shadow-orange-500/30 disabled:opacity-70 flex justify-center items-center gap-2"
                 >
-                  Verify & Activate
+                  {isVerifying ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Verifying...
+                    </>
+                  ) : 'Verify & Activate'}
                 </button>
               </div>
             </form>

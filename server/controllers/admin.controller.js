@@ -337,7 +337,8 @@ const createUser = asyncHandler(async (req, res) => {
       profileId: profileId,
       name: user.name, 
       email: user.email, 
-      role: user.role 
+      role: user.role,
+      password: password // Included for admin-side reference during OTP step
     });
   } else {
     res.status(400); throw new Error('Invalid user data');
