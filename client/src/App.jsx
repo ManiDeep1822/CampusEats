@@ -98,6 +98,7 @@ function App() {
   const shouldHideNavbar = hideActionBarRoutes.includes(location.pathname) || location.pathname === '/complete-setup';
   
   const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     if (isAuthenticated && user?.mustChangePassword && location.pathname !== '/complete-setup') {

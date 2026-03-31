@@ -340,7 +340,7 @@ const ManageVendors = () => {
                 className="w-full text-center text-3xl font-bold tracking-[0.5em] py-3 border-2 border-gray-100 rounded-2xl focus:border-primary focus:ring-4 focus:ring-orange-500/10 outline-none transition-all mb-4"
               />
               <div className="text-sm text-gray-500 mb-6">
-                Didn't receive the code?{' '}
+                Didn&apos;t receive the code?{' '}
                 <button 
                   type="button" 
                   onClick={handleResendOtp}
