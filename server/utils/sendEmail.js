@@ -41,7 +41,7 @@ const sendEmail = async (options) => {
     
   } catch (error) {
     console.error(`❌ Brevo API Delivery Failed:`, error.message);
-    throw new Error(`Email delivery blocked by gateway: ${error.message}`);
+    throw new Error(`Email delivery blocked by gateway: ${error.message}`, { cause: error });
   }
 };
 

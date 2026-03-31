@@ -162,7 +162,6 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     // --- SWIGGY/ZOMATO STYLE WORKFLOW ---
     // If vendor clicks ACCEPT (status: confirmed), we auto-trigger PREPARING
     if (status === 'confirmed' || status === 'preparing') {
-      const originalStatus = status;
       status = 'preparing'; // Final target status
 
       // Auto-calculate prepTime if not provided

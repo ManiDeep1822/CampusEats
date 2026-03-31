@@ -84,7 +84,7 @@ const acceptOrder = asyncHandler(async (req, res) => {
   );
   
   if (updatedOrder) {
-    const deliveryBoy = await DeliveryBoy.findByIdAndUpdate(
+    await DeliveryBoy.findByIdAndUpdate(
       deliveryBoyId,
       { $set: { activeOrderId: updatedOrder._id, isAvailable: false } },
       { new: true }

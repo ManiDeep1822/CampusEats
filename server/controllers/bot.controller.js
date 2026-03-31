@@ -23,7 +23,6 @@ const handleBotQuery = asyncHandler(async (req, res) => {
     });
   }
 
-  // Initialize client safely
   if (!ai) {
     ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   }
@@ -67,7 +66,7 @@ const handleBotQuery = asyncHandler(async (req, res) => {
         { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
       ]
-    });
+    }, { apiVersion: 'v1' });
 
     const fullPrompt = `
       System: You are CampusEats Bot. Friendly, helpful.

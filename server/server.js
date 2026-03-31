@@ -142,7 +142,7 @@ const apiLimiter = rateLimit({
             }
           }
         }
-      } catch (_err) {
+      } catch {
         // Ignore decoding errors during rate limiting
       }
     }
@@ -157,7 +157,7 @@ const loginLimiter = rateLimit({
   message: { message: 'Too many login attempts, please try again after 60 seconds.' },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (_req) => {
+  skip: () => {
     return false; // Removed bypass for admin@campus.edu to prevent brute-force
   }
 });
@@ -181,7 +181,7 @@ app.use('/api/notifications', apiLimiter, notificationRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Error Handling Middleware
-app.use((err, req, res, _next) => {
+app.use((err, req, res, _) => { // eslint-disable-line no-unused-vars
   console.error('🔥 Server Error:', err); // Log the full error to stdout for debugging
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
   res.status(statusCode);
@@ -222,7 +222,7 @@ connectDB().then(() => {
 
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err, _promise) => {
+process.on('unhandledRejection', (err) => {
   console.error(`🔥 Unhandled Rejection: ${err.message}`);
 });
 
