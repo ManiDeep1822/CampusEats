@@ -12,6 +12,7 @@ const {
   updateDeliveryStatus,
   getDashboardStats,
   createUser,
+  resendStaffOTP,
   deleteVendor,
   deleteDeliveryBoy
 } = require('../controllers/admin.controller');

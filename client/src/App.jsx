@@ -11,6 +11,7 @@ import ProtectedRoute from './components/shared/ProtectedRoute';
 import GlobalNotificationListener from './components/shared/GlobalNotificationListener';
 import CampusEatsAI from './components/shared/CampusEatsAI';
 import PageLoader from './components/shared/PageLoader';
+import MandatoryPhoneModal from './components/shared/MandatoryPhoneModal';
 
 const SessionTerminatedModal = () => {
   const { isSessionTerminated } = useSelector((state) => state.auth);
@@ -100,6 +101,7 @@ function App() {
         <SwipeableToaster />
         <GlobalNotificationListener />
         <SessionTerminatedModal />
+        <MandatoryPhoneModal />
         {!shouldHideNavbar && <Navbar />}
         <CampusEatsAI />
 

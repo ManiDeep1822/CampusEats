@@ -14,6 +14,7 @@ const ManageRiders = () => {
   const [otp, setOtp] = useState('');
   const [selectedRider, setSelectedRider] = useState(null);
   const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', vehicleType: 'Bicycle', role: 'delivery' });
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     fetchRiders();
@@ -93,14 +94,22 @@ const ManageRiders = () => {
 
   const handleCreateRider = async (e) => {
     e.preventDefault();
+    setIsCreating(true);
     try {
-      await api.post('/admin/users', formData);
+      const { data } = await api.post('/admin/users', formData);
       toast.success('Delivery Personnel Created Successfully!');
+      
+      // Auto-transition to OTP verification
+      setSelectedRider({ id: data.profileId, email: data.email });
       setShowModal(false);
+      setShowOtpModal(true);
+      
       setFormData({ name: '', email: '', password: '', phone: '', vehicleType: 'Bicycle', role: 'delivery' });
       fetchRiders(); // refresh list
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error creating rider');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -282,8 +291,19 @@ const ManageRiders = () => {
                   <option value="Walking">Walking</option>
                 </select>
               </div>
-              <button type="submit" className="w-full py-3 mt-6 bg-primary text-white font-bold rounded-xl hover:bg-orange-600 transition shadow-lg shadow-orange-500/30">
-                Grant Delivery Access
+              <button 
+                type="submit" 
+                disabled={isCreating}
+                className={`w-full py-3 mt-6 text-white font-bold rounded-xl transition shadow-lg ${isCreating ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-orange-600 shadow-orange-500/30'}`}
+              >
+                {isCreating ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Granting Access...
+                  </div>
+                ) : (
+                  'Grant Delivery Access'
+                )}
               </button>
             </form>
           </motion.div>

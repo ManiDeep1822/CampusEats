@@ -237,19 +237,21 @@ const createUser = asyncHandler(async (req, res) => {
   }
 
   if (user) {
-    // 2. Ensure secondary profile exists
+    let profileId = null;
     if (user.role === 'vendor') {
-      await Vendor.findOneAndUpdate(
+      const vendorRecord = await Vendor.findOneAndUpdate(
         { userId: user._id },
         { shopName: shopName || `${name}'s Shop`, location: location || 'Campus' },
-        { upsert: true }
+        { upsert: true, new: true }
       );
+      profileId = vendorRecord._id;
     } else if (user.role === 'delivery') {
-      await DeliveryBoy.findOneAndUpdate(
+      const deliveryRecord = await DeliveryBoy.findOneAndUpdate(
         { userId: user._id },
         { vehicleType: vehicleType || 'Bicycle' },
-        { upsert: true }
+        { upsert: true, new: true }
       );
+      profileId = deliveryRecord._id;
     }
 
     // --- NEW: WELCOME OTP & EMAIL FLOW ---
@@ -316,6 +318,7 @@ const createUser = asyncHandler(async (req, res) => {
     res.status(201).json({ 
       message: 'Account created. Invitation sent to the user.',
       _id: user._id, 
+      profileId: profileId,
       name: user.name, 
       email: user.email, 
       role: user.role 
@@ -389,6 +392,7 @@ module.exports = {
   updateDeliveryStatus,
   getDashboardStats,
   createUser,
+  resendStaffOTP,
   deleteVendor,
   deleteDeliveryBoy
 };

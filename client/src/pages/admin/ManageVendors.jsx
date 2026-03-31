@@ -14,6 +14,7 @@ const ManageVendors = () => {
   const [otp, setOtp] = useState('');
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', shopName: '', location: '', role: 'vendor' });
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     fetchVendors();
@@ -93,14 +94,22 @@ const ManageVendors = () => {
 
   const handleCreateVendor = async (e) => {
     e.preventDefault();
+    setIsCreating(true);
     try {
-      await api.post('/admin/users', formData);
+      const { data } = await api.post('/admin/users', formData);
       toast.success('Vendor Account Created Successfully!');
+      
+      // Auto-transition to OTP verification
+      setSelectedVendor({ id: data.profileId, email: data.email });
       setShowModal(false);
+      setShowOtpModal(true);
+      
       setFormData({ name: '', email: '', password: '', phone: '', shopName: '', location: '', role: 'vendor' });
       fetchVendors();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error creating vendor');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -289,8 +298,19 @@ const ManageVendors = () => {
                   <input type="text" required value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
                 </div>
               </div>
-              <button type="submit" className="w-full py-3 mt-6 bg-primary text-white font-bold rounded-xl hover:bg-orange-600 transition shadow-lg shadow-orange-500/30">
-                Grant Vendor Access
+              <button 
+                type="submit" 
+                disabled={isCreating}
+                className={`w-full py-3 mt-6 text-white font-bold rounded-xl transition shadow-lg ${isCreating ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-orange-600 shadow-orange-500/30'}`}
+              >
+                {isCreating ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Granting Access...
+                  </div>
+                ) : (
+                  'Grant Vendor Access'
+                )}
               </button>
             </form>
           </motion.div>
