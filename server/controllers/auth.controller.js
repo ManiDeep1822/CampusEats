@@ -203,6 +203,7 @@ const loginUser = asyncHandler(async (req, res) => {
       role: user.role,
       profilePic: user.profilePic,
       provider: user.provider || 'local',
+      mustChangePassword: user.mustChangePassword,
       token: generateToken(user._id, user.tokenVersion),
     });
   } else {
@@ -513,9 +514,28 @@ const setDefaultAddress = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { 
-  registerUser, 
-  loginUser, 
+// @desc    Complete initial password setup (mandatory change)
+// @route   POST /api/auth/complete-setup
+// @access  Private
+const completeInitialPasswordSetup = asyncHandler(async (req, res) => {
+  const { newPassword } = req.body;
+  const user = await User.findById(req.user._id);
+
+  if (user) {
+    user.password = newPassword;
+    user.mustChangePassword = false;
+    await user.save();
+    
+    res.json({ message: 'Password updated successfully. Account fully activated.' });
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
+});
+
+module.exports = {
+  registerUser,
+  loginUser,
   getMe, 
   refreshToken, 
   logoutUser, 
@@ -528,5 +548,6 @@ module.exports = {
   updateProfile,
   addAddress,
   removeAddress,
-  setDefaultAddress
+  setDefaultAddress,
+  completeInitialPasswordSetup
 };

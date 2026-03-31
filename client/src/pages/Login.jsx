@@ -22,7 +22,7 @@ const Login = () => {
       if (user?.role === 'admin') navigate('/admin/dashboard', { replace: true });
       else if (user?.role === 'student') navigate('/student/home', { replace: true });
       else if (user?.role === 'vendor') navigate('/vendor/dashboard', { replace: true });
-      else if (user?.role === 'delivery') navigate('/delivery/dashboard', { replace: true });
+      else if (user?.mustChangePassword) navigate('/complete-setup', { replace: true });
       else navigate('/', { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
@@ -35,7 +35,8 @@ const Login = () => {
       dispatch(setCredentials({ user: data, token: data.token, role: data.role }));
       toast.success('Login Successful!');
       
-      if (data.role === 'admin') navigate('/admin/dashboard');
+      if (data.mustChangePassword) navigate('/complete-setup');
+      else if (data.role === 'admin') navigate('/admin/dashboard');
       else if (data.role === 'student') navigate('/student/home');
       else if (data.role === 'vendor') navigate('/vendor/dashboard');
       else if (data.role === 'delivery') navigate('/delivery/dashboard');
@@ -115,7 +116,8 @@ const Login = () => {
                 });
                 dispatch(setCredentials({ user: data, token: data.token, role: data.role }));
                 toast.success('Login Successful!');
-                navigate(data.role === 'admin' ? '/admin/dashboard' : data.role === 'student' ? '/student/home' : data.role === 'vendor' ? '/vendor/dashboard' : '/delivery/dashboard');
+                if (data.mustChangePassword) navigate('/complete-setup');
+                else navigate(data.role === 'admin' ? '/admin/dashboard' : data.role === 'student' ? '/student/home' : data.role === 'vendor' ? '/vendor/dashboard' : '/delivery/dashboard');
               } catch (err) {
                 toast.error('Google Login failed');
               }

@@ -211,7 +211,17 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 });
 
 const createUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role, phone, shopName, location, vehicleType } = req.body;
+  const { name, email, role, phone, shopName, location, vehicleType } = req.body;
+  let { password } = req.body;
+
+  // Generate a secure random temporary password if not provided
+  if (!password) {
+    const charset = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%&*";
+    password = "";
+    for (let i = 0; i < 12; i++) {
+      password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+  }
 
   let user = await User.findOne({ email });
 
@@ -232,7 +242,13 @@ const createUser = asyncHandler(async (req, res) => {
   } else {
     // CREATE NEW USER (Initially unverified)
     user = await User.create({ 
-      name, email, password, role: role || 'student', phone, isVerified: false 
+      name, 
+      email, 
+      password, 
+      role: role || 'student', 
+      phone, 
+      isVerified: false,
+      mustChangePassword: true // Mandatory change for admin-created accounts
     });
   }
 

@@ -39,7 +39,8 @@ const userSchema = new mongoose.Schema({
     enum: ['local', 'google'], 
     default: 'local' 
   },
-  tokenVersion: { type: Number, default: 0 }
+  tokenVersion: { type: Number, default: 0 },
+  mustChangePassword: { type: Boolean, default: false }
 }, { timestamps: true });
 
 // Pre-save hook to hash password

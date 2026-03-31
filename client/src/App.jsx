@@ -65,6 +65,7 @@ const ContactUs = lazy(() => import('./pages/shared/ContactUs'));
 const Profile = lazy(() => import('./pages/shared/Profile'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const MandatoryPasswordChange = lazy(() => import('./pages/shared/MandatoryPasswordChange'));
 
 // Student Pages
 const StudentHome = lazy(() => import('./pages/student/StudentHome'));
@@ -94,7 +95,15 @@ const ManageFeedback = lazy(() => import('./pages/admin/ManageFeedback'));
 function App() {
   const location = useLocation();
   const hideActionBarRoutes = ['/vendor/kds'];
-  const shouldHideNavbar = hideActionBarRoutes.includes(location.pathname);
+  const shouldHideNavbar = hideActionBarRoutes.includes(location.pathname) || location.pathname === '/complete-setup';
+  
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
+
+  React.useEffect(() => {
+    if (isAuthenticated && user?.mustChangePassword && location.pathname !== '/complete-setup') {
+      navigate('/complete-setup', { replace: true });
+    }
+  }, [isAuthenticated, user, location.pathname, navigate]);
 
   return (
     <div className="min-h-screen bg-background text-textPrimary font-sans">
@@ -115,6 +124,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/complete-setup" element={<MandatoryPasswordChange />} />
             
             {/* Shared Protected Routes */}
             <Route element={<ProtectedRoute allowedRoles={['student', 'vendor', 'delivery', 'admin']} />}>
