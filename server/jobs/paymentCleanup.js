@@ -3,7 +3,7 @@ const Order = require('../models/Order');
 const Notification = require('../models/Notification');
 
 /**
- * Background job to cancel pending payments that are older than 2 minutes.
+ * Background job to cancel pending payments that are older than 5 minutes.
  * This prevents orders from being stuck in "pending_payment" indefinitely.
  * @param {Object} io - Socket.io instance
  */
@@ -13,34 +13,32 @@ const startPaymentCleanupJob = (io) => {
   // Run every 60 seconds
   setInterval(async () => {
     try {
-      // FIX: Increased from 2 minutes to 5 minutes to accommodate
-      // slow bank connections and payment gateways.
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
       
-      // Find payments that are still pending and older than 5 minutes
-      const stalePayments = await Payment.find({
-        status: 'pending',
+      // Find Orders that are still pending payment and older than 5 minutes
+      const staleOrders = await Order.find({
+        status: 'pending_payment',
         createdAt: { $lt: fiveMinutesAgo }
       });
 
-      if (stalePayments.length > 0) {
-        console.log(`[CRON] Cleaning up ${stalePayments.length} stale payments...`);
+      if (staleOrders.length > 0) {
+        console.log(`[CRON] Cleaning up ${staleOrders.length} unpaid orders...`);
         
-        for (const payment of stalePayments) {
-          // 1. Mark Payment as Cancelled
-          payment.status = 'cancelled';
-          await payment.save();
-
-          // 2. Atomically update the associated Order to Cancelled
-          // Use findOneAndUpdate with a status guard to prevent a race condition where
-          // verifyPayment() concurrently moves it to 'placed' — we must NOT overwrite that.
-          const order = await Order.findOneAndUpdate(
-            { _id: payment.orderId, status: 'pending_payment' }, // Only cancel if still waiting for payment
+        for (const order of staleOrders) {
+          // 1. Atomically update the Order to Cancelled
+          const cancelledOrder = await Order.findOneAndUpdate(
+            { _id: order._id, status: 'pending_payment' },
             { $set: { status: 'cancelled' } },
             { new: true }
           );
 
-          if (order) {
+          if (cancelledOrder) {
+            // 2. Mark any associated pending Payments as Cancelled
+            await Payment.updateMany(
+              { orderId: order._id, status: 'pending' },
+              { $set: { status: 'cancelled' } }
+            );
+
             // 3. Notify Student via Socket.io
             if (io) {
               const studentRoom = `student:${order.studentId}`;
@@ -59,8 +57,6 @@ const startPaymentCleanupJob = (io) => {
                   type: 'order_update',
                   orderId: order._id
                 });
-
-                // --- NEW: Real-time Socket Emission ---
                 io.to(studentRoom).emit('notification', notification);
               } catch (nErr) {
                 console.error("Cleanup notification persist error:", nErr.message);
@@ -68,7 +64,7 @@ const startPaymentCleanupJob = (io) => {
             }
             console.log(`[CRON] Cancelled Order ${order.orderId} (Payment Timeout)`);
           } else {
-            console.log(`[CRON] Skipped Order for Payment ${payment._id} — was already updated (race condition prevented).`);
+            console.log(`[CRON] Skipped Order ${order._id} — was already updated.`);
           }
         }
       }

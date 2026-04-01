@@ -39,6 +39,7 @@ const OrderTracking = () => {
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
   const { activeOrder, trackingStatus } = useSelector(state => state.order);
+  const { user } = useSelector(state => state.auth);
   const dispatch = useDispatch();
   
   const socket = useSocketContext();
@@ -53,7 +54,57 @@ const OrderTracking = () => {
        setRouteCoords(coords);
     };
     getRoute();
+
+    if (!document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      document.body.appendChild(script);
+    }
   }, []);
+
+  const handlePayment = async () => {
+    try {
+      const { data: initData } = await api.post('/payment/initiate', { orderId: activeOrder._id });
+
+      const options = {
+        key: initData.keyId,
+        amount: initData.amount,
+        currency: initData.currency,
+        name: "CampusEats",
+        description: "Complete Order Payment",
+        order_id: initData.razorpayOrderId,
+        handler: async function (response) {
+          try {
+            await api.post('/payment/verify', {
+              paymentId: initData.payment._id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            });
+            toast.success("Payment successful!");
+            dispatch(updateOrderStatus({ status: 'placed' }));
+            setTimeout(() => window.location.reload(), 1500);
+          } catch (err) {
+            toast.error(err.response?.data?.message || 'Payment Verification Failed');
+          }
+        },
+        prefill: {
+          name: user?.name || "Student",
+          email: user?.email || "student@campuseats.com",
+          contact: user?.phone || "9999999999"
+        },
+        theme: { color: "#F97316" }
+      };
+
+      const razorpayInstance = new window.Razorpay(options);
+      razorpayInstance.on('payment.failed', (response) => toast.error(response.error.description));
+      razorpayInstance.open();
+
+    } catch (error) { 
+      toast.error(error.response?.data?.message || 'Failed to initiate checkout'); 
+    } 
+  };
 
   const [ratingValue, setRatingValue] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -158,7 +209,10 @@ const OrderTracking = () => {
   if (loading) return <Loader />;
   if (!activeOrder) return <div className="text-center py-20 text-xl font-bold">Order Not Found</div>;
 
-  const steps = ['placed', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered'];
+  const isTakeAway = activeOrder.orderType === 'take_away';
+  const steps = isTakeAway 
+    ? ['placed', 'confirmed', 'preparing', 'ready', 'delivered']
+    : ['placed', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered'];
   const currentStepIdx = steps.indexOf(trackingStatus || activeOrder.status);
 
   return (
@@ -169,11 +223,18 @@ const OrderTracking = () => {
             <h2 className="text-2xl font-bold font-heading mb-2">Track Order</h2>
             <p className="text-textSecondary">ID: {activeOrder?.orderId} • {activeOrder?.vendorId?.shopName || 'Unknown Vendor'}</p>
           </div>
-          {['placed', 'pending_payment'].includes(trackingStatus || activeOrder.status) && (
-            <button onClick={handleCancelOrder} className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-100 transition shadow-sm text-sm border border-red-100">
-              Cancel Order
-            </button>
-          )}
+          <div className="flex gap-3">
+            {['placed', 'pending_payment'].includes(trackingStatus || activeOrder.status) && (
+              <button onClick={handleCancelOrder} className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-100 transition shadow-sm text-sm border border-red-100">
+                Cancel Order
+              </button>
+            )}
+            {(trackingStatus || activeOrder.status) === 'pending_payment' && (
+              <button onClick={handlePayment} className="animate-pulse bg-primary text-white px-4 py-2 rounded-lg font-bold hover:bg-orange-600 transition shadow-md shadow-orange-500/30 text-sm">
+                Proceed to Pay
+              </button>
+            )}
+          </div>
           {(trackingStatus || activeOrder.status) === 'cancelled' && (
             <span className="bg-red-100 text-red-600 px-4 py-2 rounded-lg font-bold shadow-sm text-sm border border-red-200">
               Cancelled
@@ -181,13 +242,36 @@ const OrderTracking = () => {
           )}
         </div>
 
+        {(trackingStatus || activeOrder.status) === 'pending_payment' && (
+           <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
+             <div className="flex">
+               <div className="flex-shrink-0">
+                 <span className="text-red-500 text-xl font-black">!</span>
+               </div>
+               <div className="ml-3">
+                 <h3 className="text-sm font-bold text-red-800 uppercase tracking-widest">Payment Pending</h3>
+                 <div className="mt-1 text-xs text-red-700 font-medium">
+                   <p>Your order will be automatically cancelled in 5 minutes if payment is not received.</p>
+                 </div>
+               </div>
+             </div>
+           </div>
+        )}
+
         <div className="relative pl-8 space-y-8 py-6 max-sm:pl-4 max-sm:space-y-6 max-sm:py-4">
           <div className="absolute left-11 top-6 bottom-6 w-0.5 bg-gray-100 max-sm:left-[27px]"></div>
           {steps.map((step, idx) => {
             const isDelivered = (trackingStatus || activeOrder.status) === 'delivered';
             const isCompleted = idx < currentStepIdx || (isDelivered && idx === currentStepIdx);
             const isActive = idx === currentStepIdx && !isDelivered;
-            const labels = { placed: "Order Placed", confirmed: "Confirmed", preparing: "Preparing", ready: "Ready", picked_up: "Out for Delivery", delivered: "Delivered" };
+            const labels = { 
+              placed: "Order Placed", 
+              confirmed: "Confirmed", 
+              preparing: "Preparing", 
+              ready: isTakeAway ? "Ready for Pickup" : "Ready", 
+              picked_up: "Out for Delivery", 
+              delivered: isTakeAway ? "Collected" : "Delivered" 
+            };
             return (
               <div key={step} className="flex items-center relative z-10">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-4 max-sm:w-6 max-sm:h-6 max-sm:border-2 ${isActive ? 'bg-primary border-orange-200 animate-pulse' : isCompleted ? 'bg-accent border-green-100' : 'bg-gray-100 border-white'}`}>
@@ -198,6 +282,23 @@ const OrderTracking = () => {
             );
           })}
         </div>
+        
+        {/* NEW: Pickup PIN Banner for Take Away */}
+        {isTakeAway && activeOrder.status === 'ready' && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 p-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-xl shadow-indigo-200 text-white text-center"
+          >
+            <p className="text-[10px] uppercase font-black tracking-widest mb-2 opacity-80">Pickup PIN</p>
+            <div className="flex justify-center gap-3 mb-4">
+              {activeOrder.deliveryOtp?.toString().split('').map((digit, i) => (
+                <div key={i} className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-2xl font-black">{digit}</div>
+              ))}
+            </div>
+            <p className="text-sm font-bold opacity-90">Show this PIN at the counter to collect your order</p>
+          </motion.div>
+        )}
         
         {activeOrder?.deliveryBoyId && (
            <div className="mt-8 pt-6 border-t bg-gray-50/50 p-4 rounded-xl flex items-center justify-between">
@@ -233,13 +334,13 @@ const OrderTracking = () => {
                {activeOrder.status === 'preparing' ? 'Estimated time to be ready' : `Expected by ${activeOrder?.estimatedDeliveryTime && new Date(activeOrder.estimatedDeliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
              </p>
            </div>
-           <div className="text-right border-l border-orange-200/50 pl-6 max-sm:w-full max-sm:text-left max-sm:border-l-0 max-sm:pl-0">
-             <p className="text-[10px] text-orange-600 font-bold uppercase tracking-widest mb-1">Delivery To</p>
-             <p className="text-orange-900 font-bold text-base leading-snug line-clamp-2 max-sm:text-sm">{activeOrder?.deliveryAddress || 'Campus'}</p>
-           </div>
+            <div className="text-right border-l border-orange-200/50 pl-6 max-sm:w-full max-sm:text-left max-sm:border-l-0 max-sm:pl-0">
+              <p className="text-[10px] text-orange-600 font-bold uppercase tracking-widest mb-1">{isTakeAway ? 'Pickup At' : 'Delivery To'}</p>
+              <p className="text-orange-900 font-bold text-base leading-snug line-clamp-2 max-sm:text-sm">{isTakeAway ? 'Restaurant Counter' : (activeOrder?.deliveryAddress || 'Campus')}</p>
+            </div>
         </div>
 
-        {(trackingStatus || activeOrder.status) !== 'delivered' && (
+        {(trackingStatus || activeOrder.status) !== 'delivered' && !isTakeAway && (
           <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm relative z-0 mb-8" style={{ height: '350px' }}>
             <MapContainer 
               center={riderLocation || [28.7041, 77.1025]} 

@@ -40,7 +40,7 @@ const searchItems = asyncHandler(async (req, res) => {
 });
 
 const calculateOrderBill = asyncHandler(async (req, res) => {
-  const { items } = req.body;
+  const { items, orderType } = req.body;
   if (!items || items.length === 0) {
     return res.json({ subtotal: 0, distance: 0, deliveryFee: 0, platformFee: 0, taxes: 0, finalTotal: 0 });
   }
@@ -54,7 +54,7 @@ const calculateOrderBill = asyncHandler(async (req, res) => {
   }
 
   const distance = 1.2; // Constant distance or calculated via vendor proximity
-  const deliveryFee = calculateDeliveryFee(subtotal);
+  const deliveryFee = orderType === 'take_away' ? 0 : calculateDeliveryFee(subtotal);
   const platformFee = 5;
   const taxes = Number((subtotal * 0.05).toFixed(2));
   const finalTotal = Number((subtotal + deliveryFee + platformFee + taxes).toFixed(2));
@@ -62,7 +62,7 @@ const calculateOrderBill = asyncHandler(async (req, res) => {
   res.json({ subtotal, distance, deliveryFee, platformFee, taxes, finalTotal });
 });
 
-const generateSecureBill = async (vendorId, items) => {
+const generateSecureBill = async (vendorId, items, orderType) => {
   let subtotal = 0;
   let verifiedItems = [];
 
@@ -85,7 +85,7 @@ const generateSecureBill = async (vendorId, items) => {
     throw new Error('No valid items found from this vendor. Cart might be corrupted.');
   }
 
-  const deliveryFee = calculateDeliveryFee(subtotal);
+  const deliveryFee = orderType === 'take_away' ? 0 : calculateDeliveryFee(subtotal);
   const platformFee = 5;
   const taxes = Number((subtotal * 0.05).toFixed(2));
   const finalTotal = Number((subtotal + deliveryFee + platformFee + taxes).toFixed(2));
@@ -94,13 +94,13 @@ const generateSecureBill = async (vendorId, items) => {
 };
 
 const placeOrder = asyncHandler(async (req, res) => {
-  const { vendorId, items, deliveryAddress, paymentId, specialInstructions, scheduledFor } = req.body;
+  const { vendorId, items, deliveryAddress, paymentId, specialInstructions, scheduledFor, orderType } = req.body;
   if (!items || items.length === 0) {
     res.status(400);
     throw new Error('No order items');
   }
 
-  const bill = await generateSecureBill(vendorId, items);
+  const bill = await generateSecureBill(vendorId, items, orderType);
 
   // Calculate Smart ETAs: 15 mins base + 5 mins per unique item
   let estimatedDeliveryTime = new Date();
@@ -112,7 +112,7 @@ const placeOrder = asyncHandler(async (req, res) => {
     estimatedDeliveryTime.setMinutes(estimatedDeliveryTime.getMinutes() + prepMinutes);
   }
 
-  // Security Patch: Verification Code for delivery
+  // Security Patch: Verification Code for delivery/pickup
   const deliveryOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
   const orderId = 'ORD' + Date.now();
@@ -121,7 +121,8 @@ const placeOrder = asyncHandler(async (req, res) => {
     studentId: req.user._id, 
     vendorId, 
     items: bill.verifiedItems, 
-    deliveryAddress, 
+    orderType: orderType || 'delivery',
+    deliveryAddress: orderType === 'take_away' ? 'Pickup from Restaurant' : deliveryAddress, 
     totalAmount: bill.finalTotal, 
     taxAmount: bill.taxes,
     deliveryFee: bill.deliveryFee,
@@ -135,12 +136,6 @@ const placeOrder = asyncHandler(async (req, res) => {
   });
   
   const createdOrder = await order.save();
-  
-  // NOTE: We do NOT notify the vendor here.
-  // The vendor is only notified in payment.controller.js -> verifyPayment()
-  // AFTER the Razorpay signature is confirmed. This prevents phantom unpaid
-  // orders from appearing on the vendor's dashboard.
-  
   res.status(201).json(createdOrder);
 });
 

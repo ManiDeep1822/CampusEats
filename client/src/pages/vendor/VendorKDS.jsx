@@ -8,6 +8,7 @@ import {
   FiUser, FiShoppingBag, FiTruck, FiCheckCircle, FiPlayCircle,
   FiMapPin, FiCamera, FiTrash2, FiZap
 } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
 
 
 // --- Helper: Elapsed time since order was placed ---
@@ -102,6 +103,11 @@ const VendorKDS = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [nextRefresh, setNextRefresh] = useState(30);
 
+  // Take Away PIN Verification
+  const [verifyingOrder, setVerifyingOrder] = useState(null);
+  const [pickupPin, setPickupPin] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+
   const fetchOrders = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
@@ -165,14 +171,28 @@ const VendorKDS = () => {
   useSocketEvent('order:cancelled', () => { fetchOrders(true); toast.error("User cancelled their order"); });
   useSocketEvent('order:picked', () => { fetchOrders(true); toast.success("Order Dispatched!"); });
 
-  const updateStatus = async (id, status) => {
+  const updateStatus = async (id, status, extraData = {}) => {
     try {
-      await api.put(`/vendor/orders/${id}/status`, { status });
+      await api.put(`/vendor/orders/${id}/status`, { status, ...extraData });
       fetchOrders(true);
       toast.success(`Moved to ${status}!`);
-    } catch {
-      toast.error('Workflow update failed');
+      return true;
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Workflow update failed');
+      return false;
     }
+  };
+
+  const handleVerifyPin = async (e) => {
+    e.preventDefault();
+    if (pickupPin.length !== 6) return toast.error("Enter 6-digit PIN");
+    setIsVerifying(true);
+    const success = await updateStatus(verifyingOrder._id, 'delivered', { otp: pickupPin });
+    if (success) {
+      setVerifyingOrder(null);
+      setPickupPin('');
+    }
+    setIsVerifying(false);
   };
 
   const stats = useMemo(() => {
@@ -307,12 +327,20 @@ const VendorKDS = () => {
                   ) : (
                     colOrders.map(order => (
                       <div key={order._id} className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 px-5 py-5 rounded-2xl transition-all duration-300 hover:border-slate-600 shadow-xl">
-                        {col.key === 'dispatched' && (
-                           <div className={`mb-3 py-1.5 px-3 rounded-lg border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${order.deliveryBoyId ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-orange-500/10 border-orange-500/30 text-orange-400 animate-pulse'}`}>
-                              {order.deliveryBoyId ? <FiTruck /> : <FiClock />}
-                              {order.deliveryBoyId ? `Rider Assigned` : 'Searching for Rider'}
-                           </div>
-                        )}
+                         <div className="flex flex-wrap gap-2 mb-3">
+                           {col.key === 'dispatched' && (
+                             <div className={`py-1.5 px-3 rounded-lg border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${order.deliveryBoyId ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-orange-500/10 border-orange-500/30 text-orange-400 animate-pulse'}`}>
+                                {order.deliveryBoyId ? <FiTruck /> : <FiClock />}
+                                {order.deliveryBoyId ? `Rider Assigned` : 'Searching for Rider'}
+                             </div>
+                           )}
+                           {order.orderType === 'take_away' && (
+                             <div className="py-1.5 px-3 rounded-lg border bg-indigo-500/10 border-indigo-500/30 text-indigo-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 animate-bounce">
+                                <FiShoppingBag />
+                                Self Pickup
+                             </div>
+                           )}
+                         </div>
                         <div className="flex items-start justify-between mb-4">
                            <div>
                               <span className="text-xl font-black font-mono text-white leading-none">#{order.orderId?.slice(-6).toUpperCase()}</span>
@@ -333,11 +361,19 @@ const VendorKDS = () => {
                              </div>
                            ))}
                         </div>
-                        {col.next && (
+                        {order.orderType === 'take_away' && order.status === 'ready' ? (
+                          <button 
+                            onClick={() => setVerifyingOrder(order)} 
+                            className="w-full py-4 mt-2 rounded-xl font-bold text-[13px] uppercase tracking-widest text-white bg-gradient-to-r from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 border border-white/10 flex items-center justify-center gap-2"
+                          >
+                            <FiCheckCircle />
+                            Verify & Complete Pickup
+                          </button>
+                        ) : col.next ? (
                            <button onClick={() => updateStatus(order._id, col.next)} className={`w-full py-4 mt-2 rounded-xl font-bold text-[13px] uppercase tracking-widest text-white bg-gradient-to-r ${col.bumpColor} shadow-[0_8px_16px_-6px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_20px_-6px_rgba(0,0,0,0.6)] hover:-translate-y-0.5 active:scale-95 transition-all duration-200 border border-white/10 flex items-center justify-center`}>
                              {col.nextLabel}
                            </button>
-                        )}
+                        ) : null}
                       </div>
                     ))
                   )}
@@ -347,6 +383,69 @@ const VendorKDS = () => {
           })}
         </div>
       </div>
+
+      {/* PIN Verification Modal */}
+      <AnimatePresence>
+        {verifyingOrder && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 pb-20 sm:pb-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setVerifyingOrder(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              className="relative w-full max-w-md bg-[#0f172a] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-indigo-500/20 text-indigo-400 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6 border border-indigo-500/20 shadow-inner">🔑</div>
+                <h2 className="text-2xl font-black text-white mb-2">Verify Pickup PIN</h2>
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest leading-relaxed">
+                  Enter the 6-digit code shown on the student&apos;s phone for order <span className="text-indigo-400">#{verifyingOrder.orderId?.slice(-6).toUpperCase()}</span>
+                </p>
+              </div>
+
+              <form onSubmit={handleVerifyPin} className="space-y-6">
+                <div className="relative group">
+                  <input 
+                    type="text" 
+                    maxLength="6"
+                    value={pickupPin}
+                    onChange={(e) => setPickupPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="0 0 0 0 0 0" 
+                    className="w-full bg-slate-800/50 border-2 border-slate-700 rounded-2xl px-6 py-5 text-center text-3xl font-mono font-black tracking-[0.5em] text-white outline-none focus:border-indigo-500/50 focus:bg-slate-800 transition-all placeholder:text-slate-700"
+                    autoFocus
+                  />
+                  <div className="absolute inset-0 rounded-2xl bg-indigo-500/5 opacity-0 group-focus-within:opacity-100 pointer-events-none transition-opacity" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    type="button"
+                    onClick={() => setVerifyingOrder(null)}
+                    className="py-4 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/5"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={pickupPin.length !== 6 || isVerifying}
+                    className="py-4 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isVerifying ? <FiRefreshCw className="animate-spin" /> : <FiZap />}
+                    {isVerifying ? 'Verifying...' : 'Confirm Delivery'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

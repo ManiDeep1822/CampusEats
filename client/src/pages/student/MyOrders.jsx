@@ -79,8 +79,11 @@ const MyOrders = () => {
                 
                 <div className="flex flex-col items-end gap-3 min-w-[140px]">
                   <div className="font-extrabold text-2xl text-primary">₹{order.totalAmount}</div>
-                  <Link to={`/student/tracking/${order._id}`} className="w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-xl transition">
-                    View Details
+                  <Link 
+                    to={`/student/tracking/${order._id}`} 
+                    className={`w-full text-center font-bold py-2.5 px-4 rounded-xl transition ${order.status === 'pending_payment' ? 'bg-primary text-white hover:bg-orange-600 animate-pulse shadow-md shadow-orange-500/20' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
+                  >
+                    {order.status === 'pending_payment' ? 'Complete Payment' : 'View Details'}
                   </Link>
                   {['delivered', 'ready', 'preparing', 'placed'].includes(order.status) && (
                     <button 

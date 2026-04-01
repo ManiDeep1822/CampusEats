@@ -10,6 +10,12 @@ const orderSchema = new mongoose.Schema({
     quantity: { type: Number, required: true },
     price: { type: Number, required: true }
   }],
+  orderType: { 
+    type: String, 
+    enum: ['delivery', 'take_away'], 
+    default: 'delivery',
+    required: true
+  },
   status: {
     type: String,
     enum: ['pending_payment', 'placed', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered', 'cancelled'],
@@ -17,7 +23,7 @@ const orderSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  deliveryAddress: { type: String, required: true },
+  deliveryAddress: { type: String, required: function() { return this.orderType === 'delivery'; } },
   totalAmount: { type: Number, required: true },
   taxAmount: { type: Number, default: 0 },
   deliveryFee: { type: Number, default: 0 },

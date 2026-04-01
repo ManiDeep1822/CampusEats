@@ -171,6 +171,16 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       }
     }
 
+    // --- TAKE AWAY OTP VERIFICATION ---
+    if (order.orderType === 'take_away' && status === 'delivered') {
+      const { otp } = req.body;
+      if (!otp || otp !== order.deliveryOtp) {
+        res.status(400);
+        throw new Error('Invalid Pickup PIN. Please get the correct 6-digit PIN from the student.');
+      }
+      order.deliveredAt = Date.now();
+    }
+
     if (status) order.status = status;
     if (prepTime) order.estimatedTime = prepTime;
     

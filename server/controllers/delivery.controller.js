@@ -67,7 +67,11 @@ const toggleAvailability = asyncHandler(async (req, res) => {
 });
 
 const getAvailableOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find({ status: { $in: ['placed', 'confirmed', 'preparing', 'ready'] }, deliveryBoyId: null })
+  const orders = await Order.find({ 
+    status: { $in: ['placed', 'confirmed', 'preparing', 'ready'] }, 
+    deliveryBoyId: null,
+    orderType: 'delivery' 
+  })
     .populate('vendorId', 'shopName location')
     .populate('studentId', 'name phone')
     .sort({ updatedAt: -1 });
