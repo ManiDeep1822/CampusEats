@@ -24,6 +24,8 @@ const StudentHome = () => {
   const [locating, setLocating] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+  const [categoryVendorIds, setCategoryVendorIds] = useState([]);
+  const [isSearchingCategory, setIsSearchingCategory] = useState(false);
 
   const categories = [
     { id: 'biryani', label: 'Biryani', icon: 'https://images.unsplash.com/photo-1563379091339-03b21bc4a4f8?q=80&w=300&h=300&auto=format&fit=crop', color: 'bg-orange-50' },
@@ -62,6 +64,27 @@ const StudentHome = () => {
     fetchFavs();
   }, []);
 
+  useEffect(() => {
+    const fetchCategoryMatches = async () => {
+      if (!selectedCategory) {
+        setCategoryVendorIds([]);
+        return;
+      }
+      setIsSearchingCategory(true);
+      try {
+        // Fetch items matching category to find which vendors sell it
+        const { data } = await api.get(`/student/search?query=${selectedCategory}`);
+        const vendorIds = [...new Set((data || []).map(item => item.vendorId?._id || item.vendorId))];
+        setCategoryVendorIds(vendorIds.filter(Boolean));
+      } catch (error) {
+        console.error("Failed to fetch category matches", error);
+      } finally {
+        setIsSearchingCategory(false);
+      }
+    };
+    fetchCategoryMatches();
+  }, [selectedCategory]);
+
   const toggleFav = async (e, vendorId) => {
     e.preventDefault(); 
     try {
@@ -76,8 +99,12 @@ const StudentHome = () => {
   const filteredVendors = vendors
     .filter(v => {
       const matchesSearch = v.shopName.toLowerCase().includes(search.toLowerCase()) || 
-                            v.cuisineType.join(',').toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = !selectedCategory || v.cuisineType.some(c => c.toLowerCase().includes(selectedCategory.toLowerCase()));
+                            (v.cuisineType || []).join(',').toLowerCase().includes(search.toLowerCase());
+      
+      const matchesCuisine = (v.cuisineType || []).some(c => c.toLowerCase().includes(selectedCategory?.toLowerCase()));
+      const matchesMenuItem = categoryVendorIds.some(id => id.toString() === (v._id || v.id).toString());
+      const matchesCategory = !selectedCategory || matchesCuisine || matchesMenuItem;
+      
       const matchesRating = v.rating >= minRating;
       const matchesVeg = !onlyVeg || v.cuisineType.some(c => c.toLowerCase().includes('veg'));
       const matchesFavorites = !showOnlyFavorites || favorites.includes(v._id);
@@ -116,18 +143,29 @@ const StudentHome = () => {
     }
     
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setAddress(`LPU (Detected)`);
-        setLocating(false);
-        toast.success('Location detected!');
-      },
-      (error) => {
-        setLocating(false);
-        toast.error('Location error: ' + error.message);
-      },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-    );
+    const geoOptions = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+    
+    const success = (position) => {
+      setAddress(`LPU (Detected)`);
+      setLocating(false);
+      toast.success('Location detected!');
+    };
+
+    const errorCallback = (error) => {
+      // If high accuracy fails, try one more time with standard accuracy
+      if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
+        console.warn("High accuracy failed, retrying with standard accuracy...");
+        navigator.geolocation.getCurrentPosition(success, (err) => {
+          setLocating(false);
+          toast.error('Location error: ' + err.message);
+        }, { enableHighAccuracy: false, timeout: 10000 });
+        return;
+      }
+      setLocating(false);
+      toast.error('Location error: ' + error.message);
+    };
+
+    navigator.geolocation.getCurrentPosition(success, errorCallback, geoOptions);
   };
 
   const RestaurantCard = ({ vendor }) => (
@@ -273,8 +311,8 @@ const StudentHome = () => {
         </div>
       </div>
 
-      {/* Sticky Filter Bar */}
-      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-100 py-4 px-4 shadow-sm">
+      {/* Sticky Filter Bar - OFFSET BY NAVBAR HEIGHT (64px) TO FIX OVERLAP */}
+      <div className="sticky top-16 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-100 py-4 px-4 shadow-sm transition-all duration-300">
         <div className="max-w-7xl mx-auto flex items-center gap-3">
           
           {/* STATIC SORT BUTTON (Outside overflow to prevent clipping) */}
@@ -383,16 +421,27 @@ const StudentHome = () => {
           {search || selectedCategory ? `Results for "${search || selectedCategory}"` : 'Top Restaurants for you'}
         </h2>
 
-        {loading ? (
+        {loading || isSearchingCategory ? (
           <SkeletonLoader count={8} />
         ) : (
-          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12">
-            <AnimatePresence>
-              {filteredVendors.map((vendor) => (
-                <RestaurantCard key={vendor._id} vendor={vendor} />
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          <div className="space-y-16">
+            {/* RESTAURANTS GRID */}
+            <div className="space-y-10 pt-4">
+              <div className="flex justify-between items-baseline px-2">
+                <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-none">
+                  {selectedCategory ? `Top Restaurants for "${selectedCategory}"` : 'Discover Restaurants'}
+                </h3>
+                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{filteredVendors.length} Spots Nearby</span>
+              </div>
+              <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12">
+                <AnimatePresence>
+                  {filteredVendors.map((vendor) => (
+                    <RestaurantCard key={vendor._id} vendor={vendor} />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </div>
+          </div>
         )}
 
         {filteredVendors.length === 0 && !loading && (
