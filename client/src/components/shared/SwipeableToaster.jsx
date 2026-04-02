@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 const SwipeableToaster = () => {
   const { toasts, handlers } = useToaster();
   const { startPause, endPause } = handlers;
-  
-  // Limit visible toasts to 3 for performance and UI clarity
-  const visibleToasts = toasts.slice(0, 3);
-  const remainingCount = toasts.length - 3;
+
+  // Only show the single top-most visible toast — no ghost stacking
+  const visibleToasts = toasts.filter(t => t.visible);
+  const topToast = visibleToasts[0];
+  const queuedCount = visibleToasts.length - 1;
 
   return (
     <div
@@ -18,120 +19,79 @@ const SwipeableToaster = () => {
         top: 24,
         left: 0,
         right: 0,
-        bottom: 0,
         pointerEvents: 'none',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'flex-start',
-        overflow: 'hidden',
       }}
       onMouseEnter={startPause}
       onMouseLeave={endPause}
     >
-      <motion.div
-        style={{ 
-          pointerEvents: toasts.length > 0 ? 'auto' : 'none',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          position: 'relative',
-          padding: '16px',
-          width: '100%',
-          maxWidth: '380px',
-        }}
-      >
-        <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', height: '80px' }}>
-          <AnimatePresence mode="popLayout">
-            {visibleToasts.map((t, index) => {
-              const scale = 1 - index * 0.05;
-              const yOffset = index * 12;
-              const zIndex = 100 - index;
-              const opacity = 1 - index * 0.25;
+      <AnimatePresence mode="wait">
+        {topToast && (
+          <motion.div
+            key={topToast.id}
+            initial={{ opacity: 0, y: -60, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 400, damping: 28 } }}
+            exit={{ opacity: 0, y: -80, scale: 0.9, transition: { duration: 0.2, ease: 'easeIn' } }}
+            drag="y"
+            dragConstraints={{ top: -200, bottom: 10 }}
+            dragElastic={{ top: 0.5, bottom: 0.1 }}
+            dragTransition={{ bounceStiffness: 400, bounceDamping: 30 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y < -50 || info.velocity.y < -200) {
+                toast.dismiss(); // Dismiss ALL on swipe-up
+              }
+            }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              cursor: 'grab',
+              backgroundColor: 'white',
+              boxShadow: '0 15px 35px -8px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0,0,0,0.05)',
+              padding: '10px 18px',
+              borderRadius: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              minWidth: '260px',
+              maxWidth: '350px',
+              width: '90vw',
+              border: '1px solid #f1f5f9',
+              pointerEvents: 'auto',
+              willChange: 'transform, opacity',
+            }}
+          >
+            {/* Icon */}
+            <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-gray-50 shadow-inner">
+              {topToast.type === 'success' && <span className="text-green-500 text-lg font-bold">✓</span>}
+              {topToast.type === 'error' && <span className="text-red-500 text-lg font-bold">✕</span>}
+              {topToast.type === 'loading' && <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />}
+              {topToast.type === 'blank' && <span className="text-orange-500 text-lg">🔔</span>}
+            </div>
 
-              return (
-                <motion.div
-                  key={t.id}
-                  layout
-                  // Performance: Removed 'filter: blur()'
-                  initial={{ opacity: 0, y: -60, scale: 0.8 }}
-                  animate={{ 
-                    opacity: opacity, 
-                    y: yOffset, 
-                    scale: scale, 
-                    zIndex: zIndex,
-                    transition: { 
-                      type: 'spring', 
-                      stiffness: 350, 
-                      damping: 30,
-                    } 
-                  }}
-                  exit={{ 
-                    opacity: 0, 
-                    y: -80, 
-                    scale: 0.9, 
-                    transition: { duration: 0.2, ease: "easeIn" } 
-                  }}
-                  whileHover={index === 0 ? { scale: 1.02, y: -2 } : {}}
-                  whileTap={index === 0 ? { scale: 0.98 } : {}}
-                  drag={index === 0 ? "y" : false}
-                  dragConstraints={{ top: -200, bottom: 10 }}
-                  dragElastic={{ top: 0.5, bottom: 0.1 }}
-                  dragTransition={{ bounceStiffness: 400, bounceDamping: 30 }}
-                  onDragEnd={(_, info) => {
-                    if (index === 0 && (info.offset.y < -50 || info.velocity.y < -200)) {
-                      toast.dismiss(t.id);
-                    }
-                  }}
-                  style={{
-                    position: 'absolute',
-                    cursor: index === 0 ? 'grab' : 'default',
-                    // Performance: Using high-opacity solid color instead of backdropFilter: blur()
-                    backgroundColor: 'white',
-                    boxShadow: index === 0 
-                      ? '0 15px 35px -8px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0,0,0,0.05)'
-                      : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                    padding: '10px 18px',
-                    borderRadius: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    minWidth: '260px',
-                    maxWidth: '350px',
-                    width: '90%',
-                    border: '1px solid #f1f5f9',
-                    pointerEvents: index === 0 ? 'auto' : 'none',
-                    willChange: 'transform, opacity',
-                  }}
-                >
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-gray-50 shadow-inner">
-                    {t.type === 'success' && <span className="text-green-500 text-lg font-bold">✓</span>}
-                    {t.type === 'error' && <span className="text-red-500 text-lg font-bold">✕</span>}
-                    {t.type === 'loading' && <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />}
-                    {t.type === 'blank' && <span className="text-orange-500 text-lg">🔔</span>}
-                  </div>
-                  <div className="flex-grow flex flex-col overflow-hidden py-0.5">
-                    <span className="text-[8px] uppercase tracking-[0.2em] text-gray-400 font-black mb-0.5">Notification</span>
-                    <div className="text-[13px] font-bold text-slate-800 leading-[1.3] whitespace-normal">
-                      {typeof t.message === 'function' ? t.message(t) : t.message}
-                    </div>
-                  </div>
-                  
-                  {index === 0 && remainingCount > 0 && (
-                    <motion.div 
-                      initial={{ scale: 0 }} 
-                      animate={{ scale: 1 }}
-                      className="flex-shrink-0 bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-black border border-primary/20"
-                    >
-                      +{remainingCount + 1}
-                    </motion.div>
-                  )}
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
-      </motion.div>
+            {/* Message */}
+            <div className="flex-grow flex flex-col overflow-hidden py-0.5">
+              <span className="text-[8px] uppercase tracking-[0.2em] text-gray-400 font-black mb-0.5">Notification</span>
+              <div className="text-[13px] font-bold text-slate-800 leading-[1.3] whitespace-normal">
+                {typeof topToast.message === 'function' ? topToast.message(topToast) : topToast.message}
+              </div>
+            </div>
+
+            {/* Queue Count Badge — shows how many more are waiting */}
+            {queuedCount > 0 && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="flex-shrink-0 bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-black border border-primary/20"
+              >
+                +{queuedCount}
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
