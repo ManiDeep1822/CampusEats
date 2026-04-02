@@ -77,6 +77,7 @@ const CartPage = lazy(() => import('./pages/student/CartPage'));
 const OrderTracking = lazy(() => import('./pages/student/OrderTracking'));
 const MyOrders = lazy(() => import('./pages/student/MyOrders'));
 const StudentOffers = lazy(() => import('./pages/student/StudentOffers'));
+const CategoryResults = lazy(() => import('./pages/student/CategoryResults'));
 
 
 // Vendor Pages
@@ -148,6 +149,7 @@ function App() {
               <Route path="/student/tracking/:id" element={<OrderTracking />} />
               <Route path="/student/orders" element={<MyOrders />} />
               <Route path="/student/offers" element={<StudentOffers />} />
+              <Route path="/student/category/:categoryId" element={<CategoryResults />} />
 
             </Route>
             

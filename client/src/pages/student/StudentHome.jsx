@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FiSearch, FiClock, FiStar, FiHeart, FiFilter, FiX, FiCheck, 
@@ -12,11 +12,11 @@ import SkeletonLoader from '../../components/shared/SkeletonLoader';
 import LiveOrderTracker from '../../components/student/LiveOrderTracker';
 
 const StudentHome = () => {
+  const navigate = useNavigate();
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
   const [minRating, setMinRating] = useState(0);
   const [onlyVeg, setOnlyVeg] = useState(false);
   const [sortBy, setSortBy] = useState('default');
@@ -24,8 +24,6 @@ const StudentHome = () => {
   const [locating, setLocating] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
-  const [categoryVendorIds, setCategoryVendorIds] = useState([]);
-  const [isSearchingCategory, setIsSearchingCategory] = useState(false);
 
   const categories = [
     { id: 'biryani', label: 'Biryani', icon: 'https://images.unsplash.com/photo-1563379091339-03b21bc4a4f8?q=80&w=300&h=300&auto=format&fit=crop', color: 'bg-orange-50' },
@@ -65,25 +63,29 @@ const StudentHome = () => {
   }, []);
 
   useEffect(() => {
-    const fetchCategoryMatches = async () => {
-      if (!selectedCategory) {
-        setCategoryVendorIds([]);
-        return;
-      }
-      setIsSearchingCategory(true);
+    const fetchVendors = async () => {
       try {
-        // Fetch items matching category to find which vendors sell it
-        const { data } = await api.get(`/student/search?query=${selectedCategory}`);
-        const vendorIds = [...new Set((data || []).map(item => item.vendorId?._id || item.vendorId))];
-        setCategoryVendorIds(vendorIds.filter(Boolean));
+        const { data } = await api.get('/student/vendors');
+        setVendors(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error("Failed to fetch category matches", error);
+        setVendors([]);
+        console.error(error);
       } finally {
-        setIsSearchingCategory(false);
+        setLoading(false);
       }
     };
-    fetchCategoryMatches();
-  }, [selectedCategory]);
+    const fetchFavs = async () => {
+      try {
+        const { data } = await api.get('/student/favorites');
+        setFavorites((data || []).map(f => (f._id || f).toString()));
+      } catch(e) { 
+        setFavorites([]);
+        console.error('Failed to fetch favs', e); 
+      }
+    };
+    fetchVendors();
+    fetchFavs();
+  }, []);
 
   const toggleFav = async (e, vendorId) => {
     e.preventDefault(); 
@@ -121,14 +123,10 @@ const StudentHome = () => {
       const matchesSearch = shopName.toLowerCase().includes(search.toLowerCase()) || 
                             cuisineType.join(',').toLowerCase().includes(search.toLowerCase());
       
-      const matchesCuisine = cuisineType.some(c => c.toLowerCase().includes(selectedCategory?.toLowerCase()));
-      const matchesMenuItem = (categoryVendorIds || []).some(id => id?.toString() === (v?._id || v?.id)?.toString());
-      const matchesCategory = !selectedCategory || matchesCuisine || matchesMenuItem;
-      
       const matchesRating = (v?.rating || 0) >= minRating;
       const matchesVeg = !onlyVeg || cuisineType.some(c => c.toLowerCase().includes('veg'));
       const matchesFavorites = !showOnlyFavorites || (favorites || []).includes(v?._id?.toString());
-      return matchesSearch && matchesCategory && matchesRating && matchesVeg && matchesFavorites;
+      return matchesSearch && matchesRating && matchesVeg && matchesFavorites;
     })
     .sort((a, b) => {
       // Prioritize Favorites in the "Recommended" (default) view
@@ -146,7 +144,6 @@ const StudentHome = () => {
     });
   
   const clearFilters = () => {
-    setSelectedCategory(null);
     setMinRating(0);
     setOnlyVeg(false);
     setShowOnlyFavorites(false);
@@ -349,20 +346,18 @@ const StudentHome = () => {
                 key={cat.id}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setSelectedCategory(selectedCategory === cat.label ? null : cat.label)}
-                className="flex flex-col items-center gap-3 shrink-0"
+                onClick={() => navigate(`/student/category/${cat.id}`)}
+                className="flex flex-col items-center gap-3 shrink-0 group"
               >
-                <div className={`w-24 h-24 rounded-full overflow-hidden p-1.5 transition-all duration-300 ${
-                  selectedCategory === cat.label ? 'ring-4 ring-primary ring-offset-2' : 'hover:shadow-xl hover:scale-110'
-                } ${cat.color}`}>
+                <div className={`w-24 h-24 rounded-full overflow-hidden p-1.5 transition-all duration-300 hover:shadow-xl hover:scale-110 ${cat.color}`}>
                   <img 
                     src={cat.icon} 
                     alt={cat.label} 
-                    className="w-full h-full object-cover rounded-full mix-blend-multiply" 
+                    className="w-full h-full object-cover rounded-full mix-blend-multiply group-hover:scale-110 transition-transform duration-700" 
                     onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=200&h=200&auto=format&fit=crop'; }}
                   />
                 </div>
-                <span className={`text-xs font-black tracking-tight ${selectedCategory === cat.label ? 'text-primary' : 'text-slate-600'}`}>
+                <span className="text-xs font-black tracking-tight text-slate-600 group-hover:text-primary transition-colors">
                   {cat.label}
                 </span>
               </motion.button>
@@ -478,10 +473,10 @@ const StudentHome = () => {
       {/* Main Vendor Grid */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         <h2 className="text-2xl font-black text-slate-900 mb-8 tracking-tight">
-          {search || selectedCategory ? `Results for "${search || selectedCategory}"` : 'Top Restaurants for you'}
+          {search ? `Results for "${search}"` : 'Top Restaurants for you'}
         </h2>
 
-        {loading || isSearchingCategory ? (
+        {loading ? (
           <SkeletonLoader count={8} />
         ) : (
           <div className="space-y-16">
@@ -489,7 +484,7 @@ const StudentHome = () => {
             <div className="space-y-10 pt-4">
               <div className="flex justify-between items-baseline px-2">
                 <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-none">
-                  {selectedCategory ? `Top Restaurants for "${selectedCategory}"` : 'Discover Restaurants'}
+                  Discover Restaurants
                 </h3>
                 <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{filteredVendors.length} Spots Nearby</span>
               </div>
@@ -510,7 +505,7 @@ const StudentHome = () => {
             <h3 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">No restaurants match those filters</h3>
             <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest px-4">Try resetting your filters to explore more campus spots</p>
             <button 
-              onClick={() => { setSearch(''); setSelectedCategory(null); setMinRating(0); setOnlyVeg(false); setSortBy('default'); }}
+              onClick={() => { setSearch(''); setMinRating(0); setOnlyVeg(false); setSortBy('default'); }}
               className="mt-8 px-8 py-3 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
             >
               Reset All Filters
