@@ -88,9 +88,9 @@ const getMenu = asyncHandler(async (req, res) => {
 
 const addMenuItem = asyncHandler(async (req, res) => {
   const vendorId = await getMyVendorId(req.user._id);
-  const { name, description, price, category, image, isAvailable, preparationTime } = req.body;
+  const { name, description, price, category, image, isAvailable, preparationTime, isVeg } = req.body;
   const item = new MenuItem({ 
-    name, description, price, category, image, isAvailable, preparationTime,
+    name, description, price, category, image, isAvailable, preparationTime, isVeg,
     vendorId 
   });
   res.status(201).json(await item.save());
@@ -100,7 +100,7 @@ const updateMenuItem = asyncHandler(async (req, res) => {
   const vendorId = await getMyVendorId(req.user._id);
   const item = await MenuItem.findById(req.params.id);
   if (item && item.vendorId.toString() === vendorId.toString()) {
-    const { name, description, price, category, image, isAvailable, preparationTime } = req.body;
+    const { name, description, price, category, image, isAvailable, preparationTime, isVeg } = req.body;
     if (name !== undefined) item.name = name;
     if (description !== undefined) item.description = description;
     if (price !== undefined) item.price = price;
@@ -108,6 +108,7 @@ const updateMenuItem = asyncHandler(async (req, res) => {
     if (image !== undefined) item.image = image;
     if (isAvailable !== undefined) item.isAvailable = isAvailable;
     if (preparationTime !== undefined) item.preparationTime = preparationTime;
+    if (isVeg !== undefined) item.isVeg = isVeg;
     
     res.json(await item.save());
   } else { res.status(404); throw new Error('Menu item not found'); }

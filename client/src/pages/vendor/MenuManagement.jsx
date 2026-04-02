@@ -183,10 +183,27 @@ const MenuManagement = () => {
                   <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full p-2 border rounded text-sm"/>
                   {formData.image && <img src={formData.image} alt="Preview" className="h-20 w-20 object-cover rounded mt-2 shadow"/>}
                 </div>
-                <label className="flex items-center space-x-2">
-                  <input type="checkbox" checked={formData.isVeg} onChange={e => setFormData({...formData, isVeg: e.target.checked})} className="accent-accent w-4 h-4"/>
-                  <span>Vegetarian</span>
-                </label>
+                <div className="w-full">
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Food Type (Veg / Non-Veg)</label>
+                  <div className="flex gap-4">
+                    <button 
+                      type="button" 
+                      onClick={() => setFormData({...formData, isVeg: true})}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 transition-all font-black text-xs uppercase tracking-tight ${formData.isVeg ? 'border-accent bg-accent/5 text-accent shadow-sm' : 'border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                    >
+                      <div className={`w-3 h-3 rounded-full border ${formData.isVeg ? 'bg-accent border-accent' : 'border-slate-300'}`} />
+                      Veg
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setFormData({...formData, isVeg: false})}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 transition-all font-black text-xs uppercase tracking-tight ${!formData.isVeg ? 'border-rose-500 bg-rose-50 text-rose-500 shadow-sm' : 'border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                    >
+                      <div className={`w-3 h-3 rounded-full border ${!formData.isVeg ? 'bg-rose-500 border-rose-500' : 'border-slate-300'}`} />
+                      Non-Veg
+                    </button>
+                  </div>
+                </div>
                 <div className="flex gap-4 pt-4">
                   <button type="button" onClick={() => {setShowModal(false); setEditingId(null); setFormData({name: '', description: '', price: '', category: '', isVeg: true, image: ''})}} className="flex-1 bg-gray-100 text-gray-700 py-2 rounded font-bold hover:bg-gray-200">Cancel</button>
                   <button type="submit" className="flex-1 bg-primary text-white py-2 rounded font-bold hover:bg-orange-600">Save</button>
