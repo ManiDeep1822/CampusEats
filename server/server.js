@@ -87,13 +87,21 @@ app.use(helmet());
  app.use(express.json({ limit: '10kb' })); // M10: Limit JSON body size
  app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-// Middleware: Prepare query for sanitization if needed
+// Middleware: Express 5 compatibility fix for sanitization libraries
+// Express 5 defines req.query, req.params, and req.body as read-only getters.
+// We must redefine them as writable properties to allow sanitization libraries to function.
 app.use((req, _, next) => {
-  if (req.query && typeof req.query === 'object') {
-    // In Express 5, req.query is a getter. We ensure it's a plain object for mongoSanitize
-    // but we do it without breaking the getter behavior for other middlewares.
-    req.query = { ...req.query };
-  }
+  ['query', 'params', 'body'].forEach(prop => {
+    if (req[prop]) {
+      const originalValue = req[prop];
+      Object.defineProperty(req, prop, {
+        value: typeof originalValue === 'object' ? { ...originalValue } : originalValue,
+        writable: true,
+        configurable: true,
+        enumerable: true
+      });
+    }
+  });
   next();
 });
 
