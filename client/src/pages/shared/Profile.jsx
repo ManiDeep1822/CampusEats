@@ -119,9 +119,7 @@ const Profile = () => {
 
       try {
         // 1. Upload to Cloudinary via our upload route
-        const { data: uploadData } = await api.post('/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const { data: uploadData } = await api.post('/upload', formData);
 
         const newPhotoUrl = uploadData.imageUrl;
 

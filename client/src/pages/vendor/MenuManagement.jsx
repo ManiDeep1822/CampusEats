@@ -47,9 +47,7 @@ const MenuManagement = () => {
     
     const toastId = toast.loading('Uploading image...');
     try {
-      const { data } = await api.post('/upload', uploadData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const { data } = await api.post('/upload', uploadData);
       setFormData({ ...formData, image: data.imageUrl });
       toast.success('Image uploaded successfully', { id: toastId });
     } catch (err) {

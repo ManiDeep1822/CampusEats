@@ -9,7 +9,13 @@ router.post('/', protect, (req, res) => {
   upload.single('image')(req, res, async (err) => {
     if (err) {
       console.error('❌ Multer Error:', err);
-      return res.status(500).json({ message: 'Multer error', error: err.message });
+      // Differentiate between Multer errors (like size limit) and other errors
+      const statusCode = err.name === 'MulterError' ? 400 : 500;
+      return res.status(statusCode).json({ 
+        message: err.name === 'MulterError' ? `Upload error: ${err.message}` : 'Server error during upload', 
+        error: err.message,
+        code: err.code
+      });
     }
 
     if (!req.file) {
