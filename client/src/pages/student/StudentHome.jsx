@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -24,6 +24,13 @@ const StudentHome = () => {
   const [locating, setLocating] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+
+  // Search overlay state
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const [overlayQuery, setOverlayQuery] = useState('');
+  const [suggestions, setSuggestions] = useState({ vendors: [], items: [] });
+  const [suggLoading, setSuggLoading] = useState(false);
+  const overlayInputRef = useRef(null);
 
   const categories = [
     { id: 'biryani', label: 'Biryani', icon: 'https://images.unsplash.com/photo-1563379091339-03b21bc4a4f8?q=80&w=300&h=300&auto=format&fit=crop', color: 'bg-orange-50' },
@@ -62,30 +69,45 @@ const StudentHome = () => {
     fetchFavs();
   }, []);
 
+  // Open overlay: lock body scroll
   useEffect(() => {
-    const fetchVendors = async () => {
+    if (overlayOpen) {
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => overlayInputRef.current?.focus(), 100);
+    } else {
+      document.body.style.overflow = '';
+      setOverlayQuery('');
+      setSuggestions({ vendors: [], items: [] });
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [overlayOpen]);
+
+  // Debounced live suggestions
+  useEffect(() => {
+    const q = overlayQuery.trim();
+    if (!q) { setSuggestions({ vendors: [], items: [] }); return; }
+    const timer = setTimeout(async () => {
+      setSuggLoading(true);
       try {
-        const { data } = await api.get('/student/vendors');
-        setVendors(Array.isArray(data) ? data : []);
-      } catch (error) {
-        setVendors([]);
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    const fetchFavs = async () => {
-      try {
-        const { data } = await api.get('/student/favorites');
-        setFavorites((data || []).map(f => (f._id || f).toString()));
-      } catch(e) { 
-        setFavorites([]);
-        console.error('Failed to fetch favs', e); 
-      }
-    };
-    fetchVendors();
-    fetchFavs();
-  }, []);
+        const { data } = await api.get(`/student/search?query=${encodeURIComponent(q)}`);
+        setSuggestions({ vendors: data.vendors?.slice(0, 4) || [], items: data.items?.slice(0, 5) || [] });
+      } catch { setSuggestions({ vendors: [], items: [] }); }
+      finally { setSuggLoading(false); }
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [overlayQuery]);
+
+  const handleOverlaySubmit = (e) => {
+    e?.preventDefault();
+    if (!overlayQuery.trim()) return;
+    setOverlayOpen(false);
+    navigate(`/student/search?q=${encodeURIComponent(overlayQuery.trim())}`);
+  };
+
+  const handleSuggestionClick = (q) => {
+    setOverlayOpen(false);
+    navigate(`/student/search?q=${encodeURIComponent(q)}`);
+  };
 
   const toggleFav = async (e, vendorId) => {
     e.preventDefault(); 
@@ -272,18 +294,134 @@ const StudentHome = () => {
             Hungry? Let&apos;s fix that <span className="text-primary">instantly.</span>
           </h1>
 
-          <div className="relative group">
-            <input 
-              type="text" 
-              placeholder="Search for restaurants or dishes..." 
-              value={search} 
-              onChange={(e) => setSearch(e.target.value)} 
-              className="w-full pl-12 pr-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-primary/20 focus:bg-white outline-none font-bold text-slate-700 transition-all shadow-inner" 
-            />
-            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl group-focus-within:text-primary transition-colors" />
-          </div>
+          {/* Search Bar — tap to open full-screen overlay */}
+          <button
+            onClick={() => setOverlayOpen(true)}
+            className="relative w-full flex items-center gap-3 pl-12 pr-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent hover:border-primary/20 hover:bg-white cursor-text text-left shadow-inner transition-all group"
+          >
+            <FiSearch className="absolute left-4 text-slate-400 text-xl group-hover:text-primary transition-colors" />
+            <span className="font-bold text-slate-400">Search for restaurants or dishes...</span>
+          </button>
         </div>
       </div>
+
+      {/* ─── FULL SCREEN SEARCH OVERLAY ─── */}
+      <AnimatePresence>
+        {overlayOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-white flex flex-col"
+          >
+            {/* Overlay Header */}
+            <form onSubmit={handleOverlaySubmit} className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 shrink-0">
+              <button
+                type="button"
+                onClick={() => setOverlayOpen(false)}
+                className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors shrink-0"
+              >
+                <FiSearch size={18} className="rotate-[225deg]" />
+              </button>
+              <div className="flex-1 relative">
+                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input
+                  ref={overlayInputRef}
+                  type="text"
+                  value={overlayQuery}
+                  onChange={e => setOverlayQuery(e.target.value)}
+                  placeholder="Restaurant, dish, or cuisine..."
+                  className="w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-100 border-2 border-transparent focus:border-primary/30 focus:bg-white outline-none font-bold text-slate-800 text-sm transition-all"
+                />
+                {overlayQuery && (
+                  <button type="button" onClick={() => setOverlayQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg">×</button>
+                )}
+              </div>
+              <button type="submit" className="shrink-0 bg-primary text-white px-4 py-2.5 rounded-xl font-black text-sm hover:bg-orange-600 transition-colors">
+                Search
+              </button>
+            </form>
+
+            {/* Suggestions Body */}
+            <div className="flex-1 overflow-y-auto">
+              {!overlayQuery ? (
+                // Default empty state
+                <div className="text-center py-24 px-8">
+                  <div className="text-6xl mb-5 opacity-20">🍽️</div>
+                  <p className="font-black text-slate-400 text-sm">Search for biryani, pizza, burgers...</p>
+                </div>
+              ) : suggLoading ? (
+                <div className="px-4 pt-8 space-y-4">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-14 bg-slate-100 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              ) : suggestions.vendors.length === 0 && suggestions.items.length === 0 ? (
+                <div className="text-center py-16 px-8">
+                  <p className="font-black text-slate-500 mb-1">No results for "{overlayQuery}"</p>
+                  <p className="text-slate-400 text-xs">Try pressing Search above for full results</p>
+                </div>
+              ) : (
+                <div className="px-4 py-4 space-y-1">
+                  {/* Restaurant Suggestions */}
+                  {suggestions.vendors.length > 0 && (
+                    <>
+                      <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest px-2 pt-2 pb-1">Restaurants</p>
+                      {suggestions.vendors.map(v => (
+                        <button
+                          key={v._id}
+                          onClick={() => navigate(`/student/restaurant/${v._id}`)}
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-slate-50 transition-colors group text-left"
+                        >
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 shrink-0">
+                            {v.shopImage ? <img src={v.shopImage} alt={v.shopName} className="w-full h-full object-cover" onError={e => e.target.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=80&auto=format&fit=crop'} /> : <div className="w-full h-full flex items-center justify-center text-xl opacity-30">🏪</div>}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-black text-slate-800 text-sm truncate group-hover:text-primary transition-colors">{v.shopName}</p>
+                            <p className="text-xs text-slate-400 font-medium truncate">{(v.cuisineType || []).join(' · ')}</p>
+                          </div>
+                          <FiSearch className="text-slate-200 shrink-0" size={14} />
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Dish Suggestions */}
+                  {suggestions.items.length > 0 && (
+                    <>
+                      <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest px-2 pt-4 pb-1">Dishes</p>
+                      {suggestions.items.map(item => (
+                        <button
+                          key={item._id}
+                          onClick={() => handleSuggestionClick(item.name)}
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-slate-50 transition-colors group text-left"
+                        >
+                          <div className={`w-4 h-4 rounded-sm border-2 shrink-0 flex items-center justify-center ${item.isVeg ? 'border-emerald-500' : 'border-rose-500'}`}>
+                            <div className={`w-2 h-2 rounded-full ${item.isVeg ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-black text-slate-800 text-sm truncate group-hover:text-primary transition-colors">{item.name}</p>
+                            <p className="text-xs text-slate-400 font-medium truncate">at {item.vendorId?.shopName}</p>
+                          </div>
+                          <span className="text-xs font-black text-slate-700 shrink-0">₹{item.price}</span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {/* View all results CTA */}
+                  <button
+                    onClick={handleOverlaySubmit}
+                    className="w-full mt-4 py-4 rounded-2xl border-2 border-dashed border-slate-200 text-sm font-black text-primary hover:border-primary/40 hover:bg-primary/5 transition-all"
+                  >
+                    View all results for "{overlayQuery}" →
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* TOP OFFERS SECTION - STUNNING OFFERS CAROUSEL */}
       <div className="px-4 pt-10 md:pt-16 pb-6 md:pb-8 overflow-hidden">

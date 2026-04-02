@@ -29,16 +29,35 @@ const getVendorById = asyncHandler(async (req, res) => {
 });
 
 const searchItems = asyncHandler(async (req, res) => {
-  const queryTerm = String(req.query.query || ''); 
-  const keyword = queryTerm ? { name: { $regex: queryTerm, $options: 'i' } } : {};
-  // Find all matching items
-  const items = await MenuItem.find({ ...keyword }).populate('vendorId', 'shopName location rating isOpen isApproved');
-  
-  // Filter out items belonging to unapproved vendors, or out of stock
-  const verifiedItems = items.filter(item => item.vendorId && item.vendorId.isApproved && item.isAvailable !== false);
-  
-  res.json(verifiedItems);
+  const queryTerm = String(req.query.query || '').trim();
+  if (!queryTerm) return res.json({ vendors: [], items: [], query: '' });
+
+  const regex = { $regex: queryTerm, $options: 'i' };
+
+  // Search vendors by shop name OR cuisine type
+  const vendors = await Vendor.find({
+    isApproved: true,
+    $or: [
+      { shopName: regex },
+      { cuisineType: regex },
+      { location: regex },
+    ]
+  }).populate('userId', 'name profilePic').lean();
+
+  // Search menu items by name or description, then populate vendor info
+  const items = await MenuItem.find({
+    $or: [{ name: regex }, { description: regex }],
+    isAvailable: { $ne: false }
+  })
+  .populate('vendorId', 'shopName location rating isOpen isApproved cuisineType shopImage')
+  .lean();
+
+  // Filter out items from unapproved or closed vendors
+  const verifiedItems = items.filter(item => item.vendorId?.isApproved);
+
+  res.json({ vendors, items: verifiedItems, query: queryTerm });
 });
+
 
 const calculateOrderBill = asyncHandler(async (req, res) => {
   const { items, orderType, couponCode } = req.body;
