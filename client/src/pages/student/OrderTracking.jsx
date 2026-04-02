@@ -343,15 +343,15 @@ const OrderTracking = () => {
                  </div>
                  
                  <div className="flex items-center justify-center gap-3">
-                    <span className="text-slate-400 font-black text-2xl lowercase opacity-40">Arriving in</span>
-                    <span className="text-slate-900 font-black text-6xl tracking-tighter max-sm:text-5xl">
+                    <span className="text-slate-400 font-black text-2xl max-sm:text-lg lowercase opacity-40">Arriving in</span>
+                    <span className="text-slate-900 font-black text-6xl max-sm:text-4xl tracking-tighter">
                       {activeOrder.status === 'preparing' 
                         ? (activeOrder.estimatedTime || 15) 
                         : activeOrder?.estimatedDeliveryTime 
                           ? Math.max(0, Math.ceil((new Date(activeOrder.estimatedDeliveryTime) - new Date()) / 60000))
                           : '--'}
                     </span>
-                    <span className="text-slate-900 font-black text-2xl lowercase underline decoration-primary decoration-4">mins</span>
+                    <span className="text-slate-900 font-black text-2xl max-sm:text-lg lowercase underline decoration-primary decoration-4">mins</span>
                  </div>
               </div>
 

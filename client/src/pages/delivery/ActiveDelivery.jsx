@@ -355,7 +355,7 @@ const ActiveDelivery = () => {
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`p-6 rounded-[2.5rem] shadow-xl border flex flex-col gap-4 ${data.status !== 'picked_up' ? 'bg-slate-900 text-white border-slate-800' : 'bg-white border-gray-100'}`}
+                className={`p-6 max-sm:p-4 rounded-[2.5rem] max-sm:rounded-[1.5rem] shadow-xl border flex flex-col gap-4 ${data.status !== 'picked_up' ? 'bg-slate-900 text-white border-slate-800' : 'bg-white border-gray-100'}`}
             >
                 <div className="flex justify-between items-start">
                     <div>
@@ -389,7 +389,7 @@ const ActiveDelivery = () => {
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`p-6 rounded-[2.5rem] shadow-xl border flex flex-col gap-4 ${data.status === 'picked_up' ? 'bg-slate-900 text-white border-slate-800' : 'bg-white border-gray-100'}`}
+                className={`p-6 max-sm:p-4 rounded-[2.5rem] max-sm:rounded-[1.5rem] shadow-xl border flex flex-col gap-4 ${data.status === 'picked_up' ? 'bg-slate-900 text-white border-slate-800' : 'bg-white border-gray-100'}`}
             >
                 <div className="flex justify-between items-start">
                     <div>

@@ -500,7 +500,7 @@ const CartPage = () => {
                  <div className="border-t-2 border-dashed border-gray-100 pt-6 mb-8 group cursor-default">
                     <div className="flex justify-between items-end mb-1">
                        <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Grand Total</span>
-                       <span className="text-primary font-black text-3xl tracking-tight">₹{bill.finalTotal.toFixed(2)}</span>
+                       <span className="text-primary font-black text-3xl max-sm:text-2xl tracking-tight">₹{bill.finalTotal.toFixed(2)}</span>
                     </div>
                  </div>
                </>
@@ -520,7 +520,7 @@ const CartPage = () => {
                 whileTap={{ scale: 0.98 }}
                 disabled={loading}
                 onClick={handlePayment} 
-                className="w-full bg-primary text-white py-5 rounded-2xl font-black text-lg shadow-lg shadow-orange-500/30 transition-all uppercase tracking-wider flex items-center justify-center gap-2 group"
+                className="w-full bg-primary text-white py-5 max-sm:py-4 rounded-2xl font-black text-lg max-sm:text-base shadow-lg shadow-orange-500/30 transition-all uppercase tracking-wider flex items-center justify-center gap-2 group"
               >
                 {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Pay Securely'}
               </motion.button>
@@ -536,16 +536,16 @@ const CartPage = () => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white rounded-[3rem] shadow-2xl p-12 max-w-md w-full text-center relative overflow-hidden"
+              className="bg-white rounded-[3rem] max-sm:rounded-[2rem] shadow-2xl p-12 max-sm:p-6 max-w-md w-full text-center relative overflow-hidden"
             >
               <div className="absolute top-0 left-0 w-full h-3 bg-primary"></div>
               <div className="w-16 h-16 bg-green-50 text-green-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-100/50">
                 <FiCheckCircle size={32} />
               </div>
 
-              <h2 className="text-3xl font-black text-slate-900 mb-2">Ordered Successfully!</h2>
-              <p className="text-slate-500 font-bold text-sm mb-10">Order ID: #{placedOrder?.orderId}</p>
-              <div className="grid grid-cols-2 gap-4 mb-10">
+              <h2 className="text-3xl max-sm:text-2xl font-black text-slate-900 mb-2">Ordered Successfully!</h2>
+              <p className="text-slate-500 font-bold text-sm mb-10 max-sm:mb-6">Order ID: #{placedOrder?.orderId}</p>
+              <div className="grid grid-cols-2 gap-4 mb-10 max-sm:mb-6">
                 <div className="bg-slate-50 p-4 rounded-3xl">
                   <FiClock className="mx-auto mb-2 text-primary" size={18} />
                   <p className="text-xs font-black text-slate-900">~{orderType === 'take_away' ? '15' : '25'} Mins</p>

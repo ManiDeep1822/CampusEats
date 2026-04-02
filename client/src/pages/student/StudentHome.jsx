@@ -26,22 +26,22 @@ const StudentHome = () => {
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
 
   const categories = [
-    { id: 'biryani', label: 'Biryani', icon: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-orange-50' },
-    { id: 'pizza', label: 'Pizza', icon: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-red-50' },
-    { id: 'burger', label: 'Burgers', icon: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-yellow-50' },
-    { id: 'chinese', label: 'Chinese', icon: 'https://images.unsplash.com/photo-1552611052-33e04de081de?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-emerald-50' },
-    { id: 'south', label: 'South Indian', icon: 'https://images.unsplash.com/photo-1630383249896-cf906336e147?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-blue-50' },
-    { id: 'desserts', label: 'Desserts', icon: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-pink-50' },
-    { id: 'beverages', label: 'Drinks', icon: 'https://images.unsplash.com/photo-1513558161293-cdaf76589fd8?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-cyan-50' },
-    { id: 'rolls', label: 'Rolls', icon: 'https://images.unsplash.com/photo-1628155930542-3c7a64e2c833?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-amber-50' },
+    { id: 'biryani', label: 'Biryani', icon: 'https://images.unsplash.com/photo-1563379091339-03b21bc4a4f8?q=80&w=300&h=300&auto=format&fit=crop', color: 'bg-orange-50' },
+    { id: 'pizza', label: 'Pizza', icon: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=300&h=300&auto=format&fit=crop', color: 'bg-red-50' },
+    { id: 'burger', label: 'Burgers', icon: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?q=80&w=300&h=300&auto=format&fit=crop', color: 'bg-yellow-50' },
+    { id: 'chinese', label: 'Chinese', icon: 'https://images.unsplash.com/photo-1525755662778-989d0524087e?q=80&w=300&h=300&auto=format&fit=crop', color: 'bg-emerald-50' },
+    { id: 'south', label: 'South Indian', icon: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?q=80&w=300&h=300&auto=format&fit=crop', color: 'bg-blue-50' },
+    { id: 'desserts', label: 'Desserts', icon: 'https://images.unsplash.com/photo-1551024622-d2845FA7C113?q=80&w=300&h=300&auto=format&fit=crop', color: 'bg-pink-50' },
+    { id: 'beverages', label: 'Drinks', icon: 'https://images.unsplash.com/photo-1437419764061-2473afe69fc2?q=80&w=300&h=300&auto=format&fit=crop', color: 'bg-cyan-50' },
+    { id: 'rolls', label: 'Rolls', icon: 'https://images.unsplash.com/photo-1628155930542-3c7a64e2c833?q=80&w=300&h=300&auto=format&fit=crop', color: 'bg-amber-50' },
   ];
 
   useEffect(() => {
     const fetchVendors = async () => {
       try {
-        const { data } = await api.get('/student/vendors');
-        setVendors(data);
+        setVendors(Array.isArray(data) ? data : []);
       } catch (error) {
+        setVendors([]);
         console.error(error);
       } finally {
         setTimeout(() => setLoading(false), 600);
@@ -49,9 +49,11 @@ const StudentHome = () => {
     };
     const fetchFavs = async () => {
       try {
-        const { data } = await api.get('/student/favorites');
-        setFavorites(data.map(f => f._id || f));
-      } catch(e) { console.error('Failed to fetch favs', e); }
+        setFavorites((data || []).map(f => (f._id || f).toString()));
+      } catch(e) { 
+        setFavorites([]);
+        console.error('Failed to fetch favs', e); 
+      }
     };
     fetchVendors();
     fetchFavs();
@@ -61,8 +63,10 @@ const StudentHome = () => {
     e.preventDefault(); 
     try {
       const { data } = await api.put(`/student/favorites/${vendorId}`);
-      setFavorites(data.favorites);
-      toast.success(data.favorites.includes(vendorId) ? "Saved to Favorites" : "Removed from Favorites");
+      // Store String IDs from server response
+      const updatedFavs = (data?.favorites || []).map(id => id.toString());
+      setFavorites(updatedFavs);
+      toast.success(updatedFavs.includes(vendorId?.toString()) ? "Saved to Favorites" : "Removed from Favorites");
     } catch(err) { toast.error("Failed to update favorites"); }
   };
 
@@ -77,6 +81,14 @@ const StudentHome = () => {
       return matchesSearch && matchesCategory && matchesRating && matchesVeg && matchesFavorites;
     })
     .sort((a, b) => {
+      // Prioritize Favorites in the "Recommended" (default) view
+      if (sortBy === 'default') {
+        const isAFav = (favorites || []).includes(a._id?.toString());
+        const isBFav = (favorites || []).includes(b._id?.toString());
+        if (isAFav && !isBFav) return -1;
+        if (!isAFav && isBFav) return 1;
+      }
+      
       if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
       if (sortBy === 'time') return (a.deliveryTime || 30) - (b.deliveryTime || 30);
       if (sortBy === 'popularity') return (b.totalOrders || 0) - (a.totalOrders || 0);
@@ -210,7 +222,7 @@ const StudentHome = () => {
             </div>
           </motion.div>
 
-          <h1 className="text-4xl font-black text-slate-900 mb-8 tracking-tighter leading-none">
+          <h1 className="text-4xl max-sm:text-3xl font-black text-slate-900 mb-8 tracking-tighter leading-none">
             Hungry? Let's fix that <span className="text-primary">instantly.</span>
           </h1>
 
@@ -228,13 +240,13 @@ const StudentHome = () => {
       </div>
 
       {/* Horizontal Categories - "What's on your mind?" */}
-      <div className="px-4 py-12 overflow-hidden">
+      <div className="px-4 py-12">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-baseline justify-between mb-8">
             <h2 className="text-2xl font-black text-slate-900 tracking-tight">What's on your mind?</h2>
           </div>
           
-          <div className="flex gap-8 overflow-x-auto no-scrollbar py-4 -mx-1 px-1">
+          <div className="flex gap-8 overflow-x-auto no-scrollbar py-8 -mx-4 px-4">
             {categories.map((cat) => (
               <motion.button
                 key={cat.id}
@@ -243,14 +255,14 @@ const StudentHome = () => {
                 onClick={() => setSelectedCategory(selectedCategory === cat.label ? null : cat.label)}
                 className="flex flex-col items-center gap-3 shrink-0"
               >
-                <div className={`w-24 h-24 rounded-full overflow-hidden p-3 transition-all duration-300 ${
-                  selectedCategory === cat.label ? 'ring-4 ring-primary ring-offset-2' : 'hover:shadow-xl'
+                <div className={`w-24 h-24 rounded-full overflow-hidden p-1.5 transition-all duration-300 ${
+                  selectedCategory === cat.label ? 'ring-4 ring-primary ring-offset-2' : 'hover:shadow-xl hover:scale-110'
                 } ${cat.color}`}>
                   <img 
                     src={cat.icon} 
                     alt={cat.label} 
                     className="w-full h-full object-cover rounded-full mix-blend-multiply" 
-                    onError={(e) => { e.target.src = 'https://via.placeholder.com/200?text=' + cat.label; }}
+                    onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=200&h=200&auto=format&fit=crop'; }}
                   />
                 </div>
                 <span className={`text-xs font-black tracking-tight ${selectedCategory === cat.label ? 'text-primary' : 'text-slate-600'}`}>
@@ -264,9 +276,9 @@ const StudentHome = () => {
 
       {/* Sticky Filter Bar */}
       <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-100 py-4 px-4 shadow-sm">
-        <div className="max-w-7xl mx-auto flex gap-3 overflow-x-auto no-scrollbar relative">
+        <div className="max-w-7xl mx-auto flex items-center gap-3">
           
-          {/* PREMIUM SORT DROPDOWN */}
+          {/* STATIC SORT BUTTON (Outside overflow to prevent clipping) */}
           <div className="relative shrink-0">
             <button 
               onClick={() => setIsSortOpen(!isSortOpen)}
@@ -274,38 +286,33 @@ const StudentHome = () => {
                 sortBy !== 'default' ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'
               }`}
             >
-              Sort By <FiChevronRight className={`transition-transform duration-300 ${isSortOpen ? '-rotate-90' : 'rotate-90'}`} />
+              Sort <FiChevronRight className={`transition-transform duration-300 ${isSortOpen ? '-rotate-90' : 'rotate-90'}`} />
             </button>
 
             <AnimatePresence>
               {isSortOpen && (
                 <>
-                  {/* Backdrop */}
                   <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                     onClick={() => setIsSortOpen(false)}
                     className="fixed inset-0 z-40 bg-black/5"
                   />
-                  
-                  {/* Dropdown Menu */}
                   <motion.div 
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute left-0 mt-3 w-56 bg-white rounded-[1.5rem] shadow-2xl border border-slate-100 p-2 z-50 origin-top-left overflow-hidden"
+                    className="absolute left-0 mt-3 w-64 bg-white rounded-[2rem] shadow-2xl border border-slate-100 p-3 z-50 origin-top-left overflow-hidden ring-8 ring-black/5"
                   >
                     {[
-                      { id: 'default', label: 'Relevance', icon: <FiFilter /> },
+                      { id: 'default', label: 'Recommended', icon: <FiFilter /> },
                       { id: 'rating', label: 'Ratings: High to Low', icon: <FiStar /> },
-                      { id: 'time', label: 'Fastest Delivery', icon: <FiClock /> },
-                      { id: 'popularity', label: 'Most Orders', icon: <FiZap /> }
+                      { id: 'time', label: 'Delivery Time', icon: <FiClock /> },
+                      { id: 'popularity', label: 'Popularity', icon: <FiZap /> }
                     ].map((opt) => (
                       <button
                         key={opt.id}
                         onClick={() => { setSortBy(opt.id); setIsSortOpen(false); }}
-                        className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-xs font-bold transition-all ${
+                        className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl text-xs font-bold transition-all mb-1 last:mb-0 ${
                           sortBy === opt.id ? 'bg-primary/5 text-primary' : 'text-slate-600 hover:bg-slate-50'
                         }`}
                       >
@@ -313,7 +320,12 @@ const StudentHome = () => {
                            <span className={sortBy === opt.id ? 'text-primary' : 'text-slate-400'}>{opt.icon}</span>
                            {opt.label}
                         </div>
-                        {sortBy === opt.id && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                        {/* Radio Selector Visual */}
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                          sortBy === opt.id ? 'border-primary' : 'border-slate-200'
+                        }`}>
+                          {sortBy === opt.id && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                        </div>
                       </button>
                     ))}
                   </motion.div>
@@ -321,42 +333,48 @@ const StudentHome = () => {
               )}
             </AnimatePresence>
           </div>
-          
-          <button 
-            onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all shrink-0 ${
-              showOnlyFavorites ? 'bg-rose-500 border-rose-500 text-white' : 'border-slate-200 bg-white text-slate-700'
-            }`}
-          >
-            Favorites <FiHeart className={showOnlyFavorites ? 'fill-current' : ''} />
-          </button>
 
-          <button 
-            onClick={() => setMinRating(minRating === 4 ? 0 : 4)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all shrink-0 ${
-              minRating === 4 ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'
-            }`}
-          >
-            Ratings 4.0+ {minRating === 4 && <FiCheck />}
-          </button>
+          {/* Separator Line */}
+          <div className="h-6 w-[1px] bg-slate-200 shrink-0" />
 
-          <button 
-            onClick={() => setOnlyVeg(!onlyVeg)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all shrink-0 ${
-              onlyVeg ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-700'
-            }`}
-          >
-            Pure Veg {onlyVeg && <FiCheck />}
-          </button>
+          {/* SCROLLABLE FILTERS */}
+          <div className="flex gap-3 overflow-x-auto no-scrollbar relative flex-1">
+            <button 
+              onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all shrink-0 ${
+                showOnlyFavorites ? 'bg-rose-500 border-rose-500 text-white' : 'border-slate-200 bg-white text-slate-700'
+              }`}
+            >
+              Favorites <FiHeart className={showOnlyFavorites ? 'fill-current' : ''} />
+            </button>
 
-          <button 
-            onClick={() => setSortBy(sortBy === 'time' ? 'default' : 'time')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all shrink-0 ${
-              sortBy === 'time' ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'
-            }`}
-          >
-            Fast Delivery <FiZap className="text-amber-500" />
-          </button>
+            <button 
+              onClick={() => setMinRating(minRating === 4 ? 0 : 4)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all shrink-0 ${
+                minRating === 4 ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'
+              }`}
+            >
+              Ratings 4.0+ {minRating === 4 && <FiCheck />}
+            </button>
+
+            <button 
+              onClick={() => setOnlyVeg(!onlyVeg)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all shrink-0 ${
+                onlyVeg ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-700'
+              }`}
+            >
+              Pure Veg {onlyVeg && <FiCheck />}
+            </button>
+
+            <button 
+              onClick={() => setSortBy(sortBy === 'time' ? 'default' : 'time')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all shrink-0 ${
+                sortBy === 'time' ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'
+              }`}
+            >
+              Fast Delivery <FiZap className="text-amber-500" />
+            </button>
+          </div>
         </div>
       </div>
 
