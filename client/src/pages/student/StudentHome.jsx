@@ -87,27 +87,47 @@ const StudentHome = () => {
 
   const toggleFav = async (e, vendorId) => {
     e.preventDefault(); 
+    
+    // ⚡ Optimistic UI Update: Update instantly before API call
+    const vendorIdStr = vendorId.toString();
+    const isCurrentlyFav = favorites.includes(vendorIdStr);
+    const oldFavs = [...favorites];
+    
+    const newFavs = isCurrentlyFav 
+      ? favorites.filter(id => id !== vendorIdStr)
+      : [...favorites, vendorIdStr];
+    
+    setFavorites(newFavs);
+
     try {
       const { data } = await api.put(`/student/favorites/${vendorId}`);
-      // Store String IDs from server response
-      const updatedFavs = (data?.favorites || []).map(id => id.toString());
-      setFavorites(updatedFavs);
-      toast.success(updatedFavs.includes(vendorId?.toString()) ? "Saved to Favorites" : "Removed from Favorites");
-    } catch(err) { toast.error("Failed to update favorites"); }
+      // Re-sync with server response for consistency
+      const serverFavs = (data?.favorites || []).map(id => id.toString());
+      setFavorites(serverFavs);
+      
+      const wasAdded = serverFavs.includes(vendorIdStr);
+      toast.success(wasAdded ? "Saved to Favorites" : "Removed from Favorites");
+    } catch(err) { 
+      // Rollback if the server fails
+      setFavorites(oldFavs);
+      toast.error("Cloud sync failed. Favorited status rolled back."); 
+    }
   };
 
   const filteredVendors = vendors
     .filter(v => {
-      const matchesSearch = v.shopName.toLowerCase().includes(search.toLowerCase()) || 
-                            (v.cuisineType || []).join(',').toLowerCase().includes(search.toLowerCase());
+      const shopName = v?.shopName || '';
+      const cuisineType = v?.cuisineType || [];
+      const matchesSearch = shopName.toLowerCase().includes(search.toLowerCase()) || 
+                            cuisineType.join(',').toLowerCase().includes(search.toLowerCase());
       
-      const matchesCuisine = (v.cuisineType || []).some(c => c.toLowerCase().includes(selectedCategory?.toLowerCase()));
-      const matchesMenuItem = categoryVendorIds.some(id => id.toString() === (v._id || v.id).toString());
+      const matchesCuisine = cuisineType.some(c => c.toLowerCase().includes(selectedCategory?.toLowerCase()));
+      const matchesMenuItem = (categoryVendorIds || []).some(id => id?.toString() === (v?._id || v?.id)?.toString());
       const matchesCategory = !selectedCategory || matchesCuisine || matchesMenuItem;
       
-      const matchesRating = v.rating >= minRating;
-      const matchesVeg = !onlyVeg || v.cuisineType.some(c => c.toLowerCase().includes('veg'));
-      const matchesFavorites = !showOnlyFavorites || favorites.includes(v._id);
+      const matchesRating = (v?.rating || 0) >= minRating;
+      const matchesVeg = !onlyVeg || cuisineType.some(c => c.toLowerCase().includes('veg'));
+      const matchesFavorites = !showOnlyFavorites || (favorites || []).includes(v?._id?.toString());
       return matchesSearch && matchesCategory && matchesRating && matchesVeg && matchesFavorites;
     })
     .sort((a, b) => {
@@ -242,24 +262,24 @@ const StudentHome = () => {
       <LiveOrderTracker />
       
       {/* Header & Search Section */}
-      <div className="bg-white px-4 pt-12 pb-6 border-b border-slate-100">
+      <div className="bg-white px-4 pt-8 md:pt-12 pb-6 border-b border-slate-100">
         <div className="max-w-7xl mx-auto">
           <motion.div 
             initial={{ opacity: 0, y: -10 }} 
             animate={{ opacity: 1, y: 0 }} 
             onClick={handleGetLocation}
-            className="flex items-center gap-2 mb-8 text-primary cursor-pointer hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 mb-6 md:mb-8 text-primary cursor-pointer hover:opacity-80 transition-opacity"
           >
-            <FiMapPin className={`text-2xl ${locating ? 'animate-bounce' : ''}`} />
+            <FiMapPin className={`text-xl md:text-2xl ${locating ? 'animate-bounce' : ''}`} />
             <div>
-              <div className="flex items-center gap-1 font-black text-slate-800 tracking-tighter">
+              <div className="flex items-center gap-1 font-black text-slate-800 tracking-tighter text-sm md:text-base">
                 {locating ? 'Locating...' : address} <FiChevronRight />
               </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Detect My Location</p>
+              <p className="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase tracking-widest">Detect My Location</p>
             </div>
           </motion.div>
 
-          <h1 className="text-4xl max-sm:text-3xl font-black text-slate-900 mb-8 tracking-tighter leading-none">
+          <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-6 md:mb-8 tracking-tighter leading-none">
             Hungry? Let&apos;s fix that <span className="text-primary">instantly.</span>
           </h1>
 
@@ -276,8 +296,48 @@ const StudentHome = () => {
         </div>
       </div>
 
+      {/* TOP OFFERS SECTION - STUNNING OFFERS CAROUSEL */}
+      <div className="px-4 pt-10 md:pt-16 pb-6 md:pb-8 overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-baseline justify-between mb-6 md:mb-8 px-2">
+            <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+              Top Offers For You <FiZap className="text-primary animate-pulse" />
+            </h2>
+            <Link to="/student/offers" className="text-[9px] md:text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:underline">View All</Link>
+          </div>
+
+          <div className="flex gap-4 overflow-x-auto no-scrollbar py-4 -mx-4 snap-x snap-mandatory">
+             {[
+               { id: 1, title: 'FLAT ₹100 OFF', code: 'CAMPUS100', desc: 'Above ₹499', icon: '₹', color: 'bg-indigo-50 text-indigo-600' },
+               { id: 2, title: '50% OFF', code: 'WELCOME50', desc: 'Up to ₹80', icon: '%', color: 'bg-blue-50 text-blue-600' },
+               { id: 3, title: 'FREE DELIVERY', code: 'FREESHIP', desc: 'On all orders', icon: '🚚', color: 'bg-emerald-50 text-emerald-600' },
+               { id: 4, title: 'BOGO MONDAY', code: 'BOGO', desc: 'Select items', icon: '🍔', color: 'bg-orange-50 text-orange-600' },
+             ].map((offer, index) => (
+                <motion.div
+                  key={offer.id}
+                  whileHover={{ y: -2, scale: 1.02 }}
+                  className={`flex-shrink-0 w-[240px] md:w-[260px] p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] flex items-center gap-3.5 snap-center md:snap-start cursor-pointer group ${index === 0 ? 'ml-4' : ''} ${index === 3 ? 'mr-4' : ''}`}
+                >
+                   {/* Left Icon */}
+                   <div className={`w-10 h-10 shrink-0 ${offer.color} rounded-full flex items-center justify-center text-lg shadow-inner`}>
+                      {offer.icon}
+                   </div>
+
+                   {/* Right Content */}
+                   <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <h3 className="text-sm font-black text-slate-800 tracking-tight truncate">{offer.title}</h3>
+                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-wider mt-0.5 truncate">
+                         USE <span className="text-slate-700">{offer.code}</span> <span className="text-slate-300 mx-0.5">|</span> {offer.desc}
+                      </p>
+                   </div>
+                </motion.div>
+             ))}
+          </div>
+        </div>
+      </div>
+
       {/* Horizontal Categories - "What's on your mind?" */}
-      <div className="px-4 py-12">
+      <div className="px-4 py-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-baseline justify-between mb-8">
             <h2 className="text-2xl font-black text-slate-900 tracking-tight">What&apos;s on your mind?</h2>

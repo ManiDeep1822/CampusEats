@@ -211,6 +211,9 @@ const Navbar = () => {
                     {user?.role === 'student' && (
                       <Link onClick={() => setIsProfileOpen(false)} to="/student/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium border-b border-gray-100">My Orders</Link>
                     )}
+                    {user?.role === 'admin' && (
+                      <Link onClick={() => setIsProfileOpen(false)} to="/admin/coupons" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium border-b border-gray-100">Manage Coupons</Link>
+                    )}
                     <button onClick={() => { setIsProfileOpen(false); handleLogout(); }} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 font-bold transition-colors">Logout</button>
                   </div>
                 </div>
@@ -238,6 +241,11 @@ const Navbar = () => {
                     <Link onClick={() => setIsMenuOpen(false)} to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Profile Settings</Link>
                     {user?.role === 'student' && (
                       <Link onClick={() => setIsMenuOpen(false)} to="/student/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">My Orders</Link>
+                    )}
+                    {user?.role === 'admin' && (
+                      <div className="px-2 py-1">
+                        <Link onClick={() => setIsMenuOpen(false)} to="/admin/coupons" className="block px-4 py-3 text-sm text-primary bg-orange-50/50 rounded-xl font-black uppercase tracking-wider mb-2">Manage Coupons</Link>
+                      </div>
                     )}
                     <Link onClick={() => setIsMenuOpen(false)} to="/contact" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Contact Us</Link>
                     <InstallPWA 

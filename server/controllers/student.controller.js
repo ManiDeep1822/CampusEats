@@ -4,6 +4,7 @@ const User = require('../models/User');
 const MenuItem = require('../models/MenuItem');
 const Order = require('../models/Order');
 const Notification = require('../models/Notification');
+const Coupon = require('../models/Coupon');
 const { generateReceiptHTML } = require('../utils/receiptTemplate');
 
 // Helper to calculate delivery fees centrally
@@ -40,7 +41,7 @@ const searchItems = asyncHandler(async (req, res) => {
 });
 
 const calculateOrderBill = asyncHandler(async (req, res) => {
-  const { items, orderType } = req.body;
+  const { items, orderType, couponCode } = req.body;
   
   // M11: Validate orderType enum
   const allowedOrderTypes = ['delivery', 'take_away'];
@@ -49,7 +50,7 @@ const calculateOrderBill = asyncHandler(async (req, res) => {
   }
 
   if (!items || items.length === 0) {
-    return res.json({ subtotal: 0, distance: 0, deliveryFee: 0, platformFee: 0, taxes: 0, finalTotal: 0 });
+    return res.json({ subtotal: 0, distance: 0, deliveryFee: 0, platformFee: 0, taxes: 0, discountAmount: 0, finalTotal: 0 });
   }
 
   let subtotal = 0;
@@ -60,16 +61,77 @@ const calculateOrderBill = asyncHandler(async (req, res) => {
     }
   }
 
+  let discountAmount = 0;
+  if (couponCode) {
+    const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
+    if (coupon) {
+      const validation = coupon.isValid(subtotal);
+      if (validation.valid) {
+        if (coupon.discountType === 'percentage') {
+          discountAmount = (subtotal * coupon.discountValue) / 100;
+          if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) {
+            discountAmount = coupon.maxDiscountAmount;
+          }
+        } else {
+          discountAmount = coupon.discountValue;
+        }
+      }
+    }
+  }
+
   const distance = 1.2; // Constant distance or calculated via vendor proximity
   const deliveryFee = orderType === 'take_away' ? 0 : calculateDeliveryFee(subtotal);
   const platformFee = 5; 
   const taxes = Number((subtotal * 0.05).toFixed(2));
-  const finalTotal = Number((subtotal + deliveryFee + platformFee + taxes).toFixed(2));
+  const finalTotal = Number((subtotal + deliveryFee + platformFee + taxes - discountAmount).toFixed(2));
 
-  res.json({ subtotal, distance, deliveryFee, platformFee, taxes, finalTotal });
+  res.json({ subtotal, distance, deliveryFee, platformFee, taxes, discountAmount, finalTotal });
 });
 
-const generateSecureBill = async (vendorId, items, orderType) => {
+const applyCoupon = asyncHandler(async (req, res) => {
+  const { code, items } = req.body;
+  
+  if (!code) {
+    res.status(400); throw new Error('Coupon code is required');
+  }
+
+  const coupon = await Coupon.findOne({ code: code.toUpperCase() });
+  if (!coupon) {
+    res.status(404); throw new Error('Invalid coupon code');
+  }
+
+  let subtotal = 0;
+  for (const item of items) {
+    const menuItem = await MenuItem.findById(item.menuItemId || item._id);
+    if (menuItem) {
+      subtotal += menuItem.price * item.quantity;
+    }
+  }
+
+  const validation = coupon.isValid(subtotal);
+  if (!validation.valid) {
+    res.status(400); throw new Error(validation.message);
+  }
+
+  let discountAmount = 0;
+  if (coupon.discountType === 'percentage') {
+    discountAmount = (subtotal * coupon.discountValue) / 100;
+    if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) {
+      discountAmount = coupon.maxDiscountAmount;
+    }
+  } else {
+    discountAmount = coupon.discountValue;
+  }
+
+  res.json({
+    code: coupon.code,
+    discountAmount: Number(discountAmount.toFixed(2)),
+    discountType: coupon.discountType,
+    discountValue: coupon.discountValue
+  });
+});
+
+const generateSecureBill = async (vendorId, items, orderType, couponCode) => {
   let subtotal = 0;
   let verifiedItems = [];
 
@@ -92,16 +154,36 @@ const generateSecureBill = async (vendorId, items, orderType) => {
     throw new Error('No valid items found from this vendor. Cart might be corrupted.');
   }
 
+  let discountAmount = 0;
+  let validCoupon = null;
+  if (couponCode) {
+    const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
+    if (coupon) {
+      const validation = coupon.isValid(subtotal);
+      if (validation.valid) {
+        validCoupon = coupon;
+        if (coupon.discountType === 'percentage') {
+          discountAmount = (subtotal * coupon.discountValue) / 100;
+          if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) {
+            discountAmount = coupon.maxDiscountAmount;
+          }
+        } else {
+          discountAmount = coupon.discountValue;
+        }
+      }
+    }
+  }
+
   const deliveryFee = orderType === 'take_away' ? 0 : calculateDeliveryFee(subtotal);
   const platformFee = 5;
   const taxes = Number((subtotal * 0.05).toFixed(2));
-  const finalTotal = Number((subtotal + deliveryFee + platformFee + taxes).toFixed(2));
+  const finalTotal = Number((subtotal + deliveryFee + platformFee + taxes - discountAmount).toFixed(2));
 
-  return { verifiedItems, subtotal, deliveryFee, platformFee, taxes, finalTotal };
+  return { verifiedItems, subtotal, deliveryFee, platformFee, taxes, discountAmount, finalTotal, validCoupon };
 };
 
 const placeOrder = asyncHandler(async (req, res) => {
-  const { vendorId, items, deliveryAddress, paymentId, specialInstructions, scheduledFor, orderType } = req.body;
+  const { vendorId, items, deliveryAddress, paymentId, specialInstructions, scheduledFor, orderType, couponCode } = req.body;
 
   const vendor = await Vendor.findById(vendorId);
   if (!vendor) {
@@ -119,7 +201,13 @@ const placeOrder = asyncHandler(async (req, res) => {
     throw new Error('No order items');
   }
 
-  const bill = await generateSecureBill(vendorId, items, orderType);
+  const bill = await generateSecureBill(vendorId, items, orderType, couponCode);
+
+  // If coupon was applied, increment its usage
+  if (bill.validCoupon) {
+    bill.validCoupon.usedCount += 1;
+    await bill.validCoupon.save();
+  }
 
   // Calculate Smart ETAs: 15 mins base + 5 mins per unique item
   let estimatedDeliveryTime = new Date();
@@ -146,6 +234,8 @@ const placeOrder = asyncHandler(async (req, res) => {
     taxAmount: bill.taxes,
     deliveryFee: bill.deliveryFee,
     platformFee: bill.platformFee,
+    discountAmount: bill.discountAmount,
+    couponCode: bill.validCoupon ? bill.validCoupon.code : null,
     paymentId, 
     specialInstructions,
     scheduledFor,
@@ -292,16 +382,20 @@ const cancelOrder = asyncHandler(async (req, res) => {
   const io = req.app.get('io');
   if (io) {
     const msg = `❌ Heads up! Order #${order.orderId} was cancelled within 60s window. Refund: ${refundStatus}`;
-    io.to(`vendor:${order.vendorId?._id || order.vendorId}`).emit('order:cancelled', { orderId: order._id, message: msg });
+    const vendorRoom = `vendor:${order.vendorId}`;
+    io.to(vendorRoom).emit('order:cancelled', { orderId: order._id, message: msg });
 
-    // Persist
-    const notification = await Notification.create({
-      recipient: order.vendorId,
-      message: msg,
-      type: 'order_update',
-      orderId: order._id
-    });
-    io.to(`vendor:${order.vendorId?._id || order.vendorId}`).emit('notification', notification);
+    const Vendor = require('../models/Vendor');
+    const vendor = await Vendor.findById(order.vendorId).populate('userId', '_id');
+    if (vendor && vendor.userId) {
+      const notification = await Notification.create({
+        recipient: vendor.userId._id,
+        message: msg,
+        type: 'order_update',
+        orderId: order._id
+      });
+      io.to(`vendor:${vendor.userId._id}`).emit('notification', notification);
+    }
   }
 
   res.json({ 
@@ -363,6 +457,25 @@ const getOrderReceipt = asyncHandler(async (req, res) => {
   res.send(receiptHtml);
 });
 
+// @desc    Get available coupons
+// @route   GET /api/student/coupons/available
+// @access  Private/Student
+const getAvailableCoupons = asyncHandler(async (req, res) => {
+  const now = new Date();
+  const coupons = await Coupon.find({
+    isActive: true,
+    expiryDate: { $gt: now }
+  }).sort({ expiryDate: 1 }); // Soonest expiring first
+
+  // Further check usageLimit vs usedCount manually to be safe
+  const validCoupons = coupons.filter(c => {
+    if (c.usageLimit === null) return true;
+    return c.usedCount < c.usageLimit;
+  });
+
+  res.json(validCoupons);
+});
+
 // --- ADDRESS MANAGEMENT ---
 const getSavedAddresses = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
@@ -401,6 +514,8 @@ module.exports = {
   getVendorById, 
   searchItems, 
   calculateOrderBill, 
+  applyCoupon,
+  getAvailableCoupons,
   placeOrder, 
   getMyOrders, 
   getOrderById, 

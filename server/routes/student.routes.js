@@ -5,6 +5,8 @@ const {
   getVendorById, 
   searchItems, 
   calculateOrderBill, 
+  applyCoupon,
+  getAvailableCoupons,
   placeOrder, 
   getMyOrders, 
   getOrderById, 
@@ -26,6 +28,8 @@ router.get('/vendors', getVendors);
 router.get('/vendors/:id', getVendorById);
 router.get('/search', searchItems);
 router.post('/calculate-bill', calculateOrderBill);
+router.post('/apply-coupon', applyCoupon);
+router.get('/coupons/available', getAvailableCoupons);
 router.post('/order', placeOrder);
 router.get('/orders', getMyOrders);
 router.get('/orders/:id', getOrderById);

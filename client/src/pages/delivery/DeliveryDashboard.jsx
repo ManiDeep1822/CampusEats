@@ -54,11 +54,30 @@ const DeliveryDashboard = () => {
   });
 
   const toggleAvailability = async () => {
+    const oldIsAvailable = data.profile.isAvailable;
+    
+    // ⚡ Optimistic UI: Toggle rider status instantly
+    setData({
+      ...data,
+      profile: { ...data.profile, isAvailable: !oldIsAvailable }
+    });
+
     try {
       const res = await api.put('/delivery/toggle-availability');
-      setData({ ...data, profile: { ...data.profile, isAvailable: res.data.isAvailable } });
-      toast.success(res.data.isAvailable ? "You are now ONLINE" : "You are now OFFLINE");
-    } catch(err) { toast.error("Toggle failed"); }
+      // Sync with server response
+      setData({ 
+        ...data, 
+        profile: { ...data.profile, isAvailable: res.data.isAvailable } 
+      });
+      toast.success(res.data.isAvailable ? "You are now ONLINE 🟢" : "You are now OFFLINE 🔴");
+    } catch(err) { 
+      // Rollback on failure
+      setData({
+        ...data,
+        profile: { ...data.profile, isAvailable: oldIsAvailable }
+      });
+      toast.error("Network sync failed. Status reverted."); 
+    }
   };
 
   const acceptOrder = async (orderId) => {
@@ -259,16 +278,16 @@ const DeliveryDashboard = () => {
               Recent Missions
             </h2>
             <div className="space-y-3">
-              {data.recentDeliveries.map(order => (
-                <div key={order._id} className="bg-white/60 backdrop-blur-md p-4 rounded-2xl border border-white/20 flex items-center justify-between shadow-sm">
+              {(data?.recentDeliveries || []).map(order => (
+                <div key={order?._id} className="bg-white/60 backdrop-blur-md p-4 rounded-2xl border border-white/20 flex items-center justify-between shadow-sm">
                    <div className="flex items-center gap-3">
                      <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold">✓</div>
                      <div>
-                       <p className="text-xs font-black text-slate-800">{order.vendorId?.shopName}</p>
-                       <p className="text-[10px] font-bold text-slate-400">{new Date(order.deliveredAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                       <p className="text-xs font-black text-slate-800">{order?.vendorId?.shopName || 'Shop'}</p>
+                       <p className="text-[10px] font-bold text-slate-400">{order?.deliveredAt ? new Date(order.deliveredAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Recently'}</p>
                      </div>
                    </div>
-                   <p className="font-black text-slate-900 text-sm">₹{order.deliveryFee || 15}</p>
+                   <p className="font-black text-slate-900 text-sm">₹{order?.deliveryFee || 15}</p>
                 </div>
               ))}
             </div>

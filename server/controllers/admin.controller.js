@@ -4,6 +4,7 @@ const Vendor = require('../models/Vendor');
 const DeliveryBoy = require('../models/DeliveryBoy');
 const Order = require('../models/Order');
 const OTP = require('../models/OTP');
+const Coupon = require('../models/Coupon');
 const sendEmail = require('../utils/sendEmail');
 
 const crypto = require('crypto');
@@ -399,6 +400,75 @@ const resendStaffOTP = asyncHandler(async (req, res) => {
   res.json({ message: 'A fresh verification code has been dispatched.' });
 });
 
+// @desc    Get all coupons
+// @route   GET /api/admin/coupons
+// @access  Private/Admin
+const getCoupons = asyncHandler(async (req, res) => {
+  const coupons = await Coupon.find({}).sort({ createdAt: -1 });
+  res.json(coupons);
+});
+
+// @desc    Create a coupon
+// @route   POST /api/admin/coupons
+// @access  Private/Admin
+const createCoupon = asyncHandler(async (req, res) => {
+  const { code, discountType, discountValue, minOrderAmount, maxDiscountAmount, expiryDate, usageLimit } = req.body;
+
+  const couponExists = await Coupon.findOne({ code: code.toUpperCase() });
+
+  if (couponExists) {
+    res.status(400);
+    throw new Error('Coupon code already exists');
+  }
+
+  const coupon = await Coupon.create({
+    code: code.toUpperCase(),
+    discountType,
+    discountValue,
+    minOrderAmount,
+    maxDiscountAmount: discountType === 'percentage' ? maxDiscountAmount : null,
+    expiryDate,
+    usageLimit
+  });
+
+  if (coupon) {
+    res.status(201).json(coupon);
+  } else {
+    res.status(400);
+    throw new Error('Invalid coupon data');
+  }
+});
+
+// @desc    Delete a coupon
+// @route   DELETE /api/admin/coupons/:id
+// @access  Private/Admin
+const deleteCoupon = asyncHandler(async (req, res) => {
+  const coupon = await Coupon.findById(req.params.id);
+
+  if (coupon) {
+    await Coupon.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Coupon removed' });
+  } else {
+    res.status(404);
+    throw new Error('Coupon not found');
+  }
+});
+
+// @desc    Toggle coupon status
+// @route   PUT /api/admin/coupons/:id/status
+// @access  Private/Admin
+const toggleCouponStatus = asyncHandler(async (req, res) => {
+  const coupon = await Coupon.findById(req.params.id);
+
+  if (coupon) {
+    coupon.isActive = !coupon.isActive;
+    const updatedCoupon = await coupon.save();
+    res.json(updatedCoupon);
+  } else {
+    res.status(404);
+    throw new Error('Coupon not found');
+  }
+});
 
 module.exports = {
   getUsers,
@@ -412,5 +482,9 @@ module.exports = {
   createUser,
   resendStaffOTP,
   deleteVendor,
-  deleteDeliveryBoy
+  deleteDeliveryBoy,
+  getCoupons,
+  createCoupon,
+  deleteCoupon,
+  toggleCouponStatus,
 };

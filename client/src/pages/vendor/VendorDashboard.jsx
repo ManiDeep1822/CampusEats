@@ -30,10 +30,30 @@ const VendorDashboard = () => {
   };
 
   const toggleStatus = async () => {
+    const oldIsOpen = data.shopDetails.isOpen;
+
+    // ⚡ Optimistic UI Update: Toggle switch instantly
+    setData({ 
+      ...data, 
+      shopDetails: { ...data.shopDetails, isOpen: !oldIsOpen } 
+    });
+
     try {
       const res = await api.put('/vendor/toggle-status');
-      setData({ ...data, shopDetails: { ...data.shopDetails, isOpen: res.data.isOpen } });
-    } catch (error) { toast.error('Failed to toggle status'); }
+      // Sync with server result
+      setData({ 
+        ...data, 
+        shopDetails: { ...data.shopDetails, isOpen: res.data.isOpen } 
+      });
+      toast.success(`Shop is now ${res.data.isOpen ? 'OPEN' : 'CLOSED'} 🏪`);
+    } catch (error) { 
+      // Rollback if the server fails
+      setData({ 
+        ...data, 
+        shopDetails: { ...data.shopDetails, isOpen: oldIsOpen } 
+      });
+      toast.error('Failed to update shop status. Rolled back.'); 
+    }
   };
 
   const handleImageUpload = async (e) => {
@@ -175,14 +195,7 @@ const VendorDashboard = () => {
               <h3 className="text-textSecondary font-bold">Pending Orders</h3>
               <div className="p-2 bg-yellow-100 text-yellow-600 rounded-lg"><FiClock size={20}/></div>
             </div>
-            <p className="text-3xl font-extrabold text-gray-900">{data.stats.pendingOrders}</p>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-textSecondary font-bold">Rating</h3>
-              <div className="p-2 bg-green-100 text-accent rounded-lg"><FiStar size={20}/></div>
-            </div>
-            <p className="text-3xl font-extrabold text-gray-900">{data.stats.rating?.toFixed(1) || '0.0'}</p>
+            <p className="text-3xl font-extrabold text-gray-900">{(data?.stats?.rating || 0).toFixed(1)}</p>
           </div>
         </div>
 
@@ -192,7 +205,7 @@ const VendorDashboard = () => {
             <h2 className="text-xl font-bold font-heading mb-6">Weekly Sales Performance</h2>
             <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.weeklyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <AreaChart data={data?.weeklyData || []} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/>
@@ -220,20 +233,20 @@ const VendorDashboard = () => {
               {data.popularItems?.length === 0 && (
                  <p className="text-sm text-gray-400 text-center py-10 border-2 border-dashed border-gray-100 rounded-lg">No delivered sales data yet.</p>
               )}
-              {data.popularItems?.map((item, idx) => (
-                <div key={item._id} className="flex items-center gap-4 p-3 hover:bg-orange-50 rounded-xl transition cursor-pointer border border-transparent hover:border-orange-100">
+              {(data?.popularItems || []).map((item, idx) => (
+                <div key={item?._id || idx} className="flex items-center gap-4 p-3 hover:bg-orange-50 rounded-xl transition cursor-pointer border border-transparent hover:border-orange-100">
                   <div className="text-xl font-extrabold text-orange-300 w-6">#{idx + 1}</div>
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded-lg shadow-sm" />
+                  {item?.image ? (
+                    <img src={item.image} alt={item?.name} className="w-12 h-12 object-cover rounded-lg shadow-sm" />
                   ) : (
                     <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-xl">🍲</div>
                   )}
                   <div className="flex-1">
-                    <h4 className="font-bold text-gray-800 text-sm leading-tight mb-1">{item.name}</h4>
-                    <p className="text-xs font-medium text-gray-500">{item.totalSold} units sold</p>
+                    <h4 className="font-bold text-gray-800 text-sm leading-tight mb-1">{item?.name || 'Item'}</h4>
+                    <p className="text-xs font-medium text-gray-500">{item?.totalSold || 0} units sold</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-extrabold text-green-600 text-sm">₹{item.revenue}</p>
+                    <p className="font-extrabold text-green-600 text-sm">₹{item?.revenue || 0}</p>
                   </div>
                 </div>
               ))}

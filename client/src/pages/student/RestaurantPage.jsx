@@ -27,14 +27,14 @@ const RestaurantPage = () => {
     const fetchRestaurant = async () => {
       try {
         const { data } = await api.get(`/student/vendors/${id}`);
-        setVendor(data.vendor);
-        setMenu(data.menu);
+        setVendor(data?.vendor || null);
+        setMenu(data?.menu || []);
       } catch (error) { toast.error('Failed to load restaurant details'); } finally { setLoading(false); }
     };
     const fetchFavs = async () => {
       try {
         const { data } = await api.get('/student/favorites');
-        setIsFavorite(data.some(f => (f._id || f) === id));
+        setIsFavorite((data || []).some(f => (f?._id || f) === id));
       } catch(e) { console.error('Failed to fetch favorites', e); }
     }
     fetchRestaurant();
@@ -42,11 +42,21 @@ const RestaurantPage = () => {
   }, [id]);
 
   const toggleFav = async () => {
+    const oldIsFavorite = isFavorite;
+    
+    // ⚡ Optimistic UI Update: Toggle heart instantly
+    setIsFavorite(!isFavorite);
+    
     try {
       const { data } = await api.put(`/student/favorites/${id}`);
-      setIsFavorite(data.favorites.includes(id));
-      toast.success(data.favorites.includes(id) ? "Saved to favorites!" : "Removed from favorites");
-    } catch(err) { toast.error("Failed to update favorites"); }
+      const serverIsFav = (data?.favorites || []).includes(id);
+      setIsFavorite(serverIsFav);
+      toast.success(serverIsFav ? "Saved to favorites!" : "Removed from favorites");
+    } catch(err) { 
+      // Rollback if the server fails
+      setIsFavorite(oldIsFavorite);
+      toast.error("Cloud sync failed. Favorited status rolled back."); 
+    }
   };
 
   const submitReviewHandler = async (e) => {
@@ -99,11 +109,11 @@ const RestaurantPage = () => {
                 <FiHeart className={`text-2xl ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'} max-sm:text-xl`} />
               </button>
             </div>
-            <p className="text-gray-400 text-base mb-6 max-sm:text-sm max-sm:mb-4">{vendor.cuisineType.join(', ')} • {vendor.location}</p>
+            <p className="text-gray-400 text-base mb-6 max-sm:text-sm max-sm:mb-4">{(vendor?.cuisineType || []).join(', ')} • {vendor?.location || 'Campus'}</p>
             <div className="flex flex-wrap items-center gap-8 max-sm:gap-4">
               <span className="flex items-center text-base font-medium max-sm:text-sm">
-                <FiStar className="mr-2 text-accent fill-accent"/> {vendor.rating.toFixed(1)} 
-                <span className="text-gray-500 ml-1 font-normal text-sm max-sm:text-xs">({vendor.numReviews || 0} reviews)</span>
+                <FiStar className="mr-2 text-accent fill-accent"/> {(vendor?.rating || 0).toFixed(1)} 
+                <span className="text-gray-500 ml-1 font-normal text-sm max-sm:text-xs">({vendor?.numReviews || 0} reviews)</span>
               </span>
               <span className="flex items-center text-base font-medium max-sm:text-sm">
                 <FiClock className="mr-2 text-primary"/> 20-30 mins
@@ -139,12 +149,12 @@ const RestaurantPage = () => {
               className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-row justify-between items-center gap-4 hover:shadow-md transition-shadow max-sm:flex-col max-sm:items-start max-sm:p-4"
             >
               <div className="flex-1 w-full max-sm:order-2">
-                <div className={`w-4 h-4 rounded-sm border mb-2 flex items-center justify-center ${item.isVeg ? 'border-accent' : 'border-red-500'}`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${item.isVeg ? 'bg-accent' : 'bg-red-500'}`}></div>
+                <div className={`w-4 h-4 rounded-sm border mb-2 flex items-center justify-center ${item?.isVeg ? 'border-accent' : 'border-red-500'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${item?.isVeg ? 'bg-accent' : 'bg-red-500'}`}></div>
                 </div>
-                <h3 className="text-lg font-bold text-textPrimary mb-1">{item.name}</h3>
-                <p className="text-sm text-textSecondary mb-3 line-clamp-2 max-sm:text-xs">{item.description}</p>
-                <div className="font-bold text-textPrimary text-lg">₹{item.price}</div>
+                <h3 className="text-lg font-bold text-textPrimary mb-1">{item?.name || 'Item'}</h3>
+                <p className="text-sm text-textSecondary mb-3 line-clamp-2 max-sm:text-xs">{item?.description}</p>
+                <div className="font-bold text-textPrimary text-lg">₹{item?.price || 0}</div>
               </div>
               
               <div className="w-32 flex flex-col items-center justify-center gap-3 max-sm:w-full max-sm:flex-row max-sm:justify-between max-sm:order-1">
@@ -224,22 +234,22 @@ const RestaurantPage = () => {
 
         {/* Reviews List */}
         <div className="space-y-4">
-          {(!vendor.reviews || vendor.reviews.length === 0) && (
+          {(!vendor?.reviews || vendor.reviews.length === 0) && (
             <div className="text-center text-gray-500 py-6 bg-white rounded-xl shadow-sm border border-gray-100">No reviews yet. Be the first to review this restaurant!</div>
           )}
-          {vendor.reviews && vendor.reviews.map((review) => (
-            <div key={review._id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+          {(vendor?.reviews || []).map((review) => (
+            <div key={review?._id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
               <div className="flex items-center gap-3 mb-3">
                 <div className="h-10 w-10 bg-orange-100 text-primary rounded-full flex items-center justify-center font-bold text-lg">
-                  {review.name.charAt(0).toUpperCase()}
+                  {(review?.name || 'U').charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <div className="font-bold text-gray-800">{review.name}</div>
-                  <div className="text-xs text-gray-500">{new Date(review.createdAt).toLocaleDateString()}</div>
+                  <div className="font-bold text-gray-800">{review?.name || 'Guest'}</div>
+                  <div className="text-xs text-gray-500">{review?.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Recently'}</div>
                 </div>
-                <div className="ml-auto flex items-center bg-orange-50 text-accent font-bold px-2 py-1 rounded text-sm"><FiStar className="mr-1"/> {review.rating}</div>
+                <div className="ml-auto flex items-center bg-orange-50 text-accent font-bold px-2 py-1 rounded text-sm"><FiStar className="mr-1"/> {review?.rating || 0}</div>
               </div>
-              <p className="text-gray-600">{review.comment}</p>
+              <p className="text-gray-600">{review?.comment}</p>
             </div>
           ))}
         </div>

@@ -40,12 +40,19 @@ const ManageVendors = () => {
       return;
     }
 
+    const oldVendors = [...vendors];
+    // ⚡ Optimistic UI: Toggle approval status immediately
+    setVendors(vendors.map(v => v._id === id ? { ...v, isApproved: !currentStatus } : v));
+
     try {
       const { data } = await api.put(`/admin/vendors/${id}/status`, { isApproved: !currentStatus });
-      toast.success(data.isApproved ? 'Vendor Approved' : 'Vendor Suspended');
+      toast.success(data.isApproved ? 'Vendor Approved ✅' : 'Vendor Suspended 🚫');
+      // Re-sync with server response
       setVendors(vendors.map(v => v._id === id ? { ...v, isApproved: data.isApproved } : v));
     } catch (error) {
-      toast.error('Error updating vendor status');
+      // Rollback on failure
+      setVendors(oldVendors);
+      toast.error('Error updating vendor status. Changes reverted.');
     }
   };
 
@@ -86,12 +93,18 @@ const ManageVendors = () => {
 
   const handleDeleteVendor = async (id) => {
     if (window.confirm('Are you sure you want to completely remove this vendor account? This cannot be undone.')) {
+      const oldVendors = [...vendors];
+      
+      // ⚡ Optimistic UI: Remove vendor immediately from view
+      setVendors(vendors.filter(v => v._id !== id));
+
       try {
         await api.delete(`/admin/vendors/${id}`);
         toast.success('Vendor account removed successfully');
-        setVendors(vendors.filter(v => v._id !== id));
       } catch (error) {
-        toast.error(error.response?.data?.message || 'Error deleting vendor');
+        // Rollback on failure
+        setVendors(oldVendors);
+        toast.error('Error deleting vendor. Account restored.');
       }
     }
   };
@@ -169,65 +182,65 @@ const ManageVendors = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {vendors.map((vendor, idx) => (
+                {(vendors || []).map((vendor, idx) => (
                   <motion.tr 
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    key={vendor._id} 
+                    key={vendor?._id} 
                     className="hover:bg-gray-50/50 transition-colors"
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-500 font-bold overflow-hidden">
-                          {vendor.shopImage ? (
-                            <img src={vendor.shopImage} alt={vendor.shopName} className="w-full h-full object-cover" />
+                          {vendor?.shopImage ? (
+                            <img src={vendor.shopImage} alt={vendor?.shopName} className="w-full h-full object-cover" />
                           ) : (
                             <FiShoppingBag />
                           )}
                         </div>
                         <div>
-                          <p className="font-bold text-gray-800">{vendor.shopName}</p>
-                          <p className="text-xs text-gray-400">{vendor.cuisineType?.join(', ') || 'General'}</p>
+                          <p className="font-bold text-gray-800">{vendor?.shopName || 'Shop'}</p>
+                          <p className="text-xs text-gray-400">{(vendor?.cuisineType || []).join(', ') || 'General'}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm font-medium text-gray-700">{vendor.userId?.name || 'Unknown'}</p>
-                      <p className="text-xs text-gray-400">{vendor.userId?.email}</p>
+                      <p className="text-sm font-medium text-gray-700">{vendor?.userId?.name || 'Unknown'}</p>
+                      <p className="text-xs text-gray-400">{vendor?.userId?.email}</p>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700">
-                      {vendor.location}
+                      {vendor?.location}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1 group">
                         <FiStar className="text-yellow-400 fill-yellow-400" size={14} />
-                        <span className="font-bold text-gray-700">{vendor.rating ? vendor.rating.toFixed(1) : 'New'}</span>
-                        <span className="text-xs text-gray-400">({vendor.numReviews})</span>
+                        <span className="font-bold text-gray-700">{vendor?.rating ? vendor.rating.toFixed(1) : 'New'}</span>
+                        <span className="text-xs text-gray-400">({vendor?.numReviews || 0})</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button 
-                          onClick={() => handleToggleStatus(vendor._id, vendor.isApproved, vendor.userId?.isVerified, vendor.userId?.email)}
+                          onClick={() => handleToggleStatus(vendor?._id, vendor?.isApproved, vendor?.userId?.isVerified, vendor?.userId?.email)}
                           className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm ${
-                            vendor.isApproved 
+                            vendor?.isApproved 
                               ? 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 hover:scale-105' 
-                              : !vendor.userId?.isVerified
+                              : !vendor?.userId?.isVerified
                                 ? 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 hover:scale-105'
                                 : 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:scale-105'
                           }`}
                         >
-                          {vendor.isApproved ? (
+                          {vendor?.isApproved ? (
                             <><FiCheckCircle size={14} /> Approved</>
-                          ) : !vendor.userId?.isVerified ? (
+                          ) : !vendor?.userId?.isVerified ? (
                             <><FiXCircle size={14} /> Verify & Approve</>
                           ) : (
                             <><FiXCircle size={14} /> Needs Approval</>
                           )}
                         </button>
                         <button 
-                          onClick={() => handleDeleteVendor(vendor._id)}
+                          onClick={() => handleDeleteVendor(vendor?._id)}
                           className="text-gray-400 hover:text-rose-500 p-2 rounded-full hover:bg-rose-50 transition-all"
                           title="Delete Vendor"
                         >

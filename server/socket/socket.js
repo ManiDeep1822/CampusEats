@@ -19,7 +19,9 @@ const socketHandler = (io) => {
       socket.decoded = decoded; // Store for later use
       next();
     } catch (err) {
-      console.error('Socket Auth Error:', err.message);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`[Socket Auth] Rejected: ${err.message}`);
+      }
       next(new Error('Authentication error: Invalid token'));
     }
   });

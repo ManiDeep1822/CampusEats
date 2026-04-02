@@ -4,7 +4,6 @@ import { useLocation } from 'react-router-dom';
 import { useSocketContext } from '../../context/SocketContext';
 import { addNotification } from '../../store/notificationSlice';
 import { toast } from 'react-hot-toast';
-import axios from 'axios';
 
 const GlobalNotificationListener = () => {
   const socket = useSocketContext();
@@ -34,12 +33,17 @@ const GlobalNotificationListener = () => {
             });
           }
 
-          // Send to backend - using axios directly to avoid redirect loop on 401
+          // Send to backend - using native fetch to avoid redirect loop on 401
           const userInfo = JSON.parse(localStorage.getItem('userInfo'));
           if (userInfo?.token) {
-            const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-            await axios.post(`${API_BASE}/auth/push/subscribe`, subscription, {
-              headers: { Authorization: `Bearer ${userInfo.token}` }
+            const API_BASE = import.meta.env.VITE_VAPID_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+            await fetch(`${API_BASE}/auth/push/subscribe`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${userInfo.token}` 
+              },
+              body: JSON.stringify(subscription)
             });
             console.log('Push Registered Successfully');
           }

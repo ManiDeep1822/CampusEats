@@ -55,17 +55,20 @@ const corsOptions = {
     // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
     
-    // Check if origin is in whitelist or is a vercel.app subdomain
-     // SECURITY: Restrict to specifically authorized production domains
+    // Check if origin is in whitelist or is a local development origin
      const isAllowed = allowedOrigins.includes(origin) || 
-                       (process.env.NODE_ENV === 'development' && origin.endsWith('.vercel.app'));
+                       (process.env.NODE_ENV === 'development' && (
+                         origin.startsWith('http://localhost:') || 
+                         origin.startsWith('http://127.0.0.1:') || 
+                         origin.endsWith('.vercel.app')
+                       ));
  
-     if (isAllowed) {
-      callback(null, true);
-    } else {
-      console.warn(`❌ CORS blocked origin: "${origin}"`);
-      callback(new Error(`CORS policy blocked origin: ${origin}`));
-    }
+      if (isAllowed) {
+       callback(null, true);
+     } else {
+       console.warn(`❌ CORS blocked origin: "${origin}"`);
+       callback(new Error(`CORS policy blocked origin: ${origin}`));
+     }
   },
 
   credentials: true,
@@ -84,16 +87,12 @@ app.use(helmet());
  app.use(express.json({ limit: '10kb' })); // M10: Limit JSON body size
  app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-// Override req.query getter behavior to prevent mongoSanitize crash
-app.use((req, res, next) => {
-  if (req.query) {
-    const originalQuery = req.query;
-    Object.defineProperty(req, 'query', {
-      value: { ...originalQuery },
-      writable: true,
-      enumerable: true,
-      configurable: true
-    });
+// Middleware: Prepare query for sanitization if needed
+app.use((req, _, next) => {
+  if (req.query && typeof req.query === 'object') {
+    // In Express 5, req.query is a getter. We ensure it's a plain object for mongoSanitize
+    // but we do it without breaking the getter behavior for other middlewares.
+    req.query = { ...req.query };
   }
   next();
 });

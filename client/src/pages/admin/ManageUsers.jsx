@@ -32,24 +32,39 @@ const ManageUsers = () => {
       return;
     }
     if (window.confirm('Are you sure you want to completely remove this user? This cannot be undone.')) {
+      const oldUsers = [...users];
+      
+      // ⚡ Optimistic UI: Remove user immediately from view
+      setUsers(users.filter(u => u._id !== id));
+      
       try {
         await api.delete(`/admin/users/${id}`);
         toast.success('User removed successfully');
-        setUsers(users.filter(u => u._id !== id));
       } catch (error) {
-        toast.error(error.response?.data?.message || 'Error deleting user');
+        // Rollback if server fails
+        setUsers(oldUsers);
+        toast.error(error.response?.data?.message || 'Error deleting user. Status restored.');
       }
     }
   };
 
   const handleUpdateRole = async (id) => {
+    const oldUsers = [...users];
+    const targetUser = users.find(u => u._id === id);
+    
+    // ⚡ Optimistic UI: Change role immediately
+    setUsers(users.map(u => u._id === id ? { ...u, role: newRole } : u));
+    setEditingRole(null);
+
     try {
       const { data } = await api.put(`/admin/users/${id}/role`, { role: newRole });
-      toast.success('User role updated');
+      toast.success(`User "${targetUser?.name || 'User'}" is now a ${data.role}`);
+      // Re-sync with production server data
       setUsers(users.map(u => u._id === id ? { ...u, role: data.role } : u));
-      setEditingRole(null);
     } catch (error) {
-      toast.error('Error updating role');
+      // Rollback if server fails
+      setUsers(oldUsers);
+      toast.error('Error updating role. Changes reverted.');
     }
   };
 
@@ -105,35 +120,35 @@ const ManageUsers = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {users.map((user, idx) => (
+                {(users || []).map((user, idx) => (
                   <motion.tr 
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    key={user._id} 
+                    key={user?._id} 
                     className="hover:bg-gray-50/50 transition-colors group"
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold overflow-hidden border border-slate-200">
-                          {user.profilePic ? (
-                            <img src={user.profilePic} alt={user.name} className="w-full h-full object-cover" />
+                          {user?.profilePic ? (
+                            <img src={user.profilePic} alt={user?.name} className="w-full h-full object-cover" />
                           ) : (
-                            user.name.charAt(0).toUpperCase()
+                            (user?.name || 'U').charAt(0).toUpperCase()
                           )}
                         </div>
                         <div>
-                          <p className="font-bold text-gray-800">{user.name}</p>
-                          <p className="text-xs text-gray-400">ID: {user._id.slice(-6)}</p>
+                          <p className="font-bold text-gray-800">{user?.name || 'Unknown User'}</p>
+                          <p className="text-xs text-gray-400">ID: {user?._id?.slice(-6) || 'N/A'}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm font-medium text-gray-700">{user.email}</p>
-                      <p className="text-xs text-gray-400">{user.phone || 'No phone'}</p>
+                      <p className="text-sm font-medium text-gray-700">{user?.email}</p>
+                      <p className="text-xs text-gray-400">{user?.phone || 'No phone'}</p>
                     </td>
                     <td className="px-6 py-4">
-                      {editingRole === user._id ? (
+                      {editingRole === user?._id ? (
                         <div className="flex items-center gap-2">
                           <select 
                             value={newRole}
@@ -145,21 +160,21 @@ const ManageUsers = () => {
                             <option value="delivery">Delivery</option>
                             <option value="admin">Admin</option>
                           </select>
-                          <button onClick={() => handleUpdateRole(user._id)} className="text-emerald-500 hover:bg-emerald-50 p-1.5 rounded-md"><FiCheck size={16}/></button>
+                          <button onClick={() => handleUpdateRole(user?._id)} className="text-emerald-500 hover:bg-emerald-50 p-1.5 rounded-md"><FiCheck size={16}/></button>
                           <button onClick={() => setEditingRole(null)} className="text-rose-500 hover:bg-rose-50 p-1.5 rounded-md"><FiX size={16}/></button>
                         </div>
                       ) : (
                         <div className="flex items-center justify-between w-24">
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
-                            user.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                            user.role === 'vendor' ? 'bg-orange-100 text-orange-700' :
-                            user.role === 'delivery' ? 'bg-blue-100 text-blue-700' :
+                            user?.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                            user?.role === 'vendor' ? 'bg-orange-100 text-orange-700' :
+                            user?.role === 'delivery' ? 'bg-blue-100 text-blue-700' :
                             'bg-gray-100 text-gray-700'
                           }`}>
-                            {user.role === 'admin' && <FiShield className="mr-1" />}
-                            {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                            {user?.role === 'admin' && <FiShield className="mr-1" />}
+                            {user?.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'User'}
                           </span>
-                          {user.role !== 'admin' && (
+                          {user?.role !== 'admin' && (
                             <button 
                               onClick={() => startEditing(user)}
                               className="text-gray-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -172,12 +187,12 @@ const ManageUsers = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      {new Date(user.createdAt).toLocaleDateString()}
+                      {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button 
-                        onClick={() => handleDeleteUser(user._id, user.role)}
-                        disabled={user.role === 'admin'}
+                        onClick={() => handleDeleteUser(user?._id, user?.role)}
+                        disabled={user?.role === 'admin'}
                         className="text-gray-400 hover:text-rose-500 disabled:opacity-30 disabled:hover:text-gray-400 p-2 rounded-full hover:bg-rose-50 transition-all"
                         title="Delete User"
                       >

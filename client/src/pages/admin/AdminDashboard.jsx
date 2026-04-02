@@ -7,7 +7,8 @@ import {
   FiTruck,
   FiTrendingUp,
   FiActivity,
-  FiMessageSquare
+  FiMessageSquare,
+  FiTag
 } from 'react-icons/fi';
 import { 
   AreaChart, 
@@ -56,14 +57,14 @@ const AdminDashboard = () => {
 
   if (!stats) return null;
 
-  const totalRevenue = stats.revenueData.reduce((acc, curr) => acc + curr.revenue, 0);
-  const totalOrders7Days = stats.revenueData.reduce((acc, curr) => acc + curr.orders, 0);
+  const totalRevenue = (stats?.revenueData || []).reduce((acc, curr) => acc + (curr.revenue || 0), 0);
+  const totalOrders7Days = (stats?.revenueData || []).reduce((acc, curr) => acc + (curr.orders || 0), 0);
   const weeklyCommission = Number((totalRevenue * 0.05).toFixed(2));
 
   const pieData = [
-    { name: 'Students', value: stats.totalStudents, color: '#3B82F6' },
-    { name: 'Vendors', value: stats.totalVendors, color: '#F97316' },
-    { name: 'Delivery', value: stats.totalDelivery, color: '#10B981' }
+    { name: 'Students', value: stats?.totalStudents || 0, color: '#3B82F6' },
+    { name: 'Vendors', value: stats?.totalVendors || 0, color: '#F97316' },
+    { name: 'Delivery', value: stats?.totalDelivery || 0, color: '#10B981' }
   ].filter(d => d.value > 0);
 
   // Animation variants
@@ -107,8 +108,11 @@ const AdminDashboard = () => {
               <Link to="/admin/riders" className="bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-emerald-600 transition flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95">
                 <FiTruck /> Manage Riders
               </Link>
-              <Link to="/admin/feedback" className="bg-purple-500 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-purple-600 transition flex items-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95">
+              <Link to="/admin/feedback" className="bg-purple-500 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-purple-600 transition flex items-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95 text-sm">
                 <FiMessageSquare /> Manage Feedback
+              </Link>
+              <Link to="/admin/coupons" className="bg-rose-500 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-rose-600 transition flex items-center gap-2 shadow-lg shadow-rose-500/20 active:scale-95 text-sm">
+                <FiTag /> Manage Coupons
               </Link>
             </div>
           </div>
@@ -122,7 +126,7 @@ const AdminDashboard = () => {
         >
           <StatCard 
             title="Lifetime Volume" 
-            value={`₹${stats.lifetimeTurnover.toLocaleString()}`} 
+            value={`₹${(stats?.lifetimeTurnover || 0).toLocaleString()}`} 
             subtitle="Gross Platform Processing"
             icon={<FiDollarSign size={24} />} 
             color="bg-blue-500 text-white" 
@@ -130,7 +134,7 @@ const AdminDashboard = () => {
           />
           <StatCard 
             title="Platform Earnings" 
-            value={`₹${stats.lifetimeCommission.toLocaleString()}`} 
+            value={`₹${(stats?.lifetimeCommission || 0).toLocaleString()}`} 
             subtitle="5% Lifetime Commission"
             icon={<FiActivity size={24} />} 
             color="bg-emerald-500 text-white" 
@@ -138,7 +142,7 @@ const AdminDashboard = () => {
           />
           <StatCard 
             title="Weekly Revenue" 
-            value={`₹${totalRevenue.toLocaleString()}`} 
+            value={`₹${(totalRevenue || 0).toLocaleString()}`} 
             subtitle={`+ ₹${weeklyCommission} Tax`}
             icon={<FiTrendingUp size={24} />} 
             color="bg-orange-500 text-white" 
@@ -146,7 +150,7 @@ const AdminDashboard = () => {
           />
           <StatCard 
             title="Total Users" 
-            value={stats.totalUsers.toLocaleString()} 
+            value={(stats?.totalUsers || 0).toLocaleString()} 
             subtitle="Active accounts"
             icon={<FiUsers size={24} />} 
             color="bg-purple-500 text-white" 
@@ -166,7 +170,7 @@ const AdminDashboard = () => {
             </h2>
             <div className="h-[350px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={stats.revenueData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <AreaChart data={stats?.revenueData || []} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f97316" stopOpacity={0.4}/>

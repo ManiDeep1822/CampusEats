@@ -532,11 +532,11 @@ const ActiveDelivery = () => {
             </span>
           </div>
           <div className="flex-1 p-5 bg-slate-50/50 overflow-y-auto space-y-4 flex flex-col no-scrollbar">
-            {chatHistory.length === 0 && <div className="m-auto text-slate-300 text-[10px] font-black uppercase tracking-widest">Maintain radio silence...</div>}
-            {chatHistory.map((msg, i) => (
-              <div key={i} className={`max-w-[85%] p-4 rounded-3xl text-sm shadow-sm ${msg.isMe ? 'bg-slate-950 text-white self-end rounded-br-none' : 'bg-white border border-gray-100 text-slate-700 self-start rounded-bl-none'}`}>
-                <p className="font-medium leading-relaxed">{msg.message}</p>
-                <p className={`text-[8px] mt-1 font-black uppercase opacity-40 ${msg.isMe ? 'text-right' : 'text-left'}`}>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+            {(!chatHistory || chatHistory.length === 0) && <div className="m-auto text-slate-300 text-[10px] font-black uppercase tracking-widest">Maintain radio silence...</div>}
+            {(chatHistory || []).map((msg, i) => (
+              <div key={i} className={`max-w-[85%] p-4 rounded-3xl text-sm shadow-sm ${msg?.isMe ? 'bg-slate-950 text-white self-end rounded-br-none' : 'bg-white border border-gray-100 text-slate-700 self-start rounded-bl-none'}`}>
+                <p className="font-medium leading-relaxed">{msg?.message || ''}</p>
+                <p className={`text-[8px] mt-1 font-black uppercase opacity-40 ${msg?.isMe ? 'text-right' : 'text-left'}`}>{msg?.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'recently'}</p>
               </div>
             ))}
           </div>

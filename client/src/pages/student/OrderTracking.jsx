@@ -152,10 +152,8 @@ const OrderTracking = () => {
     if (!chatMessage.trim() || !activeOrder.deliveryBoyId) return;
 
     const getTargetId = () => {
-      // Safety: Sometimes Mongoose populates DeliveryBoy id but leaves userId as a string, or unpopulated.
-      // We must explicitly match what the Rider used to join: 'delivery:USER_ID'.
-      const targetUser = activeOrder.deliveryBoyId?.userId;
-      const targetUserId = targetUser?._id || targetUser || activeOrder.deliveryBoyId;
+      const targetUser = activeOrder?.deliveryBoyId?.userId;
+      const targetUserId = targetUser?._id || targetUser || activeOrder?.deliveryBoyId;
       
       if (!targetUserId) throw new Error('Could not identify target rider ID for chat');
       return targetUserId.toString();
@@ -209,11 +207,11 @@ const OrderTracking = () => {
   if (loading) return <Loader />;
   if (!activeOrder) return <div className="text-center py-20 text-xl font-bold">Order Not Found</div>;
 
-  const isTakeAway = activeOrder.orderType === 'take_away';
+  const isTakeAway = activeOrder?.orderType === 'take_away';
   const steps = isTakeAway 
     ? ['placed', 'confirmed', 'preparing', 'ready', 'delivered']
     : ['placed', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered'];
-  const currentStepIdx = steps.indexOf(trackingStatus || activeOrder.status);
+  const currentStepIdx = steps.indexOf(trackingStatus || activeOrder?.status || 'placed');
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 transition-colors duration-300">
@@ -234,9 +232,12 @@ const OrderTracking = () => {
                 Proceed to Pay
               </button>
             )}
-            {activeOrder.status !== 'pending_payment' && (
+            {activeOrder?.status !== 'pending_payment' && (
               <button 
-                onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/student/orders/${activeOrder._id}/receipt?token=${localStorage.getItem('token') || ''}`, '_blank')}
+                onClick={() => {
+                  const token = JSON.parse(localStorage.getItem('userInfo') || '{}')?.token;
+                  window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/student/orders/${activeOrder?._id}/receipt?token=${token || ''}`, '_blank');
+                }}
                 className="flex-1 sm:flex-none bg-gray-50 text-gray-600 px-3 sm:px-4 py-2 rounded-lg font-bold hover:bg-gray-100 transition shadow-sm text-xs sm:text-sm border border-gray-100 whitespace-nowrap"
               >
                 View Receipt
@@ -292,7 +293,7 @@ const OrderTracking = () => {
         </div>
         
         {/* NEW: Pickup PIN Banner for Take Away */}
-        {isTakeAway && activeOrder.status === 'ready' && (
+        {isTakeAway && activeOrder?.status === 'ready' && (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -300,7 +301,7 @@ const OrderTracking = () => {
           >
             <p className="text-[10px] uppercase font-black tracking-widest mb-2 opacity-80">Pickup PIN</p>
             <div className="flex justify-center gap-3 mb-4">
-              {activeOrder.deliveryOtp?.toString().split('').map((digit, i) => (
+              {(activeOrder?.deliveryOtp?.toString() || '0000').split('').map((digit, i) => (
                 <div key={i} className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-2xl font-black">{digit}</div>
               ))}
             </div>
@@ -345,10 +346,10 @@ const OrderTracking = () => {
                  <div className="flex items-center justify-center gap-3">
                     <span className="text-slate-400 font-black text-2xl max-sm:text-lg lowercase opacity-40">Arriving in</span>
                     <span className="text-slate-900 font-black text-6xl max-sm:text-4xl tracking-tighter">
-                      {activeOrder.status === 'preparing' 
-                        ? (activeOrder.estimatedTime || 15) 
+                      {activeOrder?.status === 'preparing' 
+                        ? (activeOrder?.estimatedTime || 15) 
                         : activeOrder?.estimatedDeliveryTime 
-                          ? Math.max(0, Math.ceil((new Date(activeOrder.estimatedDeliveryTime) - new Date()) / 60000))
+                          ? Math.max(0, Math.ceil((new Date(activeOrder.estimatedDeliveryTime).getTime() - new Date().getTime()) / 60000))
                           : '--'}
                     </span>
                     <span className="text-slate-900 font-black text-2xl max-sm:text-lg lowercase underline decoration-primary decoration-4">mins</span>

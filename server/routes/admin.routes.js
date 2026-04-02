@@ -14,7 +14,11 @@ const {
   createUser,
   resendStaffOTP,
   deleteVendor,
-  deleteDeliveryBoy
+  deleteDeliveryBoy,
+  getCoupons,
+  createCoupon,
+  deleteCoupon,
+  toggleCouponStatus
 } = require('../controllers/admin.controller');
 
 // Apply middleware to all routes
@@ -24,7 +28,9 @@ router.use(protect, admin);
 router.route('/stats').get(getDashboardStats);
 
 // User routes
-router.route('/users').get(getUsers).post(createUser);
+router.route('/users')
+  .get(getUsers)
+  .post(createUser);
 router.route('/users/resend-otp').post(resendStaffOTP);
 router.route('/users/:id').delete(deleteUser);
 router.route('/users/:id/role').put(updateUserRole);
@@ -38,5 +44,10 @@ router.route('/vendors/:id/status').put(updateVendorStatus);
 router.route('/delivery').get(getDeliveryBoys);
 router.route('/delivery/:id').delete(deleteDeliveryBoy);
 router.route('/delivery/:id/status').put(updateDeliveryStatus);
+
+// Coupon routes
+router.route('/coupons').get(getCoupons).post(createCoupon);
+router.route('/coupons/:id').delete(deleteCoupon);
+router.route('/coupons/:id/status').put(toggleCouponStatus);
 
 module.exports = router;

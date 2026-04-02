@@ -65,11 +65,13 @@ const MyOrders = () => {
                   </div>
                   <h3 className="font-bold text-xl">{order.vendorId?.shopName || 'Unknown Vendor'}</h3>
                   <div className="text-sm text-gray-500 mt-1">
-                    {order.createdAt ? formatDistanceToNow(new Date(order.createdAt), {addSuffix: true}) : 'Recently'}
+                    {order.createdAt && !isNaN(new Date(order.createdAt)) 
+                      ? formatDistanceToNow(new Date(order.createdAt), {addSuffix: true}) 
+                      : 'Recently'}
                   </div>
                   
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {order.items.map((item, i) => (
+                    {order.items?.map((item, i) => (
                       <span key={i} className="text-xs bg-gray-50 border px-2 py-1 rounded text-gray-600">
                         {item.quantity}x {item.menuItemId?.name || 'Item'}
                       </span>

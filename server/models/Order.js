@@ -42,10 +42,12 @@ const orderSchema = new mongoose.Schema({
   arrivedAtVendorAt: { type: Date },
   pickedUpAt: { type: Date },
   chatHistory: [{
-    sender: { type: String, enum: ['Student', 'Rider'] },
+    sender: { type: String, required: true },
     message: { type: String, required: true },
     timestamp: { type: Date, default: Date.now }
-  }]
+  }],
+  couponCode: { type: String },
+  discountAmount: { type: Number, default: 0 }
 }, { timestamps: true });
 
 const Order = mongoose.model('Order', orderSchema);
