@@ -150,7 +150,12 @@ const RestaurantPage = () => {
               <div className="w-32 flex flex-col items-center justify-center gap-3 max-sm:w-full max-sm:flex-row max-sm:justify-between max-sm:order-1">
                 <div className="relative w-full h-24 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex items-center justify-center p-1 group shrink-0 max-sm:w-24 max-sm:h-24">
                   {item.image ? (
-                    <img src={item.image} alt={item.name} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                    <img 
+                      src={item.image} 
+                      alt={item.name} 
+                      className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                      onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=200&h=200&auto=format&fit=crop'; }}
+                    />
                   ) : (
                     <div className="text-3xl opacity-20">🍲</div>
                   )}

@@ -129,4 +129,32 @@ const getPaymentHistory = asyncHandler(async (req, res) => {
   res.json(payments);
 });
 
-module.exports = { initiatePayment, verifyPayment, getPaymentHistory };
+const refundPayment = async (orderId) => {
+  try {
+    const payment = await Payment.findOne({ orderId, status: 'completed' });
+    if (!payment || !payment.transactionId) return false;
+
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+
+    const refund = await razorpay.payments.refund(payment.transactionId, {
+      amount: Math.round(payment.amount * 100),
+      speed: "normal",
+      notes: { reason: "Customer cancelled within 60s window" }
+    });
+
+    if (refund) {
+      payment.status = 'refunded';
+      await payment.save();
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Refund failed:', error);
+    return false;
+  }
+};
+
+module.exports = { initiatePayment, verifyPayment, getPaymentHistory, refundPayment };

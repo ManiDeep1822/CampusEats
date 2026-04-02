@@ -20,9 +20,25 @@
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-rose-500;
   }
+  .swiggy-orange {
+    @apply bg-[#fc8019] text-white;
+  }
+  .zomato-red {
+    @apply bg-[#cb202d] text-white;
+  }
   .glass {
     @apply bg-white/70 border border-white/20 shadow-xl shadow-slate-200/50;
     backdrop-filter: blur(12px);
+  }
+  .premium-shadow {
+    box-shadow: 0 8px 24px rgba(149, 157, 165, 0.2);
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   /* Disable expensive blur on mobile GPUs */

@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FiSearch, FiClock, FiStar, FiHeart } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  FiSearch, FiClock, FiStar, FiHeart, FiFilter, FiX, FiCheck, 
+  FiChevronRight, FiMapPin, FiTruck, FiZap 
+} from 'react-icons/fi';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 import CartFloatingButton from '../../components/student/CartFloatingButton';
@@ -13,7 +16,23 @@ const StudentHome = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState([]);
-  const [filterMode, setFilterMode] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [minRating, setMinRating] = useState(0);
+  const [onlyVeg, setOnlyVeg] = useState(false);
+  const [sortBy, setSortBy] = useState('default');
+  const [address, setAddress] = useState('Campus Block');
+  const [locating, setLocating] = useState(false);
+
+  const categories = [
+    { id: 'biryani', label: 'Biryani', icon: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-orange-50' },
+    { id: 'pizza', label: 'Pizza', icon: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-red-50' },
+    { id: 'burger', label: 'Burgers', icon: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-yellow-50' },
+    { id: 'chinese', label: 'Chinese', icon: 'https://images.unsplash.com/photo-1552611052-33e04de081de?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-emerald-50' },
+    { id: 'south', label: 'South Indian', icon: 'https://images.unsplash.com/photo-1630383249896-cf906336e147?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-blue-50' },
+    { id: 'desserts', label: 'Desserts', icon: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-pink-50' },
+    { id: 'beverages', label: 'Drinks', icon: 'https://images.unsplash.com/photo-1513558161293-cdaf76589fd8?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-cyan-50' },
+    { id: 'rolls', label: 'Rolls', icon: 'https://images.unsplash.com/photo-1628155930542-3c7a64e2c833?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-amber-50' },
+  ];
 
   useEffect(() => {
     const fetchVendors = async () => {
@@ -23,8 +42,7 @@ const StudentHome = () => {
       } catch (error) {
         console.error(error);
       } finally {
-        // Add a tiny artificial delay to appreciate the beautiful skeleton loaders!
-        setTimeout(() => setLoading(false), 800);
+        setTimeout(() => setLoading(false), 600);
       }
     };
     const fetchFavs = async () => {
@@ -46,129 +64,285 @@ const StudentHome = () => {
     } catch(err) { toast.error("Failed to update favorites"); }
   };
 
-  const filteredVendors = vendors.filter(v => {
-    const matchesSearch = v.shopName.toLowerCase().includes(search.toLowerCase()) || 
-                          v.cuisineType.join(',').toLowerCase().includes(search.toLowerCase());
-    if (filterMode === 'favorites') return matchesSearch && favorites.includes(v._id);
-    return matchesSearch;
-  });
+  const filteredVendors = vendors
+    .filter(v => {
+      const matchesSearch = v.shopName.toLowerCase().includes(search.toLowerCase()) || 
+                            v.cuisineType.join(',').toLowerCase().includes(search.toLowerCase());
+      const matchesCategory = !selectedCategory || v.cuisineType.some(c => c.toLowerCase().includes(selectedCategory.toLowerCase()));
+      const matchesRating = v.rating >= minRating;
+      const matchesVeg = !onlyVeg || v.cuisineType.some(c => c.toLowerCase().includes('veg'));
+      return matchesSearch && matchesCategory && matchesRating && matchesVeg;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'rating') return b.rating - a.rating;
+      if (sortBy === 'alphabetical') return a.shopName.localeCompare(b.shopName);
+      return 0;
+    });
+  
+  const clearFilters = () => {
+    setSelectedCategory(null);
+    setMinRating(0);
+    setOnlyVeg(false);
+    setSortBy('default');
+    setSearch('');
+  };
+
+  const handleGetLocation = () => {
+    alert("Hello location - Accessing your coordinates...");
+    console.log("Location detection triggered...");
+
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      console.error("Geolocation not supported");
+      return;
+    }
+    
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        console.log("Position received:", position.coords);
+        // In a campus environment, we'll map coordinates to the institution name
+        setAddress(`LPU (Detected)`);
+        setLocating(false);
+        toast.success('Location detected!');
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        setLocating(false);
+        toast.error('Error detecting location: ' + error.message);
+      }
+    );
+  };
+
+  const RestaurantCard = ({ vendor }) => (
+    <motion.div 
+      layout
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      whileHover={{ y: -4 }}
+      className={`relative bg-white rounded-3xl overflow-hidden premium-shadow border border-gray-100/50 group transition-all duration-300 ${!vendor.isOpen ? 'grayscale-[0.8] opacity-75' : ''}`}
+    >
+      <Link to={`/student/restaurant/${vendor._id}`} className="block">
+        <div className="relative h-52 overflow-hidden bg-slate-50">
+          {vendor.shopImage ? (
+            <img 
+              src={vendor.shopImage} 
+              alt={vendor.shopName} 
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+              onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=500&h=500&auto=format&fit=crop'; }}
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-4xl opacity-40">🏪</div>
+          )}
+          
+          {/* Offer Badge - Swiggy Style */}
+          <div className="absolute bottom-3 left-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-black tracking-tight shadow-lg uppercase">
+            Flat ₹100 OFF
+          </div>
+
+          {/* Status Badge */}
+          <div className="absolute top-3 left-3">
+            <span className={`px-2.5 py-1 rounded-md text-[10px] font-black tracking-wider uppercase backdrop-blur-md shadow-sm border ${
+              vendor.isOpen ? 'bg-emerald-500/90 text-white border-emerald-400' : 'bg-rose-500/90 text-white border-rose-400'
+            }`}>
+              {vendor.isOpen ? 'OPEN' : 'CLOSED'}
+            </span>
+          </div>
+
+          <motion.button 
+            whileTap={{ scale: 0.8 }}
+            onClick={(e) => toggleFav(e, vendor._id)} 
+            className="absolute top-3 right-3 bg-white/90 backdrop-blur-md p-2.5 rounded-full shadow-md hover:bg-white transition-all z-10"
+          >
+            <FiHeart className={`text-xl ${favorites.includes(vendor._id) ? 'fill-rose-500 text-rose-500' : 'text-gray-400'}`} />
+          </motion.button>
+        </div>
+
+        <div className="p-5">
+          <div className="flex justify-between items-start gap-2 mb-2">
+            <h3 className="text-xl font-black text-slate-800 leading-tight line-clamp-1 group-hover:text-primary transition-colors">
+              {vendor.shopName}
+            </h3>
+            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-white font-black text-xs shrink-0 ${
+              vendor.rating >= 4 ? 'bg-emerald-600' : 'bg-amber-500'
+            }`}>
+              <FiStar className="fill-current" /> {vendor.rating.toFixed(1)}
+            </div>
+          </div>
+          
+          <p className="text-slate-500 text-sm font-medium mb-4 line-clamp-1">{vendor.cuisineType.join(', ')}</p>
+          
+          <div className="flex items-center justify-between pt-4 border-t border-slate-50 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+            <div className="flex items-center gap-1.5"><FiClock className="text-primary" /> 25-35 MIN</div>
+            <div className="w-1 h-1 bg-slate-200 rounded-full"></div>
+            <div className="flex items-center gap-1.5"><FiTruck className="text-primary" /> {vendor.location}</div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
 
   return (
-    <div className="min-h-screen bg-background pb-20 mt-[1rem]">
+    <div className="min-h-screen bg-white pb-20">
       <LiveOrderTracker />
-      <div className="relative pt-16 pb-24 px-4 overflow-hidden border-b border-gray-100">
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-rose-50 -z-10"></div>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full mix-blend-multiply blur-3xl animate-blob pointer-events-none opacity-50"></div>
-        
-        <div className="max-w-7xl mx-auto relative z-10 text-center">
-          <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-5xl lg:text-6xl max-sm:text-3xl font-heading font-extrabold text-textPrimary mb-8 tracking-tight px-2">
-            What are you <span className="text-gradient">craving?</span>
-          </motion.h1>
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="relative max-w-2xl mx-auto px-2">
+      
+      {/* Header & Search Section */}
+      <div className="bg-white px-4 pt-12 pb-6 border-b border-slate-100">
+        <div className="max-w-7xl mx-auto">
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            onClick={handleGetLocation}
+            className="flex items-center gap-2 mb-8 text-primary cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            <FiMapPin className={`text-2xl ${locating ? 'animate-bounce' : ''}`} />
+            <div>
+              <div className="flex items-center gap-1 font-black text-slate-800 tracking-tighter">
+                {locating ? 'Locating...' : address} <FiChevronRight />
+              </div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Detect My Location</p>
+            </div>
+          </motion.div>
+
+          <h1 className="text-4xl font-black text-slate-900 mb-8 tracking-tighter leading-none">
+            Hungry? Let's fix that <span className="text-primary">instantly.</span>
+          </h1>
+
+          <div className="relative group">
             <input 
               type="text" 
-              placeholder="Restaurants, cuisines, or dishes..." 
+              placeholder="Search for restaurants or dishes..." 
               value={search} 
               onChange={(e) => setSearch(e.target.value)} 
-              className="w-full pl-14 pr-6 py-5 max-sm:pl-12 max-sm:pr-4 max-sm:py-4 rounded-2xl shadow-xl shadow-slate-200/50 border border-white/50 bg-white/90 backdrop-blur-md focus:bg-white focus:ring-4 focus:ring-orange-500/20 outline-none text-lg max-sm:text-base transition-all" 
+              className="w-full pl-12 pr-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-primary/20 focus:bg-white outline-none font-bold text-slate-700 transition-all shadow-inner" 
             />
-            <FiSearch className="absolute left-5 max-sm:left-4 top-1/2 transform -translate-y-1/2 text-primary text-2xl max-sm:text-xl" />
-          </motion.div>
+            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl group-focus-within:text-primary transition-colors" />
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-10 relative z-20">
-        
-        {/* View Toggle Tabs */}
-        <div className="flex flex-wrap justify-center gap-4 mb-8">
-          <motion.button 
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setFilterMode('all')} 
-            className={`px-6 py-2.5 rounded-full text-base font-extrabold shadow-sm transition-all duration-300 ${filterMode === 'all' ? 'bg-primary text-white scale-105' : 'bg-white text-gray-500 hover:bg-orange-50'}`}
-          >
-            All Campus Spots
-          </motion.button>
-          <motion.button 
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setFilterMode('favorites')} 
-            className={`px-6 py-2.5 rounded-full text-base font-extrabold shadow-sm transition-all duration-300 flex items-center gap-2 ${filterMode === 'favorites' ? 'bg-rose-500 text-white scale-105 shadow-rose-200' : 'bg-white text-gray-500 hover:bg-rose-50'}`}
-          >
-            <FiHeart className={filterMode === 'favorites' ? 'fill-white text-white' : 'text-rose-400'} /> 
-            My Favorites
-          </motion.button>
+      {/* Horizontal Categories - "What's on your mind?" */}
+      <div className="px-4 py-12 overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-baseline justify-between mb-8">
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">What's on your mind?</h2>
+          </div>
+          
+          <div className="flex gap-8 overflow-x-auto no-scrollbar py-4 -mx-1 px-1">
+            {categories.map((cat) => (
+              <motion.button
+                key={cat.id}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setSelectedCategory(selectedCategory === cat.label ? null : cat.label)}
+                className="flex flex-col items-center gap-3 shrink-0"
+              >
+                <div className={`w-24 h-24 rounded-full overflow-hidden p-3 transition-all duration-300 ${
+                  selectedCategory === cat.label ? 'ring-4 ring-primary ring-offset-2' : 'hover:shadow-xl'
+                } ${cat.color}`}>
+                  <img 
+                    src={cat.icon} 
+                    alt={cat.label} 
+                    className="w-full h-full object-cover rounded-full mix-blend-multiply" 
+                    onError={(e) => { e.target.src = 'https://via.placeholder.com/200?text=' + cat.label; }}
+                  />
+                </div>
+                <span className={`text-xs font-black tracking-tight ${selectedCategory === cat.label ? 'text-primary' : 'text-slate-600'}`}>
+                  {cat.label}
+                </span>
+              </motion.button>
+            ))}
+          </div>
         </div>
+      </div>
+
+      {/* Sticky Filter Bar */}
+      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-100 py-4 px-4 shadow-sm">
+        <div className="max-w-7xl mx-auto flex gap-3 overflow-x-auto no-scrollbar">
+          <button 
+            onClick={() => {
+              setMinRating(minRating === 4 ? 0 : 4);
+              setOnlyVeg(false);
+              setSortBy('default');
+              setSelectedCategory(null);
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white text-xs font-black tracking-tight text-slate-700 hover:bg-slate-50 transition-all shrink-0"
+          >
+            Filter <FiFilter />
+          </button>
+
+          <button 
+            onClick={() => setSortBy(sortBy === 'rating' ? 'default' : 'rating')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all shrink-0 ${
+              sortBy === 'rating' ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'
+            }`}
+          >
+            Sort By <FiChevronRight className="rotate-90" />
+          </button>
+
+          <button 
+            onClick={() => setMinRating(minRating === 4 ? 0 : 4)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all shrink-0 ${
+              minRating === 4 ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'
+            }`}
+          >
+            Ratings 4.0+ {minRating === 4 && <FiCheck />}
+          </button>
+
+          <button 
+            onClick={() => setOnlyVeg(!onlyVeg)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all shrink-0 ${
+              onlyVeg ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-700'
+            }`}
+          >
+            Pure Veg {onlyVeg && <FiCheck />}
+          </button>
+
+          <button 
+            className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white text-xs font-black tracking-tight text-slate-700 shrink-0"
+          >
+            Fast Delivery <FiZap className="text-amber-500" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Vendor Grid */}
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <h2 className="text-2xl font-black text-slate-900 mb-8 tracking-tight">
+          {search || selectedCategory ? `Results for "${search || selectedCategory}"` : 'Top Restaurants for you'}
+        </h2>
 
         {loading ? (
           <SkeletonLoader count={8} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {filteredVendors.map((vendor, idx) => (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                whileHover={{ y: -5 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ duration: 0.3 }}
-                key={vendor._id} 
-                className={`bg-white rounded-[2rem] overflow-hidden shadow-lg shadow-slate-200/40 hover:shadow-2xl hover:shadow-orange-500/10 transition-all duration-300 border border-gray-100 group ${!vendor.isOpen ? 'grayscale-[0.8] opacity-75' : ''}`}
-              >
-                <Link to={`/student/restaurant/${vendor._id}`} className="block relative">
-                  <div className="h-48 bg-slate-50 relative overflow-hidden border-b border-gray-100 flex items-center justify-center p-2">
-                    {vendor.shopImage ? (
-                      <img src={vendor.shopImage} alt={vendor.shopName} className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-500 rounded-lg shadow-sm" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-tr from-gray-200 to-gray-100 flex items-center justify-center text-gray-400 group-hover:scale-105 transition-transform duration-500"><span className="text-5xl">🏪</span></div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    
-                    <div className="absolute top-3 left-3 flex flex-col gap-2">
-                      {vendor.isOpen ? (
-                        <span className="bg-white/90 backdrop-blur-sm text-accent px-3 py-1 rounded-full text-[10px] font-bold shadow-sm tracking-wider uppercase">OPEN</span>
-                      ) : (
-                        <span className="bg-white/90 backdrop-blur-sm text-red-500 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm tracking-wider uppercase">CLOSED</span>
-                      )}
-                    </div>
-                    
-                    <motion.button 
-                      whileTap={{ scale: 0.8 }}
-                      onClick={(e) => toggleFav(e, vendor._id)} 
-                      className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm hover:scale-110 hover:bg-white transition-all z-10"
-                    >
-                      <FiHeart className={`text-xl ${favorites.includes(vendor._id) ? 'fill-rose-500 text-rose-500' : 'text-gray-400'}`} />
-                    </motion.button>
-                  </div>
-                  
-                  <div className="p-6 relative bg-white min-h-[160px]">
-                    <div className="flex justify-between items-start gap-2 mb-3 h-16">
-                      <h2 className="text-2xl font-bold font-heading text-textPrimary group-hover:text-primary transition-colors line-clamp-2 leading-tight flex-1">
-                        {vendor.shopName}
-                      </h2>
-                      <div className="flex items-center bg-orange-50 px-2.5 py-1 rounded-lg text-primary font-bold text-sm border border-orange-100 shrink-0">
-                        <FiStar className="mr-1 fill-primary" /> {vendor.rating.toFixed(1)}
-                      </div>
-                    </div>
-                    <p className="text-textSecondary text-sm mb-4 line-clamp-1 h-5">{vendor.cuisineType.join(', ')}</p>
-                    <div className="flex items-center text-textSecondary text-sm"><FiClock className="mr-2 shrink-0" /> 20-30 min • {vendor.location}</div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
+          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12">
+            <AnimatePresence>
+              {filteredVendors.map((vendor) => (
+                <RestaurantCard key={vendor._id} vendor={vendor} />
+              ))}
+            </AnimatePresence>
+          </motion.div>
         )}
-        {filteredVendors.length === 0 && (
-          <div className="text-center py-24 bg-white/50 backdrop-blur-md rounded-3xl border border-gray-100 shadow-sm mt-8 max-sm:mx-4">
-            <span className="text-6xl mb-4 block">{filterMode === 'favorites' ? '💔' : '🍽️'}</span>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">
-              {filterMode === 'favorites' ? 'No favorites yet' : 'No restaurants found'}
-            </h3>
-            <p className="text-gray-500 max-sm:text-sm max-sm:px-4">
-              {filterMode === 'favorites' ? 'Click the heart icon on any restaurant to save it here.' : 'Try adjusting your search filters.'}
-            </p>
+
+        {filteredVendors.length === 0 && !loading && (
+          <div className="text-center py-24 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-100 mt-8">
+            <div className="text-6xl mb-6">🏜️</div>
+            <h3 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">No restaurants match those filters</h3>
+            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest px-4">Try resetting your filters to explore more campus spots</p>
+            <button 
+              onClick={() => { setSearch(''); setSelectedCategory(null); setMinRating(0); setOnlyVeg(false); setSortBy('default'); }}
+              className="mt-8 px-8 py-3 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+            >
+              Reset All Filters
+            </button>
           </div>
         )}
       </div>
+
       <CartFloatingButton />
     </div>
   );
 };
+
 export default StudentHome;

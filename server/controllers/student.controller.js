@@ -254,12 +254,23 @@ const getFavorites = asyncHandler(async (req, res) => {
 });
 
 
+const { refundPayment } = require('./payment.controller');
+
 const cancelOrder = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
   
   if (!order) { res.status(404); throw new Error('Order not found'); }
   if (order.studentId.toString() !== req.user._id.toString()) { res.status(403); throw new Error('Not authorized'); }
   
+  // Policy Check: Can only cancel within 60 seconds of PLACEMENT
+  const now = new Date();
+  const diffInSeconds = (now - order.createdAt) / 1000;
+  
+  if (diffInSeconds > 60) {
+    res.status(400);
+    throw new Error('60-second cancellation window has expired. Please contact support or the vendor.');
+  }
+
   // Can only cancel if placed or pending_payment, not yet confirmed by vendor
   const cancellableStatuses = ['placed', 'pending_payment'];
   if (!cancellableStatuses.includes(order.status)) { 
@@ -267,12 +278,20 @@ const cancelOrder = asyncHandler(async (req, res) => {
     throw new Error('Order cannot be cancelled once it is being prepared. Please contact the vendor.'); 
   }
 
+  // Attempt Refund if already paid
+  let refundStatus = 'not_started';
+  if (order.status === 'placed') {
+      const isRefunded = await refundPayment(order._id);
+      refundStatus = isRefunded ? 'success' : 'failed';
+  }
+
   order.status = 'cancelled';
+  order.cancellationReason = 'User cancelled within 60s window';
   await order.save();
   
   const io = req.app.get('io');
   if (io) {
-    const msg = `❌ Heads up! Order #${order.orderId} was cancelled by the student.`;
+    const msg = `❌ Heads up! Order #${order.orderId} was cancelled within 60s window. Refund: ${refundStatus}`;
     io.to(`vendor:${order.vendorId?._id || order.vendorId}`).emit('order:cancelled', { orderId: order._id, message: msg });
 
     // Persist
@@ -282,12 +301,14 @@ const cancelOrder = asyncHandler(async (req, res) => {
       type: 'order_update',
       orderId: order._id
     });
-
-    // --- NEW: Real-time Socket Emission ---
     io.to(`vendor:${order.vendorId?._id || order.vendorId}`).emit('notification', notification);
   }
 
-  res.json({ message: 'Order cancelled successfully' });
+  res.json({ 
+    message: 'Order cancelled successfully', 
+    refundStatus,
+    disclaimer: refundStatus === 'success' ? 'Refund initiated. 3-7 business days to reflect.' : 'No payment was made or refund failed.'
+  });
 });
 
 const rateOrder = asyncHandler(async (req, res) => {
