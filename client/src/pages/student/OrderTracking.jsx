@@ -218,19 +218,19 @@ const OrderTracking = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 transition-colors duration-300">
       <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 p-8 max-sm:p-6">
-        <div className="flex justify-between items-start mb-8 pb-4 border-b">
-          <div>
-            <h2 className="text-2xl font-bold font-heading mb-2">Track Order</h2>
-            <p className="text-textSecondary">ID: {activeOrder?.orderId} • {activeOrder?.vendorId?.shopName || 'Unknown Vendor'}</p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 pb-4 border-b gap-4">
+          <div className="max-w-full overflow-hidden">
+            <h2 className="text-xl sm:text-2xl font-bold font-heading mb-1 sm:mb-2 truncate">Track Order</h2>
+            <p className="text-textSecondary text-xs sm:text-sm truncate">ID: {activeOrder?.orderId} • {activeOrder?.vendorId?.shopName || 'Unknown Vendor'}</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
             {['placed', 'pending_payment'].includes(trackingStatus || activeOrder.status) && (
-              <button onClick={handleCancelOrder} className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-100 transition shadow-sm text-sm border border-red-100">
+              <button onClick={handleCancelOrder} className="flex-1 sm:flex-none bg-red-50 text-red-600 px-3 sm:px-4 py-2 rounded-lg font-bold hover:bg-red-100 transition shadow-sm text-xs sm:text-sm border border-red-100 whitespace-nowrap">
                 Cancel Order
               </button>
             )}
             {(trackingStatus || activeOrder.status) === 'pending_payment' && (
-              <button onClick={handlePayment} className="animate-pulse bg-primary text-white px-4 py-2 rounded-lg font-bold hover:bg-orange-600 transition shadow-md shadow-orange-500/30 text-sm">
+              <button onClick={handlePayment} className="flex-1 sm:flex-none animate-pulse bg-primary text-white px-3 sm:px-4 py-2 rounded-lg font-bold hover:bg-orange-600 transition shadow-md shadow-orange-500/30 text-xs sm:text-sm whitespace-nowrap">
                 Proceed to Pay
               </button>
             )}
@@ -427,8 +427,8 @@ const OrderTracking = () => {
               ))}
             </div>
             <form onSubmit={sendMessage} className="p-3 bg-white border-t flex gap-2">
-              <input type="text" value={chatMessage} onChange={e => setChatMessage(e.target.value)} placeholder="Type a message..." className="flex-1 bg-gray-100 rounded-full px-4 outline-none focus:ring-2 focus:ring-orange-200" />
-              <button type="submit" disabled={!chatMessage.trim()} className="bg-primary text-white px-5 rounded-full hover:bg-orange-600 transition disabled:opacity-50 font-bold">Send</button>
+              <input type="text" value={chatMessage} onChange={e => setChatMessage(e.target.value)} placeholder="Type a message..." className="flex-1 min-w-0 bg-gray-100 rounded-full px-4 outline-none focus:ring-2 focus:ring-orange-200" />
+              <button type="submit" disabled={!chatMessage.trim()} className="shrink-0 bg-primary text-white px-4 sm:px-6 py-2 rounded-full hover:bg-orange-600 transition disabled:opacity-50 font-bold text-sm sm:text-base">Send</button>
             </form>
           </div>
         )}

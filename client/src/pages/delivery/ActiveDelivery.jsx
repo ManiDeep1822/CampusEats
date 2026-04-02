@@ -541,8 +541,8 @@ const ActiveDelivery = () => {
             ))}
           </div>
           <form onSubmit={sendMessage} className="p-4 bg-white border-t border-gray-50 flex gap-3">
-            <input type="text" value={chatMessage} onChange={e => setChatMessage(e.target.value)} placeholder="Type tactical message..." className="flex-1 bg-slate-100 rounded-2xl px-5 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 border-transparent focus:border-primary transition-all" />
-            <button type="submit" disabled={!chatMessage.trim()} className="bg-slate-950 text-white w-12 h-12 flex items-center justify-center rounded-2xl shadow-lg active:scale-90 transition-all disabled:opacity-20"><FiSend size={18} /></button>
+            <input type="text" value={chatMessage} onChange={e => setChatMessage(e.target.value)} placeholder="Type tactical message..." className="flex-1 min-w-0 bg-slate-100 rounded-2xl px-5 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 border-transparent focus:border-primary transition-all" />
+            <button type="submit" disabled={!chatMessage.trim()} className="shrink-0 bg-slate-950 text-white w-12 h-12 flex items-center justify-center rounded-2xl shadow-lg active:scale-90 transition-all disabled:opacity-20"><FiSend size={18} /></button>
           </form>
         </div>
       </div>
