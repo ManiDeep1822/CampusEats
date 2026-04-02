@@ -22,6 +22,8 @@ const StudentHome = () => {
   const [sortBy, setSortBy] = useState('default');
   const [address, setAddress] = useState('Campus Block');
   const [locating, setLocating] = useState(false);
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
 
   const categories = [
     { id: 'biryani', label: 'Biryani', icon: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=200&h=200&auto=format&fit=crop', color: 'bg-orange-50' },
@@ -71,11 +73,13 @@ const StudentHome = () => {
       const matchesCategory = !selectedCategory || v.cuisineType.some(c => c.toLowerCase().includes(selectedCategory.toLowerCase()));
       const matchesRating = v.rating >= minRating;
       const matchesVeg = !onlyVeg || v.cuisineType.some(c => c.toLowerCase().includes('veg'));
-      return matchesSearch && matchesCategory && matchesRating && matchesVeg;
+      const matchesFavorites = !showOnlyFavorites || favorites.includes(v._id);
+      return matchesSearch && matchesCategory && matchesRating && matchesVeg && matchesFavorites;
     })
     .sort((a, b) => {
-      if (sortBy === 'rating') return b.rating - a.rating;
-      if (sortBy === 'alphabetical') return a.shopName.localeCompare(b.shopName);
+      if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
+      if (sortBy === 'time') return (a.deliveryTime || 30) - (b.deliveryTime || 30);
+      if (sortBy === 'popularity') return (b.totalOrders || 0) - (a.totalOrders || 0);
       return 0;
     });
   
@@ -83,6 +87,7 @@ const StudentHome = () => {
     setSelectedCategory(null);
     setMinRating(0);
     setOnlyVeg(false);
+    setShowOnlyFavorites(false);
     setSortBy('default');
     setSearch('');
   };
@@ -259,26 +264,71 @@ const StudentHome = () => {
 
       {/* Sticky Filter Bar */}
       <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-100 py-4 px-4 shadow-sm">
-        <div className="max-w-7xl mx-auto flex gap-3 overflow-x-auto no-scrollbar">
-          <button 
-            onClick={() => {
-              setMinRating(minRating === 4 ? 0 : 4);
-              setOnlyVeg(false);
-              setSortBy('default');
-              setSelectedCategory(null);
-            }}
-            className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white text-xs font-black tracking-tight text-slate-700 hover:bg-slate-50 transition-all shrink-0"
-          >
-            Filter <FiFilter />
-          </button>
+        <div className="max-w-7xl mx-auto flex gap-3 overflow-x-auto no-scrollbar relative">
+          
+          {/* PREMIUM SORT DROPDOWN */}
+          <div className="relative shrink-0">
+            <button 
+              onClick={() => setIsSortOpen(!isSortOpen)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all ${
+                sortBy !== 'default' ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'
+              }`}
+            >
+              Sort By <FiChevronRight className={`transition-transform duration-300 ${isSortOpen ? '-rotate-90' : 'rotate-90'}`} />
+            </button>
 
+            <AnimatePresence>
+              {isSortOpen && (
+                <>
+                  {/* Backdrop */}
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setIsSortOpen(false)}
+                    className="fixed inset-0 z-40 bg-black/5"
+                  />
+                  
+                  {/* Dropdown Menu */}
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute left-0 mt-3 w-56 bg-white rounded-[1.5rem] shadow-2xl border border-slate-100 p-2 z-50 origin-top-left overflow-hidden"
+                  >
+                    {[
+                      { id: 'default', label: 'Relevance', icon: <FiFilter /> },
+                      { id: 'rating', label: 'Ratings: High to Low', icon: <FiStar /> },
+                      { id: 'time', label: 'Fastest Delivery', icon: <FiClock /> },
+                      { id: 'popularity', label: 'Most Orders', icon: <FiZap /> }
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => { setSortBy(opt.id); setIsSortOpen(false); }}
+                        className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-xs font-bold transition-all ${
+                          sortBy === opt.id ? 'bg-primary/5 text-primary' : 'text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                           <span className={sortBy === opt.id ? 'text-primary' : 'text-slate-400'}>{opt.icon}</span>
+                           {opt.label}
+                        </div>
+                        {sortBy === opt.id && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+          
           <button 
-            onClick={() => setSortBy(sortBy === 'rating' ? 'default' : 'rating')}
+            onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
             className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all shrink-0 ${
-              sortBy === 'rating' ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'
+              showOnlyFavorites ? 'bg-rose-500 border-rose-500 text-white' : 'border-slate-200 bg-white text-slate-700'
             }`}
           >
-            Sort By <FiChevronRight className="rotate-90" />
+            Favorites <FiHeart className={showOnlyFavorites ? 'fill-current' : ''} />
           </button>
 
           <button 
@@ -300,7 +350,10 @@ const StudentHome = () => {
           </button>
 
           <button 
-            className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white text-xs font-black tracking-tight text-slate-700 shrink-0"
+            onClick={() => setSortBy(sortBy === 'time' ? 'default' : 'time')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black tracking-tight transition-all shrink-0 ${
+              sortBy === 'time' ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700'
+            }`}
           >
             Fast Delivery <FiZap className="text-amber-500" />
           </button>
