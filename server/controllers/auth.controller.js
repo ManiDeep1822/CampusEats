@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const crypto = require('crypto');
 const User = require('../models/User');
 const Vendor = require('../models/Vendor');
 const DeliveryBoy = require('../models/DeliveryBoy');
@@ -92,7 +93,14 @@ const registerUser = asyncHandler(async (req, res) => {
   // 5.5 Verify OTP (Required for registration)
   const otpRecord = await OTP.findOne({ email });
   if (!otpRecord || otpRecord.otp !== otp) {
-    res.status(400); throw new Error('Invalid or expired verification code. Please request a new one.');
+    res.status(400); throw new Error('Invalid verification code.');
+  }
+
+  // M2: Check for 5-minute expiration
+  const otpAge = Date.now() - new Date(otpRecord.createdAt).getTime();
+  if (otpAge > 5 * 60 * 1000) {
+    await OTP.deleteOne({ email });
+    res.status(400); throw new Error('Verification code has expired. Please request a new one.');
   }
 
   // 6. Security Patch: Prevent Privilege Escalation
@@ -158,7 +166,14 @@ const verifyAccount = asyncHandler(async (req, res) => {
 
   const otpRecord = await OTP.findOne({ email });
   if (!otpRecord || otpRecord.otp !== otp) {
-    res.status(400); throw new Error('Invalid or expired verification code');
+    res.status(400); throw new Error('Invalid verification code');
+  }
+
+  // M2: Check for 5-minute expiration
+  const otpAge = Date.now() - new Date(otpRecord.createdAt).getTime();
+  if (otpAge > 5 * 60 * 1000) {
+    await OTP.deleteOne({ email });
+    res.status(400); throw new Error('Verification code has expired');
   }
 
   const user = await User.findOne({ email });
@@ -269,7 +284,8 @@ const googleAuth = asyncHandler(async (req, res) => {
       });
     } else {
       // Create new user (default role: student)
-      const generatedPassword = Math.random().toString(36).slice(-16) + 'A1!'; 
+      // M5: Use cryptographically secure random bytes for temporary password
+      const generatedPassword = crypto.randomBytes(12).toString('hex') + 'A1!'; 
       
       user = await User.create({
         name,
@@ -394,7 +410,14 @@ const resetPasswordWithOTP = asyncHandler(async (req, res) => {
   // 1. Find and verify OTP
   const otpRecord = await OTP.findOne({ email });
   if (!otpRecord || otpRecord.otp !== otp) {
-    res.status(400); throw new Error('Invalid or expired verification code. Please request a new one.');
+    res.status(400); throw new Error('Invalid verification code.');
+  }
+
+  // M2: Check for 5-minute expiration
+  const otpAge = Date.now() - new Date(otpRecord.createdAt).getTime();
+  if (otpAge > 5 * 60 * 1000) {
+    await OTP.deleteOne({ email });
+    res.status(400); throw new Error('Reset code has expired. Please request a new one.');
   }
 
   // 2. Validate new password strength
@@ -533,6 +556,24 @@ const completeInitialPasswordSetup = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Save push notification subscription
+// @route   POST /api/auth/push/subscribe
+// @access  Private
+const subscribeToPush = asyncHandler(async (req, res) => {
+  const subscription = req.body;
+  const user = await User.findById(req.user._id);
+  if (user) {
+    user.pushSubscription = subscription;
+    // Also ensure push is enabled in settings when they subscribe
+    user.notificationSettings.push = true;
+    await user.save();
+    res.status(201).json({ message: 'Push subscription saved' });
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
+});
+
 module.exports = {
   registerUser,
   loginUser,
@@ -549,5 +590,6 @@ module.exports = {
   addAddress,
   removeAddress,
   setDefaultAddress,
-  completeInitialPasswordSetup
+  completeInitialPasswordSetup,
+  subscribeToPush
 };

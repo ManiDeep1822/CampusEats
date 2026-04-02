@@ -260,11 +260,14 @@ const updateVendorProfile = asyncHandler(async (req, res) => {
   const vendor = await Vendor.findById(vendorId);
 
   if (vendor) {
-    if (req.body.shopImage !== undefined) vendor.shopImage = req.body.shopImage;
-    if (req.body.shopName) vendor.shopName = req.body.shopName;
-    if (req.body.location) vendor.location = req.body.location;
-    if (req.body.cuisineType !== undefined) vendor.cuisineType = req.body.cuisineType;
-    if (req.body.operatingHours !== undefined) vendor.operatingHours = req.body.operatingHours;
+    // M6: Whitelist allowed fields to prevent arbitrary updates
+    const { shopImage, shopName, location, cuisineType, operatingHours } = req.body;
+    
+    if (shopImage !== undefined) vendor.shopImage = shopImage;
+    if (shopName) vendor.shopName = shopName;
+    if (location) vendor.location = location;
+    if (cuisineType !== undefined) vendor.cuisineType = cuisineType;
+    if (operatingHours !== undefined) vendor.operatingHours = operatingHours;
 
     const updatedVendor = await vendor.save();
     res.json(updatedVendor);

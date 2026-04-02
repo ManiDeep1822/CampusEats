@@ -504,15 +504,23 @@ const CartPage = () => {
           </div>
           
           {bill && !calculating && (
-             <motion.button 
-               whileHover={{ scale: 1.02 }}
-               whileTap={{ scale: 0.98 }}
-               disabled={loading}
-               onClick={handlePayment} 
-               className="w-full bg-primary text-white py-5 rounded-2xl font-black text-lg shadow-lg shadow-orange-500/30 transition-all uppercase tracking-wider flex items-center justify-center gap-2 group"
-             >
-               {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Pay Securely'}
-             </motion.button>
+             <div className="space-y-4">
+              <p className="text-[10px] text-center text-textSecondary px-2 leading-tight">
+                By placing this order, you agree to CampusEats&apos;s 
+                <Link to="/terms" className="text-primary hover:underline font-bold mx-1">Terms of Service</Link> 
+                & 
+                <Link to="/privacy" className="text-primary hover:underline font-bold mx-1">Cancellation Policy</Link>
+              </p>
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                disabled={loading}
+                onClick={handlePayment} 
+                className="w-full bg-primary text-white py-5 rounded-2xl font-black text-lg shadow-lg shadow-orange-500/30 transition-all uppercase tracking-wider flex items-center justify-center gap-2 group"
+              >
+                {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Pay Securely'}
+              </motion.button>
+             </div>
           )}
         </div>
       </div>

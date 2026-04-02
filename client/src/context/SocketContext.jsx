@@ -11,11 +11,15 @@ export const SocketProvider = ({ children }) => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    if (user) {
-      const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000');
+    if (user && user.token) {
+      const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
+        auth: {
+          token: user.token
+        }
+      });
       
       newSocket.on('connect', () => {
-        console.log('Connected to socket');
+        console.log('Connected to socket with authentication');
         newSocket.emit('join_room', { userId: user._id, role: user.role });
       });
 
@@ -32,7 +36,8 @@ export const SocketProvider = ({ children }) => {
         setSocket(null);
       }
     }
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, dispatch]);
 
   return (
     <SocketContext.Provider value={socket}>

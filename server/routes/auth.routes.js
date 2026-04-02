@@ -5,7 +5,7 @@ const {
   changePassword, googleAuth, forgotPassword, resetPasswordWithOTP,
   sendOTP, verifyAccount, updateProfile,
   addAddress, removeAddress, setDefaultAddress,
-  completeInitialPasswordSetup
+  completeInitialPasswordSetup, subscribeToPush
 } = require('../controllers/auth.controller');
 const { protect } = require('../middleware/auth.middleware');
 
@@ -28,5 +28,6 @@ router.put('/profile', protect, updateProfile);
 router.post('/profile/address', protect, addAddress);
 router.delete('/profile/address/:id', protect, removeAddress);
 router.put('/profile/address/:id/default', protect, setDefaultAddress);
+router.post('/push/subscribe', protect, subscribeToPush);
 
 module.exports = router;

@@ -13,7 +13,6 @@ const {
   getFavorites, 
   cancelOrder, 
   rateOrder, 
-  subscribeToPush,
   getSavedAddresses,
   addSavedAddress,
   deleteSavedAddress,
@@ -36,7 +35,6 @@ router.post('/orders/:id/rate', rateOrder);
 router.post('/vendors/:id/reviews', createVendorReview);
 router.get('/favorites', getFavorites);
 router.put('/favorites/:id', toggleFavorite);
-router.post('/push/subscribe', subscribeToPush);
 
 // Address Management
 router.get('/addresses', getSavedAddresses);

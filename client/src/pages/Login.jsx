@@ -96,6 +96,12 @@ const Login = () => {
           >
             {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Login'}
           </button>
+          <p className="text-[10px] text-center text-textSecondary px-4 leading-normal mt-3">
+             By continuing, I agree to the 
+             <Link to="/terms" className="text-primary hover:underline font-bold mx-1">Terms & Conditions</Link> 
+             & 
+             <Link to="/privacy" className="text-primary hover:underline font-bold mx-1">Privacy Policy</Link>
+          </p>
         </form>
 
         <div className="relative my-8">

@@ -143,6 +143,12 @@ const Register = () => {
             <button type="submit" disabled={loading} className="w-full bg-primary text-white font-bold py-3 mt-4 rounded-lg hover:bg-orange-600 transition disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg shadow-orange-500/20">
               {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Next: Verify Email'}
             </button>
+            <p className="text-[10px] text-center text-textSecondary px-4 leading-normal mt-2">
+              By creating an account, I accept the 
+              <Link to="/terms" className="text-primary hover:underline font-bold mx-1">Terms & Conditions</Link> 
+              & 
+              <Link to="/privacy" className="text-primary hover:underline font-bold mx-1">Privacy Policy</Link>
+            </p>
           </form>
         ) : (
           <form onSubmit={handleRegister} className="space-y-6">
@@ -176,6 +182,12 @@ const Register = () => {
             <button type="submit" disabled={loading} className="w-full bg-primary text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg shadow-orange-500/20">
               {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Verify & Create Account'}
             </button>
+            <p className="text-[10px] text-center text-textSecondary px-4 leading-normal mt-2">
+              By continuing, I confirm my agreement to the 
+              <Link to="/terms" className="text-primary hover:underline font-bold mx-1">Terms & Conditions</Link> 
+              & 
+              <Link to="/privacy" className="text-primary hover:underline font-bold mx-1">Privacy Policy</Link>
+            </p>
           </form>
         )}
 

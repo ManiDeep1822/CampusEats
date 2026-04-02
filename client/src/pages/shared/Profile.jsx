@@ -6,7 +6,7 @@ import {
   FiUser, FiMail, FiPhone, FiMapPin, FiTrash2, 
   FiPlus, FiLock, FiShield, FiBell, 
   FiArrowRight, FiEye, FiEyeOff, 
-  FiSmartphone, FiCamera
+  FiSmartphone, FiCamera, FiFileText
 } from 'react-icons/fi';
 import InstallPWA from '../../components/shared/InstallPWA';
 import toast from 'react-hot-toast';
@@ -192,7 +192,8 @@ const Profile = () => {
     const tabs = [
       { id: 'general', label: 'General', icon: <FiUser /> },
       { id: 'addresses', label: 'My Addresses', icon: <FiMapPin /> },
-      { id: 'security', label: 'Security', icon: <FiLock /> }
+      { id: 'security', label: 'Security', icon: <FiLock /> },
+      { id: 'legal', label: 'Legal', icon: <FiShield /> }
     ];
 
     return (
@@ -526,8 +527,53 @@ const Profile = () => {
                               )}
                             </div>
                           )}
-                        </motion.div>
-                      </AnimatePresence>
+                            {/* 5. LEGAL TAB */}
+                            {activeTab === 'legal' && (
+                              <div className="space-y-8">
+                                <div className="flex items-center gap-3">
+                                  <FiShield className="text-primary text-2xl" />
+                                  <h2 className="text-2xl font-black font-heading">Legal & Policies</h2>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4">
+                                  <Link to="/terms" className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-gray-50 hover:bg-orange-50 hover:border-orange-100 transition-all group">
+                                    <div className="flex items-center gap-4">
+                                      <div className="p-3 bg-white rounded-2xl shadow-sm text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                                        <FiFileText size={20} />
+                                      </div>
+                                      <div>
+                                        <p className="font-bold text-slate-800">Terms & Conditions</p>
+                                        <p className="text-xs text-slate-500">Service rules and user agreement</p>
+                                      </div>
+                                    </div>
+                                    <FiArrowRight className="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                                  </Link>
+
+                                  <Link to="/privacy" className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-gray-50 hover:bg-orange-50 hover:border-orange-100 transition-all group">
+                                    <div className="flex items-center gap-4">
+                                      <div className="p-3 bg-white rounded-2xl shadow-sm text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                                        <FiShield size={20} />
+                                      </div>
+                                      <div>
+                                        <p className="font-bold text-slate-800">Privacy Policy</p>
+                                        <p className="text-xs text-slate-500">How we handle your data</p>
+                                      </div>
+                                    </div>
+                                    <FiArrowRight className="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                                  </Link>
+
+                                  <div className="p-8 mt-4 bg-slate-50 rounded-[2.5rem] border border-slate-100 text-center space-y-4">
+                                    <div className="text-primary font-black tracking-[0.2em] text-[10px] uppercase">CampusEats v1.2.0</div>
+                                    <p className="text-slate-500 text-xs font-bold leading-relaxed max-w-xs mx-auto">
+                                      Designed and built for the modern campus experience. 
+                                      All transactions are secured with end-to-end encryption.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </motion.div>
+                        </AnimatePresence>
                     </div>
 
                 </div>

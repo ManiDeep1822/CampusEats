@@ -6,6 +6,8 @@ const Order = require('../models/Order');
 const OTP = require('../models/OTP');
 const sendEmail = require('../utils/sendEmail');
 
+const crypto = require('crypto');
+
 // @desc    Get all users
 // @route   GET /api/admin/users
 // @access  Private/Admin
@@ -89,6 +91,10 @@ const updateUserRole = asyncHandler(async (req, res) => {
   const { role } = req.body;
 
   if (user) {
+    const allowedRoles = ['student', 'vendor', 'delivery', 'admin'];
+    if (role && !allowedRoles.includes(role)) {
+      res.status(400); throw new Error('Invalid role specified');
+    }
     user.role = role || user.role;
     const updatedUser = await user.save();
     res.json({
@@ -214,13 +220,9 @@ const createUser = asyncHandler(async (req, res) => {
   const { name, email, role, phone, shopName, location, vehicleType } = req.body;
   let { password } = req.body;
 
-  // Generate a secure random temporary password if not provided
+  // M5: Generate a secure random temporary password if not provided
   if (!password) {
-    const charset = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%&*";
-    password = "";
-    for (let i = 0; i < 12; i++) {
-      password += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
+    password = crypto.randomBytes(10).toString('hex') + '!'; 
   }
 
   let user = await User.findOne({ email });
@@ -337,8 +339,7 @@ const createUser = asyncHandler(async (req, res) => {
       profileId: profileId,
       name: user.name, 
       email: user.email, 
-      role: user.role,
-      password: password // Included for admin-side reference during OTP step
+      role: user.role
     });
   } else {
     res.status(400); throw new Error('Invalid user data');

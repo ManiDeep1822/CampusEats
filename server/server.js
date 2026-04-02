@@ -13,6 +13,11 @@ const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 const socketHandler = require('./socket/socket');
 const { startPaymentCleanupJob } = require('./jobs/paymentCleanup');
+ 
+ if (!process.env.JWT_SECRET) {
+   console.error('❌ FATAL: JWT_SECRET is missing from environment variables. Server exiting.');
+   process.exit(1);
+ }
 
 // Routes
 const authRoutes = require('./routes/auth.routes');
@@ -41,6 +46,7 @@ const allowedOrigins = [
   'https://campus-eats-drab.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
+  process.env.CLIENT_URL,
 ];
 
 // Combine origins and add flexibility
@@ -50,10 +56,11 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     
     // Check if origin is in whitelist or is a vercel.app subdomain
-    const isAllowed = allowedOrigins.includes(origin) || 
-                      origin.endsWith('.vercel.app');
-
-    if (isAllowed) {
+     // SECURITY: Restrict to specifically authorized production domains
+     const isAllowed = allowedOrigins.includes(origin) || 
+                       (process.env.NODE_ENV === 'development' && origin.endsWith('.vercel.app'));
+ 
+     if (isAllowed) {
       callback(null, true);
     } else {
       console.warn(`❌ CORS blocked origin: "${origin}"`);
@@ -72,10 +79,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 app.use(helmet());
-app.use(compression());
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+ app.use(compression());
+ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+ app.use(express.json({ limit: '10kb' })); // M10: Limit JSON body size
+ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // Override req.query getter behavior to prevent mongoSanitize crash
 app.use((req, res, next) => {
@@ -116,51 +123,42 @@ startPaymentCleanupJob(io);
 
 // Rate Limiting Config
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 500, // Balanced for production stability
-  message: { message: 'Too many requests from this IP, please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => {
-    // 1. Skip explicitly requested admin routes (Check originalUrl because req.path is relative in mounted middleware)
-    const fullPath = req.originalUrl || req.url;
-    if (fullPath.startsWith('/api/admin')) return true;
-
-    // 2. Safely peek at the JWT token payload without full verification (just for rate limiting purposes)
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.split(' ')[1];
-        if (token) {
-          const parts = token.split('.');
-          if (parts.length === 3) {
-            const payloadBase64 = parts[1];
-            const payloadBuffer = Buffer.from(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
-            const payload = JSON.parse(payloadBuffer.toString('utf8'));
-            if (payload.id && payload.exp) { 
-              return true; // Corrected: Efficiently skip rate limit for authenticated users
-            }
-          }
-        }
-      } catch {
-        // Ignore decoding errors during rate limiting
-      }
-    }
-    
-    return false;
-  }
-});
+   windowMs: 15 * 60 * 1000,
+   max: 500, // Balanced for production stability
+   message: { message: 'Too many requests from this IP, please try again later.' },
+   standardHeaders: true,
+   legacyHeaders: false,
+   skip: (req) => {
+     // Only skip explicitly requested health checks or internal calls if absolutely necessary
+     const fullPath = req.originalUrl || req.url;
+     if (fullPath.startsWith('/api/health')) return true;
+     return false; 
+   }
+ });
+ 
+ const adminLimiter = rateLimit({
+   windowMs: 15 * 60 * 1000,
+   max: 100, // Stricter limit for admin routes
+   message: { message: 'Admin API limit exceeded. Please try again later.' },
+   standardHeaders: true,
+   legacyHeaders: false
+ });
 
 const loginLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
-  max: 5,
-  message: { message: 'Too many login attempts, please try again after 60 seconds.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: () => {
-    return false; // Removed bypass for admin@campus.edu to prevent brute-force
-  }
-});
+   windowMs: 1 * 60 * 1000,
+   max: 5,
+   message: { message: 'Too many login attempts, please try again after 60 seconds.' },
+   standardHeaders: true,
+   legacyHeaders: false
+ });
+ 
+ const feedbackLimiter = rateLimit({
+   windowMs: 60 * 60 * 1000, // 1 hour
+   max: 3, // Only 3 feedbacks per hour per IP
+   message: { message: 'Feedback limit reached. Please try again later.' },
+   standardHeaders: true,
+   legacyHeaders: false
+ });
 
 // API Routes
 app.use('/api/auth/login', loginLimiter); // Apply strict rate limit specifically to login
@@ -173,23 +171,28 @@ app.use('/api/delivery', apiLimiter, deliveryRoutes);
 app.use('/api/payment', apiLimiter, paymentRoutes);
 app.use('/api/upload', apiLimiter, uploadRoutes);
 app.use('/api/bot', apiLimiter, botRoutes);
-app.use('/api/feedback', apiLimiter, feedbackRoutes);
+app.use('/api/feedback', feedbackLimiter, feedbackRoutes);
 app.use('/api/receipts', receiptRoutes);
 app.use('/api/notifications', apiLimiter, notificationRoutes);
-
-// Bypass rate limits for System Admin to allow heavy dashboard data querying
-app.use('/api/admin', adminRoutes);
+ 
+ // Apply strict rate limits for Admin to prevent brute-force or abuse
+ app.use('/api/admin', adminLimiter, adminRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, _) => { // eslint-disable-line no-unused-vars
-  console.error('🔥 Server Error:', err); // Log the full error to stdout for debugging
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  res.status(statusCode);
-  res.json({
-    message: err.message,
-    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
-  });
-});
+   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+   res.status(statusCode);
+   
+   // H6: Return generic error messages in production
+   const message = process.env.NODE_ENV === 'production' && statusCode === 500 
+     ? 'An internal server error occurred' 
+     : err.message;
+ 
+   res.json({
+     message,
+     stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+   });
+ });
 
 // Health check endpoint (used by keep-alive ping below)
 app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok' }));

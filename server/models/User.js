@@ -32,7 +32,7 @@ const userSchema = new mongoose.Schema({
   allergies: [{ type: String }],
   notificationSettings: {
     email: { type: Boolean, default: true },
-    push: { type: Boolean, default: false }
+    push: { type: Boolean, default: true }
   },
   provider: { 
     type: String, 

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import InstallPWA from '../components/shared/InstallPWA';
+import Footer from '../components/shared/Footer';
 
 const defaultAnimations = {
   hidden: { opacity: 0, y: 30 },
@@ -118,6 +119,7 @@ const LandingPage = () => {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

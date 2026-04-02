@@ -14,7 +14,7 @@ const GlobalNotificationListener = () => {
 
   useEffect(() => {
     const registerPush = async () => {
-      if ('serviceWorker' in navigator && isAuthenticated && user?.role === 'student') {
+      if ('serviceWorker' in navigator && isAuthenticated) {
         try {
           const registration = await navigator.serviceWorker.register('/sw.js');
           
@@ -38,7 +38,7 @@ const GlobalNotificationListener = () => {
           const userInfo = JSON.parse(localStorage.getItem('userInfo'));
           if (userInfo?.token) {
             const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-            await axios.post(`${API_BASE}/student/push/subscribe`, subscription, {
+            await axios.post(`${API_BASE}/auth/push/subscribe`, subscription, {
               headers: { Authorization: `Bearer ${userInfo.token}` }
             });
             console.log('Push Registered Successfully');

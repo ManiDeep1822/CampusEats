@@ -41,6 +41,13 @@ const searchItems = asyncHandler(async (req, res) => {
 
 const calculateOrderBill = asyncHandler(async (req, res) => {
   const { items, orderType } = req.body;
+  
+  // M11: Validate orderType enum
+  const allowedOrderTypes = ['delivery', 'take_away'];
+  if (orderType && !allowedOrderTypes.includes(orderType)) {
+    res.status(400); throw new Error('Invalid order type. Must be delivery or take_away.');
+  }
+
   if (!items || items.length === 0) {
     return res.json({ subtotal: 0, distance: 0, deliveryFee: 0, platformFee: 0, taxes: 0, finalTotal: 0 });
   }
@@ -156,6 +163,19 @@ const getOrderById = asyncHandler(async (req, res) => {
 const createVendorReview = asyncHandler(async (req, res) => {
   const { rating, comment } = req.body;
   const vendorId = req.params.id;
+
+  // M4: Purchase Verification for Reviews
+  // Ensure the student has at least one 'delivered' order from this vendor
+  const hasPurchased = await Order.findOne({
+    studentId: req.user._id,
+    vendorId: vendorId,
+    status: 'delivered'
+  });
+
+  if (!hasPurchased) {
+    res.status(403);
+    throw new Error('You can only review vendors you have ordered from and received delivery.');
+  }
 
   const vendor = await Vendor.findById(vendorId);
 
@@ -289,19 +309,6 @@ const rateOrder = asyncHandler(async (req, res) => {
   res.json({ message: 'Rating submitted successfully', order });
 });
 
-const subscribeToPush = asyncHandler(async (req, res) => {
-  const subscription = req.body;
-  const user = await User.findById(req.user._id);
-  if (user) {
-    user.pushSubscription = subscription;
-    await user.save();
-    res.status(201).json({ message: 'Push subscription saved' });
-  } else {
-    res.status(404);
-    throw new Error('User not found');
-  }
-});
-
 const getOrderReceipt = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id)
     .populate('studentId', 'name email address')
@@ -364,12 +371,11 @@ module.exports = {
   placeOrder, 
   getMyOrders, 
   getOrderById, 
-  createVendorReview, 
-  toggleFavorite, 
-  getFavorites, 
-  cancelOrder, 
-  rateOrder, 
-  subscribeToPush,
+  rateOrder,
+  createVendorReview,
+  toggleFavorite,
+  getFavorites,
+  cancelOrder,
   getSavedAddresses,
   addSavedAddress,
   deleteSavedAddress,
