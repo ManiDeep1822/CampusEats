@@ -13,13 +13,18 @@ class FetchClient {
 
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
-    
+    const isFormData = options.data instanceof FormData;
+
     // Request Interceptor Logic
     const userInfo = localStorage.getItem('userInfo');
     const headers = {
-      'Content-Type': 'application/json',
       ...options.headers,
     };
+
+    // ONLY set application/json if NOT uploading a file
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (userInfo) {
       const parsed = JSON.parse(userInfo);
@@ -34,7 +39,8 @@ class FetchClient {
     };
 
     if (config.data) {
-      config.body = JSON.stringify(config.data);
+      // If it's FormData, pass it directly; otherwise JSON.stringify
+      config.body = isFormData ? config.data : JSON.stringify(config.data);
       delete config.data;
     }
 
