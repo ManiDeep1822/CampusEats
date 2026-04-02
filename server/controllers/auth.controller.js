@@ -457,6 +457,7 @@ const updateProfile = asyncHandler(async (req, res) => {
     user.dietaryPreference = req.body.dietaryPreference || user.dietaryPreference;
     user.allergies = req.body.allergies || user.allergies;
     if (req.body.profilePic !== undefined) {
+      console.log(`📸 Updating profile picture for user ${user._id} to: ${req.body.profilePic}`);
       user.profilePic = req.body.profilePic;
     }
     
@@ -472,6 +473,7 @@ const updateProfile = asyncHandler(async (req, res) => {
     }
 
     const updatedUser = await user.save();
+    console.log(`✅ User ${user._id} successfully updated.`);
     res.json({
       _id: updatedUser._id,
       name: updatedUser.name,

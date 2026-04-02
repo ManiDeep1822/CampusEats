@@ -78,19 +78,22 @@ const corsOptions = {
 };
 
 
+
 // Middleware: Express 5 compatibility fix (MUST be first)
-app.use((req, res, next) => {
+// Express 5 defines req.query, req.params, and req.body as read-only getters.
+// This redefines them as writable properties so libraries (multer, sanitize, etc.) can function.
+app.use((req, _, next) => {
   ['query', 'params', 'body'].forEach(prop => {
     try {
-      const originalValue = req[prop];
+      const currentVal = req[prop];
       Object.defineProperty(req, prop, {
-        value: typeof originalValue === 'object' ? { ...originalValue } : originalValue,
+        value: typeof currentVal === 'object' ? { ...currentVal } : currentVal,
         writable: true,
         configurable: true,
         enumerable: true
       });
     } catch (e) {
-      // Fallback if property is already defined or not present
+      // Silent catch for locked properties
     }
   });
   next();
@@ -98,7 +101,22 @@ app.use((req, res, next) => {
 
 app.use(cors(corsOptions));
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "https://lh3.googleusercontent.com"], // Allow Cloudinary & Google Profile Pics
+      connectSrc: ["'self'", "https://res.cloudinary.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'", "https://res.cloudinary.com"],
+      frameSrc: ["'self'"],
+    },
+  },
+  crossOriginResourcePolicy: { policy: "cross-origin" } // Allow images from other domains to be displayed
+}));
  app.use(compression());
  app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
  app.use(express.json({ limit: '10kb' })); // M10: Limit JSON body size
