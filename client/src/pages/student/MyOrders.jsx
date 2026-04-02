@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
@@ -7,8 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { FiDownload } from 'react-icons/fi';
 
 const MyOrders = () => {
-  const { user, token } = useSelector(state => state.auth);
-  const dispatch = useDispatch();
+  const { token } = useSelector(state => state.auth);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 

@@ -3,7 +3,7 @@ import { useSocketEvent } from '../../hooks/useSocket';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
 import toast from 'react-hot-toast';
-import { FiCheck, FiPlay, FiCheckCircle } from 'react-icons/fi';
+import { FiCheck, FiCheckCircle } from 'react-icons/fi';
 import { formatDistanceToNow } from 'date-fns';
 
 const OrderManagement = () => {

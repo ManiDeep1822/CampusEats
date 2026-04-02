@@ -101,7 +101,7 @@ const SearchResults = () => {
         {!loading && query && totalResults > 0 && (
           <div className="max-w-4xl mx-auto px-4 pb-3 flex items-center gap-1">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-3">
-              {totalResults} results for "{query}"
+              {totalResults} results for &quot;{query}&quot;
             </span>
             {[
               { id: 'restaurants', label: `Restaurants`, count: results.vendors.length },
@@ -141,7 +141,7 @@ const SearchResults = () => {
           // Zero results state
           <div className="text-center py-24">
             <div className="text-6xl mb-6">😕</div>
-            <h3 className="text-2xl font-black text-slate-800 mb-2">Nothing found for "{query}"</h3>
+            <h3 className="text-2xl font-black text-slate-800 mb-2">Nothing found for &quot;{query}&quot;</h3>
             <p className="text-slate-400 font-bold text-sm mb-8">Try a different name or browse categories</p>
             <button
               onClick={() => navigate('/student/home')}
@@ -158,7 +158,7 @@ const SearchResults = () => {
                 {results.vendors.length === 0 ? (
                   <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200">
                     <div className="text-5xl mb-4 opacity-40">🏪</div>
-                    <p className="font-black text-slate-600">No restaurants match "{query}"</p>
+                    <p className="font-black text-slate-600">No restaurants match &quot;{query}&quot;</p>
                     <button onClick={() => setActiveTab('dishes')} className="mt-4 text-primary font-black text-sm underline">
                       See {results.items.length} matching dishes →
                     </button>
@@ -226,7 +226,7 @@ const SearchResults = () => {
                 {results.items.length === 0 ? (
                   <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200">
                     <div className="text-5xl mb-4 opacity-40">🍽️</div>
-                    <p className="font-black text-slate-600">No dishes match "{query}"</p>
+                    <p className="font-black text-slate-600">No dishes match &quot;{query}&quot;</p>
                     <button onClick={() => setActiveTab('restaurants')} className="mt-4 text-primary font-black text-sm underline">
                       See {results.vendors.length} matching restaurants →
                     </button>

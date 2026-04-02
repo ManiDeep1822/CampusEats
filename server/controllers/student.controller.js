@@ -30,7 +30,7 @@ const getVendorById = asyncHandler(async (req, res) => {
 
 // Helper to escape regex special characters
 const escapeRegex = (string) => {
-  return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  return string.replace(/[-\\^$*+?.()|[\]{}]/g, '\\$&');
 };
 
 const searchItems = asyncHandler(async (req, res) => {
@@ -157,7 +157,7 @@ const applyCoupon = asyncHandler(async (req, res) => {
     res.status(400); throw new Error(validation.message);
   }
 
-  let discountAmount = 0;
+  let discountAmount;
   if (coupon.discountType === 'percentage') {
     discountAmount = (subtotal * coupon.discountValue) / 100;
     if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) {

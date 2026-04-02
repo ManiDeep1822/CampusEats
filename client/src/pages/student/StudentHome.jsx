@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -100,7 +100,8 @@ const StudentHome = () => {
       finally { setSuggLoading(false); }
     }, 280);
     return () => clearTimeout(timer);
-  }, [overlayQuery]);
+  }, [overlayQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
 
   const handleOverlaySubmit = (e) => {
@@ -364,7 +365,7 @@ const StudentHome = () => {
                 </div>
               ) : suggestions.vendors.length === 0 && suggestions.items.length === 0 ? (
                 <div className="text-center py-16 px-8">
-                  <p className="font-black text-slate-500 mb-1">No results for "{overlayQuery}"</p>
+                  <p className="font-black text-slate-500 mb-1">No results for &quot;{overlayQuery}&quot;</p>
                   <p className="text-slate-400 text-xs">Try pressing Search above for full results</p>
                 </div>
               ) : (
@@ -420,7 +421,7 @@ const StudentHome = () => {
                     onClick={handleOverlaySubmit}
                     className="w-full mt-4 py-4 rounded-2xl border-2 border-dashed border-slate-200 text-sm font-black text-primary hover:border-primary/40 hover:bg-primary/5 transition-all"
                   >
-                    View all results for "{overlayQuery}" →
+                    View all results for &quot;{overlayQuery}&quot; →
                   </button>
                 </div>
               )}

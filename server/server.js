@@ -182,14 +182,11 @@ app.use((err, req, res, _) => { // eslint-disable-line no-unused-vars
    const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
    res.status(statusCode);
    
-   if (statusCode === 500) {
-     console.error(`[Error] ${req.method} ${req.originalUrl}:`, err.message);
-   }
+   // Keep full error logging on server
+   console.error(`[Error] ${req.method} ${req.originalUrl}:`, err);
    
-   // H6: Return generic error messages in production
-   const message = process.env.NODE_ENV === 'production' && statusCode === 500 
-     ? 'An internal server error occurred' 
-     : err.message;
+   // Temporarily return actual message to client to help debug
+   const message = err.message;
  
    res.json({
      message,
@@ -237,5 +234,6 @@ process.on('uncaughtException', (err) => {
   console.error(`🔥 Uncaught Exception: ${err.message}`);
   process.exit(1);
 });
+
 
 

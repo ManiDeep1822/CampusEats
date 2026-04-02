@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiTrendingUp, FiShoppingBag, FiStar, FiClock, FiCamera, FiMonitor, FiChevronRight, FiTrash2, FiMapPin } from 'react-icons/fi';
+import { FiTrendingUp, FiShoppingBag, FiClock, FiChevronRight, FiMapPin, FiTrash2, FiCamera, FiMonitor } from 'react-icons/fi';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
@@ -99,7 +99,7 @@ const VendorDashboard = () => {
     }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      () => {
         setAddress('LPU (Detected)');
         setLocating(false);
         toast.success('Shop location verified!');

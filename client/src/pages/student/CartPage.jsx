@@ -117,7 +117,8 @@ const CartPage = () => {
       }
     };
     fetchSavedAddresses();
-  }, []);
+  }, [address]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   useEffect(() => {
     const fetchAvailableCoupons = async () => {
@@ -139,7 +140,8 @@ const CartPage = () => {
       script.async = true;
       document.body.appendChild(script);
     }
-  }, []);
+  }, [address]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   const handlePayment = async () => {
     if (orderType === 'delivery' && !address) { 
