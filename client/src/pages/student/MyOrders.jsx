@@ -85,7 +85,7 @@ const MyOrders = () => {
                   >
                     {order.status === 'pending_payment' ? 'Complete Payment' : 'View Details'}
                   </Link>
-                  {['delivered', 'ready', 'preparing', 'placed'].includes(order.status) && (
+                  {order.status !== 'pending_payment' && (
                     <button 
                       onClick={() => handleDownloadReceipt(order._id)}
                       className="w-full text-center text-xs font-bold text-gray-400 hover:text-primary transition-colors flex items-center justify-center gap-1.5"

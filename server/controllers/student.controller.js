@@ -12,7 +12,7 @@ const calculateDeliveryFee = (subtotal) => {
 };
 
 const getVendors = asyncHandler(async (req, res) => {
-  const vendors = await Vendor.find({ isOpen: true, isApproved: true }).populate('userId', 'name profilePic');
+  const vendors = await Vendor.find({ isApproved: true }).populate('userId', 'name profilePic');
   res.json(vendors);
 });
 
@@ -33,8 +33,8 @@ const searchItems = asyncHandler(async (req, res) => {
   // Find all matching items
   const items = await MenuItem.find({ ...keyword }).populate('vendorId', 'shopName location rating isOpen isApproved');
   
-  // Filter out items belonging to unapproved or closed vendors, or out of stock
-  const verifiedItems = items.filter(item => item.vendorId && item.vendorId.isApproved && item.vendorId.isOpen && item.isAvailable !== false);
+  // Filter out items belonging to unapproved vendors, or out of stock
+  const verifiedItems = items.filter(item => item.vendorId && item.vendorId.isApproved && item.isAvailable !== false);
   
   res.json(verifiedItems);
 });
@@ -102,6 +102,18 @@ const generateSecureBill = async (vendorId, items, orderType) => {
 
 const placeOrder = asyncHandler(async (req, res) => {
   const { vendorId, items, deliveryAddress, paymentId, specialInstructions, scheduledFor, orderType } = req.body;
+
+  const vendor = await Vendor.findById(vendorId);
+  if (!vendor) {
+    res.status(404);
+    throw new Error('Vendor not found');
+  }
+
+  if (!vendor.isOpen) {
+    res.status(400);
+    throw new Error(`Sorry, ${vendor.shopName} is currently closed and not accepting orders.`);
+  }
+
   if (!items || items.length === 0) {
     res.status(400);
     throw new Error('No order items');

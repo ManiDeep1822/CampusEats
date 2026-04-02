@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useSocketContext } from '../../context/SocketContext';
 import { useSocketEvent } from '../../hooks/useSocket';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FiStar } from 'react-icons/fi';
+import { FiStar, FiMapPin } from 'react-icons/fi';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
 import toast from 'react-hot-toast';
@@ -234,6 +234,14 @@ const OrderTracking = () => {
                 Proceed to Pay
               </button>
             )}
+            {activeOrder.status !== 'pending_payment' && (
+              <button 
+                onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/student/orders/${activeOrder._id}/receipt?token=${localStorage.getItem('token') || ''}`, '_blank')}
+                className="flex-1 sm:flex-none bg-gray-50 text-gray-600 px-3 sm:px-4 py-2 rounded-lg font-bold hover:bg-gray-100 transition shadow-sm text-xs sm:text-sm border border-gray-100 whitespace-nowrap"
+              >
+                View Receipt
+              </button>
+            )}
           </div>
           {(trackingStatus || activeOrder.status) === 'cancelled' && (
             <span className="bg-red-100 text-red-600 px-4 py-2 rounded-lg font-bold shadow-sm text-sm border border-red-200">
@@ -317,27 +325,89 @@ const OrderTracking = () => {
            </div>
         )}
 
-        {/* Smart ETA Banner */}
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200 rounded-2xl p-6 mb-8 mt-8 flex flex-row items-center justify-between shadow-sm gap-6 max-sm:flex-col max-sm:items-start max-sm:p-5">
-           <div className="max-sm:w-full">
-             <h3 className="text-orange-800 font-bold mb-1 text-xs uppercase tracking-widest flex items-center gap-2 max-sm:text-[10px]">
-               {activeOrder.status === 'preparing' ? '🍳 Cooking In Progress' : activeOrder.scheduledFor ? '🗓️ Scheduled' : '⚡ Est. Arrival'}
-             </h3>
-             <p className="text-orange-950 font-black text-4xl max-sm:text-3xl">
-               {activeOrder.status === 'preparing' 
-                 ? `${activeOrder.estimatedTime || 15} mins`
-                 : activeOrder?.estimatedDeliveryTime 
-                   ? Math.max(0, Math.ceil((new Date(activeOrder.estimatedDeliveryTime) - new Date()) / 60000)) + " mins"
-                   : 'Calculating...'}
-             </p>
-             <p className="text-orange-800/60 text-[10px] font-bold mt-1 uppercase">
-               {activeOrder.status === 'preparing' ? 'Estimated time to be ready' : `Expected by ${activeOrder?.estimatedDeliveryTime && new Date(activeOrder.estimatedDeliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
-             </p>
-           </div>
-            <div className="text-right border-l border-orange-200/50 pl-6 max-sm:w-full max-sm:text-left max-sm:border-l-0 max-sm:pl-0">
-              <p className="text-[10px] text-orange-600 font-bold uppercase tracking-widest mb-1">{isTakeAway ? 'Pickup At' : 'Delivery To'}</p>
-              <p className="text-orange-900 font-bold text-base leading-snug line-clamp-2 max-sm:text-sm">{isTakeAway ? 'Restaurant Counter' : (activeOrder?.deliveryAddress || 'Campus')}</p>
-            </div>
+        {/* MINIMALIST ETA MODULE (SWIGGY/ZOMATO STYLE) */}
+        <div className="relative mb-12 mt-8">
+           <motion.div 
+             initial={{ opacity: 0, y: 10 }}
+             animate={{ opacity: 1, y: 0 }}
+             className="text-center space-y-6"
+           >
+              {/* LARGE ETA DISPLAY */}
+              <div className="space-y-1">
+                 <div className="flex items-center justify-center gap-2 mb-2">
+                    <span className="relative flex h-2 w-2">
+                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                       <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                    </span>
+                    <span className="text-primary font-black text-[10px] uppercase tracking-[0.3em]">Live Tracking</span>
+                 </div>
+                 
+                 <div className="flex items-center justify-center gap-3">
+                    <span className="text-slate-400 font-black text-2xl lowercase opacity-40">Arriving in</span>
+                    <span className="text-slate-900 font-black text-6xl tracking-tighter max-sm:text-5xl">
+                      {activeOrder.status === 'preparing' 
+                        ? (activeOrder.estimatedTime || 15) 
+                        : activeOrder?.estimatedDeliveryTime 
+                          ? Math.max(0, Math.ceil((new Date(activeOrder.estimatedDeliveryTime) - new Date()) / 60000))
+                          : '--'}
+                    </span>
+                    <span className="text-slate-900 font-black text-2xl lowercase underline decoration-primary decoration-4">mins</span>
+                 </div>
+              </div>
+
+              {/* SLIDING PROGRESS LINE */}
+              <div className="max-w-xs mx-auto relative px-8 py-4">
+                 <div className="h-1 bg-slate-100 rounded-full w-full relative">
+                    {/* Active Segment */}
+                    <motion.div 
+                       initial={{ width: 0 }}
+                       animate={{ 
+                         width: activeOrder.status === 'delivered' ? '100%' : 
+                                activeOrder.status === 'picked_up' ? '70%' : 
+                                ['ready', 'prepared'].includes(activeOrder.status) ? '40%' : 
+                                activeOrder.status === 'preparing' ? '15%' : '0%' 
+                       }}
+                       className="h-full bg-primary rounded-full transition-all duration-1000"
+                    />
+                    
+                    {/* Sliding Icon Wrapper */}
+                    <motion.div 
+                       initial={{ left: 0 }}
+                       animate={{ 
+                         left: activeOrder.status === 'delivered' ? '100.5%' : 
+                               activeOrder.status === 'picked_up' ? '70.5%' : 
+                               ['ready', 'prepared'].includes(activeOrder.status) ? '40.5%' : 
+                               activeOrder.status === 'preparing' ? '15.5%' : '0%' 
+                       }}
+                       className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10"
+                    >
+                       <div className="bg-white p-2 rounded-full shadow-lg border border-slate-50 text-xl filter drop-shadow-sm">
+                          {activeOrder.status === 'preparing' ? '🍳' : 
+                           ['ready', 'prepared'].includes(activeOrder.status) ? '🥡' : 
+                           activeOrder.status === 'picked_up' ? '🛵' : 
+                           activeOrder.status === 'delivered' ? '✨' : '🛒'}
+                       </div>
+                    </motion.div>
+                 </div>
+                 
+                 {/* Destination Dots */}
+                 <div className="absolute left-7 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-slate-200"></div>
+                 <div className="absolute right-7 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-slate-200"></div>
+              </div>
+
+              {/* DYNAMIC STATUS TEXT */}
+              <div className="space-y-1">
+                 <p className="text-lg font-black text-slate-800 tracking-tight leading-none uppercase">
+                   {activeOrder.status === 'preparing' ? 'Chef is preparing your food' : 
+                    activeOrder.status === 'ready' ? 'Your food is ready for pickup!' : 
+                    activeOrder.status === 'picked_up' ? 'Rider is on the way!' : 
+                    activeOrder.status === 'delivered' ? 'Order Delivered!' : 'Order Placed'}
+                 </p>
+                 <p className="text-[10px] text-slate-400 font-bold tracking-[0.1em] uppercase">
+                    {isTakeAway ? `Pickup is from ${activeOrder?.vendorId?.shopName}` : `Delivering to ${activeOrder?.deliveryAddress || 'your location'}`}
+                 </p>
+              </div>
+           </motion.div>
         </div>
 
         {(trackingStatus || activeOrder.status) !== 'delivered' && !isTakeAway && (

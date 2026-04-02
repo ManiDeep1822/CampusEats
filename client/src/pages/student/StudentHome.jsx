@@ -110,7 +110,7 @@ const StudentHome = () => {
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.3 }}
                 key={vendor._id} 
-                className="bg-white rounded-[2rem] overflow-hidden shadow-lg shadow-slate-200/40 hover:shadow-2xl hover:shadow-orange-500/10 transition-all duration-300 border border-gray-100 group"
+                className={`bg-white rounded-[2rem] overflow-hidden shadow-lg shadow-slate-200/40 hover:shadow-2xl hover:shadow-orange-500/10 transition-all duration-300 border border-gray-100 group ${!vendor.isOpen ? 'grayscale-[0.8] opacity-75' : ''}`}
               >
                 <Link to={`/student/restaurant/${vendor._id}`} className="block relative">
                   <div className="h-48 bg-slate-50 relative overflow-hidden border-b border-gray-100 flex items-center justify-center p-2">

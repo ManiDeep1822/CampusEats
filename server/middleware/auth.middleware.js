@@ -7,6 +7,10 @@ const protect = asyncHandler(async (req, res, next) => {
   // Read token from Bearer header
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     token = req.headers.authorization.split(' ')[1];
+  } 
+  // Fallback: Read token from query parameter (for window.open)
+  else if (req.query.token) {
+    token = req.query.token;
   }
 
   if (token) {

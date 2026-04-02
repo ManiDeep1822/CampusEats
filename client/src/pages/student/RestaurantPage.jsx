@@ -111,6 +111,17 @@ const RestaurantPage = () => {
             </div>
           </div>
         </div>
+        {!vendor.isOpen && (
+          <div className="max-w-4xl mx-auto mt-6 px-4 animate-in fade-in slide-in-from-top-2 duration-500">
+            <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center gap-4 text-red-700 shadow-sm backdrop-blur-sm">
+              <span className="text-2xl">🚧</span>
+              <div>
+                <p className="font-bold tracking-tight">Restaurant is Currently Closed</p>
+                <p className="text-sm opacity-90">This restaurant is not accepting orders at the moment. You can still browse the menu.</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="max-w-4xl mx-auto mt-10 px-4 max-sm:mt-6">
@@ -154,10 +165,10 @@ const RestaurantPage = () => {
                   {getQuantity(item._id) === 0 ? (
                     <button 
                       onClick={() => handleAddToCart(item)} 
-                      disabled={item.isAvailable === false} 
-                      className={`w-full py-2 px-4 border-2 font-bold rounded-xl shadow-sm text-sm uppercase transition-all max-sm:text-xs ${item.isAvailable !== false ? 'border-primary/20 bg-white text-primary hover:bg-primary hover:text-white' : 'border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50'}`}
+                      disabled={item.isAvailable === false || vendor.isOpen === false} 
+                      className={`w-full py-2 px-4 border-2 font-bold rounded-xl shadow-sm text-sm uppercase transition-all max-sm:text-xs ${item.isAvailable !== false && vendor.isOpen !== false ? 'border-primary/20 bg-white text-primary hover:bg-primary hover:text-white' : 'border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50'}`}
                     >
-                      {item.isAvailable !== false ? 'Add' : 'Sold Out'}
+                      {item.isAvailable === false ? 'Sold Out' : vendor.isOpen === false ? 'Closed' : 'Add'}
                     </button>
                   ) : (
                     <div className="flex items-center justify-between w-full bg-primary rounded-xl shadow-md px-1 py-1 transform transition-transform animate-in zoom-in-95 duration-200">
