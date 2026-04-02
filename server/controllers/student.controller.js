@@ -28,34 +28,59 @@ const getVendorById = asyncHandler(async (req, res) => {
   }
 });
 
+// Helper to escape regex special characters
+const escapeRegex = (string) => {
+  return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+};
+
 const searchItems = asyncHandler(async (req, res) => {
   const queryTerm = String(req.query.query || '').trim();
   if (!queryTerm) return res.json({ vendors: [], items: [], query: '' });
 
-  const regex = { $regex: queryTerm, $options: 'i' };
+  try {
+    const escapedTerm = escapeRegex(queryTerm);
+    const regex = { $regex: escapedTerm, $options: 'i' };
 
-  // Search vendors by shop name OR cuisine type
-  const vendors = await Vendor.find({
-    isApproved: true,
-    $or: [
-      { shopName: regex },
-      { cuisineType: regex },
-      { location: regex },
-    ]
-  }).populate('userId', 'name profilePic').lean();
+    // Search vendors by shop name OR cuisine type OR location
+    const vendors = await Vendor.find({
+      isApproved: true,
+      $or: [
+        { shopName: regex },
+        { cuisineType: regex }, // matches any in array
+        { location: regex },
+      ]
+    })
+    .populate('userId', 'name profilePic')
+    .lean();
 
-  // Search menu items by name or description, then populate vendor info
-  const items = await MenuItem.find({
-    $or: [{ name: regex }, { description: regex }],
-    isAvailable: { $ne: false }
-  })
-  .populate('vendorId', 'shopName location rating isOpen isApproved cuisineType shopImage')
-  .lean();
+    // Search menu items by name or description
+    const items = await MenuItem.find({
+      $or: [{ name: regex }, { description: regex }],
+      isAvailable: { $ne: false } // Matches true or undefined
+    })
+    .populate('vendorId', 'shopName location rating isOpen isApproved cuisineType shopImage')
+    .lean();
 
-  // Filter out items from unapproved or closed vendors
-  const verifiedItems = items.filter(item => item.vendorId?.isApproved);
+    // Filter out items from unapproved vendors with enhanced safety check
+    const verifiedItems = items.filter(item => {
+      if (!item.vendorId) return false; // Vendor deleted or not found
+      return item.vendorId.isApproved === true;
+    });
 
-  res.json({ vendors, items: verifiedItems, query: queryTerm });
+    res.json({ 
+      vendors: vendors || [], 
+      items: verifiedItems || [], 
+      query: queryTerm 
+    });
+
+  } catch (error) {
+    console.error(`[Search Error] query="${queryTerm}":`, error.message);
+    // If it's a MongoDB regex error, return 400 instead of 500
+    if (error.message.includes('Regular expression') || error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid search query', vendors: [], items: [], query: queryTerm });
+    }
+    throw error; // Let global handler catch other issues
+  }
 });
 
 

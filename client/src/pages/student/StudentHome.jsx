@@ -90,12 +90,18 @@ const StudentHome = () => {
       setSuggLoading(true);
       try {
         const { data } = await api.get(`/student/search?query=${encodeURIComponent(q)}`);
-        setSuggestions({ vendors: data.vendors?.slice(0, 4) || [], items: data.items?.slice(0, 5) || [] });
-      } catch { setSuggestions({ vendors: [], items: [] }); }
+        const safeVendors = Array.isArray(data?.vendors) ? data.vendors.slice(0, 4) : [];
+        const safeItems = Array.isArray(data?.items) ? data.items.slice(0, 5) : [];
+        setSuggestions({ vendors: safeVendors, items: safeItems });
+      } catch (err) { 
+        console.error('Suggestions fetch failed:', err);
+        setSuggestions({ vendors: [], items: [] }); 
+      }
       finally { setSuggLoading(false); }
     }, 280);
     return () => clearTimeout(timer);
   }, [overlayQuery]);
+
 
   const handleOverlaySubmit = (e) => {
     e?.preventDefault();

@@ -26,12 +26,18 @@ const SearchResults = () => {
       setLoading(true);
       try {
         const { data } = await api.get(`/student/search?query=${encodeURIComponent(query)}`);
-        setResults(data);
+        const safeData = {
+          vendors: Array.isArray(data?.vendors) ? data.vendors : [],
+          items: Array.isArray(data?.items) ? data.items : [],
+          query: data?.query || query
+        };
+        setResults(safeData);
         // Auto-switch to dishes tab if no vendors found but items exist
-        if (data.vendors.length === 0 && data.items.length > 0) setActiveTab('dishes');
+        if (safeData.vendors.length === 0 && safeData.items.length > 0) setActiveTab('dishes');
         else setActiveTab('restaurants');
       } catch (err) {
         console.error('Search failed:', err);
+        setResults({ vendors: [], items: [], query });
       } finally {
         setLoading(false);
       }
@@ -45,16 +51,17 @@ const SearchResults = () => {
     setSearchParams({ q: localQuery.trim() });
   };
 
-  const totalResults = results.vendors.length + results.items.length;
+  const totalResults = (results?.vendors?.length || 0) + (results?.items?.length || 0);
 
   // Deduplicate items — group by vendor
-  const itemsByVendor = results.items.reduce((acc, item) => {
+  const itemsByVendor = (results?.items || []).reduce((acc, item) => {
     const vid = item.vendorId?._id;
     if (!vid) return acc;
     if (!acc[vid]) acc[vid] = { vendor: item.vendorId, items: [] };
     acc[vid].items.push(item);
     return acc;
   }, {});
+
 
   return (
     <div className="min-h-screen bg-slate-50">

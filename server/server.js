@@ -7,7 +7,7 @@ const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss-clean');
+const xssMiddleware = require('./middleware/xss.middleware');
 const hpp = require('hpp');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
@@ -101,7 +101,7 @@ app.use((req, _, next) => {
 app.use(mongoSanitize());
 
 // Security Middleware: Prevent XSS cross-site scripting
-app.use(xss());
+app.use(xssMiddleware);
 
 // Security Middleware: Prevent HTTP parameter pollution
 app.use(hpp());
@@ -181,6 +181,10 @@ app.use('/api/notifications', apiLimiter, notificationRoutes);
 app.use((err, req, res, _) => { // eslint-disable-line no-unused-vars
    const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
    res.status(statusCode);
+   
+   if (statusCode === 500) {
+     console.error(`[Error] ${req.method} ${req.originalUrl}:`, err.message);
+   }
    
    // H6: Return generic error messages in production
    const message = process.env.NODE_ENV === 'production' && statusCode === 500 
