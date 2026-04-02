@@ -7,7 +7,7 @@ import { useSocketEvent } from '../../hooks/useSocket';
 import { 
   FiClock, FiCheckSquare, FiRefreshCw, 
   FiShoppingBag, FiTruck, FiCheckCircle,
-  FiMapPin, FiCamera, FiVolume2, FiVolumeX, FiLogOut, FiLayout
+  FiVolume2, FiVolumeX, FiLogOut, FiLayout
 } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 

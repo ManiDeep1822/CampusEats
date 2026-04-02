@@ -136,7 +136,11 @@ const LiveOrderTracker = () => {
                             className="h-full bg-gradient-to-r from-orange-400 to-primary rounded-full"
                           />
                         </div>
-                        <span className="text-[9px] font-black text-primary shrink-0">{new Date(order.estimatedDeliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="text-[9px] font-black text-primary shrink-0">
+                           {order.estimatedDeliveryTime 
+                             ? new Date(order.estimatedDeliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                             : '~30 min'}
+                         </span>
                       </div>
                     </div>
                     {/* Arrow */}

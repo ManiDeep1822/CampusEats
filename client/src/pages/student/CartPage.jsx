@@ -11,7 +11,7 @@ import { addToCart, removeFromCart, clearCart } from '../../store/cartSlice';
 import { setActiveOrder } from '../../store/orderSlice';
 import AddressCard from '../../components/student/AddressCard';
 import api from '../../services/api';
-// toast removed
+import { toast } from 'react-hot-toast';
 
 const CartPage = () => {
   const { items, vendorId } = useSelector(state => state.cart);
@@ -132,10 +132,13 @@ const CartPage = () => {
   }, []);
 
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    document.body.appendChild(script);
+    // Guard: Only inject if not already present (prevents double-load)
+    if (!document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      document.body.appendChild(script);
+    }
   }, []);
 
   const handlePayment = async () => {
@@ -201,10 +204,11 @@ const CartPage = () => {
       };
 
       const razorpayInstance = new window.Razorpay(options);
-      razorpayInstance.on('payment.failed', (response) => console.error(response.error.description));
+      razorpayInstance.on('payment.failed', (response) => toast.error(response.error.description || 'Payment failed. Please try again.'));
       razorpayInstance.open();
 
     } catch (error) { 
+      toast.error(error.response?.data?.message || 'Could not create order. Please try again.');
       console.error('Failed to initiate checkout', error); 
     } finally { 
       setLoading(false); 

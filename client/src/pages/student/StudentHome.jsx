@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  FiSearch, FiClock, FiStar, FiHeart, FiFilter, FiX, FiCheck, 
+  FiSearch, FiClock, FiStar, FiHeart, FiFilter, FiCheck, 
   FiChevronRight, FiMapPin, FiTruck, FiZap 
 } from 'react-icons/fi';
 import api from '../../services/api';
@@ -143,14 +143,6 @@ const StudentHome = () => {
       return 0;
     });
   
-  const clearFilters = () => {
-    setMinRating(0);
-    setOnlyVeg(false);
-    setShowOnlyFavorites(false);
-    setSortBy('default');
-    setSearch('');
-  };
-
   const handleGetLocation = () => {
     console.log("Location detection triggered...");
 

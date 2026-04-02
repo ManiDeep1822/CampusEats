@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useSocketContext } from '../../context/SocketContext';
 import { useSocketEvent } from '../../hooks/useSocket';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FiStar, FiMapPin } from 'react-icons/fi';
+import { FiStar } from 'react-icons/fi';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
 import toast from 'react-hot-toast';

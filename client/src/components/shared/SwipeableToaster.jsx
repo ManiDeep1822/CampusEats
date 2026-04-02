@@ -1,15 +1,11 @@
 import React from 'react';
 import { useToaster, toast } from 'react-hot-toast';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const SwipeableToaster = () => {
   const { toasts, handlers } = useToaster();
   const { startPause, endPause } = handlers;
   
-  // For collective swipe logic
-  const groupY = useMotionValue(0);
-  const groupOpacity = useTransform(groupY, [-150, 0], [0, 1]);
-
   // Limit visible toasts to 3 for performance and UI clarity
   const visibleToasts = toasts.slice(0, 3);
   const remainingCount = toasts.length - 3;
@@ -35,8 +31,6 @@ const SwipeableToaster = () => {
     >
       <motion.div
         style={{ 
-          y: groupY, 
-          opacity: groupOpacity,
           pointerEvents: toasts.length > 0 ? 'auto' : 'none',
           display: 'flex',
           flexDirection: 'column',
@@ -45,15 +39,6 @@ const SwipeableToaster = () => {
           padding: '16px',
           width: '100%',
           maxWidth: '380px',
-        }}
-        drag={toasts.length > 0 ? "y" : false}
-        dragConstraints={{ top: -500, bottom: 0 }}
-        dragElastic={{ top: 0.1, bottom: 0.05 }}
-        onDragEnd={(_, info) => {
-          if (info.offset.y < -120 || info.velocity.y < -600) {
-            toast.dismiss();
-          }
-          groupY.set(0);
         }}
       >
         <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', height: '80px' }}>
@@ -90,10 +75,11 @@ const SwipeableToaster = () => {
                   whileHover={index === 0 ? { scale: 1.02, y: -2 } : {}}
                   whileTap={index === 0 ? { scale: 0.98 } : {}}
                   drag={index === 0 ? "y" : false}
-                  dragConstraints={{ top: 0, bottom: 0 }}
-                  dragElastic={{ top: 0.6, bottom: 0.1 }}
+                  dragConstraints={{ top: -200, bottom: 10 }}
+                  dragElastic={{ top: 0.5, bottom: 0.1 }}
+                  dragTransition={{ bounceStiffness: 400, bounceDamping: 30 }}
                   onDragEnd={(_, info) => {
-                    if (index === 0 && (info.offset.y < -60 || info.velocity.y < -300)) {
+                    if (index === 0 && (info.offset.y < -50 || info.velocity.y < -200)) {
                       toast.dismiss(t.id);
                     }
                   }}

@@ -162,20 +162,17 @@ const GlobalNotificationListener = () => {
         'receive_message'
       ];
 
+      // Store handler refs locally in this effect's closure for perfect cleanup
+      const boundHandlers = {};
       events.forEach(event => {
         const boundHandler = (data) => handleNotification(data, event);
+        boundHandlers[event] = boundHandler;
         socket.on(event, boundHandler);
-        
-        // Store for cleanup
-        socket._customHandlers = socket._customHandlers || {};
-        socket._customHandlers[event] = boundHandler;
       });
 
       return () => {
         events.forEach(event => {
-          if (socket._customHandlers?.[event]) {
-            socket.off(event, socket._customHandlers[event]);
-          }
+          socket.off(event, boundHandlers[event]);
         });
       };
     }
