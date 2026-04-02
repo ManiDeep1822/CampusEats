@@ -62,7 +62,7 @@ const calculateOrderBill = asyncHandler(async (req, res) => {
 
   const distance = 1.2; // Constant distance or calculated via vendor proximity
   const deliveryFee = orderType === 'take_away' ? 0 : calculateDeliveryFee(subtotal);
-  const platformFee = orderType === 'take_away' ? 0 : 5;
+  const platformFee = 5; 
   const taxes = Number((subtotal * 0.05).toFixed(2));
   const finalTotal = Number((subtotal + deliveryFee + platformFee + taxes).toFixed(2));
 
@@ -93,7 +93,7 @@ const generateSecureBill = async (vendorId, items, orderType) => {
   }
 
   const deliveryFee = orderType === 'take_away' ? 0 : calculateDeliveryFee(subtotal);
-  const platformFee = orderType === 'take_away' ? 0 : 5;
+  const platformFee = 5;
   const taxes = Number((subtotal * 0.05).toFixed(2));
   const finalTotal = Number((subtotal + deliveryFee + platformFee + taxes).toFixed(2));
 

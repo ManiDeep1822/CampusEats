@@ -471,7 +471,7 @@ const CartPage = () => {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-gray-800">Bill Summary</h2>
               <div className="text-[10px] font-extrabold bg-green-50 text-green-600 px-2 py-1 rounded-md tracking-wider uppercase">
-                 {orderType === 'take_away' ? 'No Service Fee' : bill?.deliveryFee === 0 ? 'FREE DELIVERY' : ''}
+                 {orderType === 'take_away' ? 'SELF PICKUP' : bill?.deliveryFee === 0 ? 'FREE DELIVERY' : ''}
               </div>
             </div>
             
@@ -487,6 +487,10 @@ const CartPage = () => {
                    <div className="flex justify-between items-center text-sm text-gray-500 font-medium">
                       <span>Delivery</span>
                       <span className="text-gray-800 font-bold">₹{bill.deliveryFee.toFixed(2)}</span>
+                   </div>
+                   <div className="flex justify-between items-center text-sm text-gray-500 font-medium">
+                      <span>Platform Fee</span>
+                      <span className="text-gray-800 font-bold">₹{bill.platformFee.toFixed(2)}</span>
                    </div>
                    <div className="flex justify-between items-center text-sm text-gray-500 font-medium">
                       <span>GST (5%)</span>
