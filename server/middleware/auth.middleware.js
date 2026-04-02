@@ -28,8 +28,13 @@ const protect = asyncHandler(async (req, res, next) => {
       // Check for single-device login (session sync)
       // If the token version doesn't match the current DB version, it means a newer login occurred.
       if (typeof decoded.tokenVersion !== 'undefined' && decoded.tokenVersion !== req.user.tokenVersion) {
-        res.status(401);
-        throw new Error('Session expired: Logged in from another device');
+        // M10: Relax this check in development to prevent friction with multiple tabs/refreshes
+        if (process.env.NODE_ENV === 'production') {
+           res.status(401);
+           throw new Error('Session expired: Logged in from another device');
+        } else {
+           console.warn(`[DEV ONLY] Token version mismatch for user ${req.user.email} (Token: ${decoded.tokenVersion}, DB: ${req.user.tokenVersion}). Proceeding anyway.`);
+        }
       }
 
       return next();

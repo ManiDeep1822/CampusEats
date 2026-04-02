@@ -34,7 +34,9 @@ const CategoryResults = () => {
         setVendors(Array.isArray(vendorsRes.data) ? vendorsRes.data : []);
         setFavorites((favsRes.data || []).map(f => (f._id || f).toString()));
 
-        const itemVendorIds = [...new Set((searchRes.data || []).map(item => item.vendorId?._id || item.vendorId))];
+        // M10: Fix data access - searchRes.data is { vendors, items, query }, not an array
+        const searchItems = Array.isArray(searchRes.data?.items) ? searchRes.data.items : [];
+        const itemVendorIds = [...new Set(searchItems.map(item => item.vendorId?._id || item.vendorId))];
         setCategoryVendorIds(itemVendorIds.filter(Boolean));
       } catch (error) {
         console.error(error);

@@ -6,19 +6,26 @@ const { protect } = require('../middleware/auth.middleware');
 
 // Manual upload using memory storage and Cloudinary stream
 router.post('/', protect, (req, res) => {
+  // M10: Extra safety for Express 5 — ensure body/query are writable before Multer tries to assign to them
+  ['body', 'query'].forEach(prop => {
+    if (Object.getOwnPropertyDescriptor(req, prop)?.get) {
+      const val = req[prop];
+      Object.defineProperty(req, prop, { value: val, writable: true, configurable: true });
+    }
+  });
+
   upload.single('image')(req, res, async (err) => {
     if (err) {
-      console.error('❌ Multer Error:', err);
-      // Differentiate between Multer errors (like size limit) and other errors
+      console.error('❌ Multer/Upload Error:', err);
       const statusCode = err.name === 'MulterError' ? 400 : 500;
       return res.status(statusCode).json({ 
-        message: err.name === 'MulterError' ? `Upload error: ${err.message}` : 'Server error during upload', 
-        error: err.message,
-        code: err.code
+        message: err.name === 'MulterError' ? `Upload error: ${err.message}` : 'Server error during upload process', 
+        error: err.message
       });
     }
 
     if (!req.file) {
+      console.warn('⚠️ Upload attempt with no file in request');
       return res.status(400).json({ message: 'No image uploaded' });
     }
 
