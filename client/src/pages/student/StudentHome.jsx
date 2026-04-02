@@ -39,16 +39,19 @@ const StudentHome = () => {
   useEffect(() => {
     const fetchVendors = async () => {
       try {
+        const { data } = await api.get('/student/vendors');
         setVendors(Array.isArray(data) ? data : []);
       } catch (error) {
         setVendors([]);
         console.error(error);
       } finally {
-        setTimeout(() => setLoading(false), 600);
+        setLoading(false);
       }
     };
     const fetchFavs = async () => {
       try {
+        const { data } = await api.get('/student/favorites');
+        // Ensure we store strictly String IDs for accurate filtering
         setFavorites((data || []).map(f => (f._id || f).toString()));
       } catch(e) { 
         setFavorites([]);
@@ -105,29 +108,25 @@ const StudentHome = () => {
   };
 
   const handleGetLocation = () => {
-    alert("Hello location - Accessing your coordinates...");
     console.log("Location detection triggered...");
 
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser');
-      console.error("Geolocation not supported");
       return;
     }
     
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        console.log("Position received:", position.coords);
-        // In a campus environment, we'll map coordinates to the institution name
         setAddress(`LPU (Detected)`);
         setLocating(false);
         toast.success('Location detected!');
       },
       (error) => {
-        console.error("Geolocation error:", error);
         setLocating(false);
-        toast.error('Error detecting location: ' + error.message);
-      }
+        toast.error('Location error: ' + error.message);
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
   };
 
@@ -223,7 +222,7 @@ const StudentHome = () => {
           </motion.div>
 
           <h1 className="text-4xl max-sm:text-3xl font-black text-slate-900 mb-8 tracking-tighter leading-none">
-            Hungry? Let's fix that <span className="text-primary">instantly.</span>
+            Hungry? Let&apos;s fix that <span className="text-primary">instantly.</span>
           </h1>
 
           <div className="relative group">
@@ -243,7 +242,7 @@ const StudentHome = () => {
       <div className="px-4 py-12">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-baseline justify-between mb-8">
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">What's on your mind?</h2>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">What&apos;s on your mind?</h2>
           </div>
           
           <div className="flex gap-8 overflow-x-auto no-scrollbar py-8 -mx-4 px-4">

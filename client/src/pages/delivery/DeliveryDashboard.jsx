@@ -4,7 +4,7 @@ import api from '../../services/api';
 import { useSocketEvent } from '../../hooks/useSocket';
 import Loader from '../../components/shared/Loader';
 import toast from 'react-hot-toast';
-import { FiArrowRight, FiTrendingUp, FiActivity, FiClock } from 'react-icons/fi';
+import { FiArrowRight, FiTrendingUp, FiActivity, FiClock, FiMapPin } from 'react-icons/fi';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -14,6 +14,8 @@ const DeliveryDashboard = () => {
   const [data, setData] = useState(null);
   const [availableOrders, setAvailableOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [address, setAddress] = useState('Campus Active');
+  const [locating, setLocating] = useState(false);
   const navigate = useNavigate();
   const { user } = useSelector(state => state.auth);
 
@@ -72,6 +74,25 @@ const DeliveryDashboard = () => {
     }
   };
 
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation not supported');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setAddress('LPU (Detected)');
+        setLocating(false);
+        toast.success('Rider position synced!');
+      },
+      (err) => {
+        setLocating(false);
+        toast.error('Location error: ' + err.message);
+      }
+    );
+  };
+
   if (loading) return <Loader />;
   if (!data || !data.profile) return <div className="text-center py-20 text-red-500 font-bold">Error loading dashboard. Please refresh.</div>;
 
@@ -92,6 +113,14 @@ const DeliveryDashboard = () => {
             <div className="flex items-center justify-center gap-2 mt-1">
               <span className="bg-yellow-500 text-slate-900 px-2 py-0.5 rounded font-black text-[10px] tracking-widest uppercase">PRO RIDER</span>
               <span className="text-slate-400 text-sm font-bold">⭐ {data.profile.rating?.toFixed(1) || '5.0'}</span>
+            </div>
+            
+            <div 
+              onClick={handleGetLocation}
+              className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 rounded-full border border-slate-600/50 cursor-pointer hover:bg-slate-700 transition-all"
+            >
+              <FiMapPin size={10} className={`text-orange-500 ${locating ? 'animate-bounce' : ''}`} />
+              <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{locating ? 'Syncing...' : address}</span>
             </div>
           </div>
 

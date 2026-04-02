@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiTrendingUp, FiShoppingBag, FiStar, FiClock, FiCamera, FiMonitor, FiChevronRight, FiTrash2 } from 'react-icons/fi';
+import { FiTrendingUp, FiShoppingBag, FiStar, FiClock, FiCamera, FiMonitor, FiChevronRight, FiTrash2, FiMapPin } from 'react-icons/fi';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
@@ -9,6 +9,8 @@ import toast from 'react-hot-toast';
 const VendorDashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [address, setAddress] = useState('Campus HQ');
+  const [locating, setLocating] = useState(false);
   const [showProfile, setShowProfile] = useState(() => {
     return localStorage.getItem('vendor_show_profile') !== 'false';
   });
@@ -70,6 +72,25 @@ const VendorDashboard = () => {
     }
   };
 
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation not supported');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setAddress('LPU (Detected)');
+        setLocating(false);
+        toast.success('Shop location verified!');
+      },
+      (err) => {
+        setLocating(false);
+        toast.error('Location error: ' + err.message);
+      }
+    );
+  };
+
   if (loading) return <Loader />;
   if (!data || !data.stats) return <div className="text-center py-20 text-red-500 font-bold">Error loading dashboard. Please refresh.</div>;
 
@@ -110,10 +131,15 @@ const VendorDashboard = () => {
             </div>
             <div>
               <h1 className="text-3xl font-bold font-heading text-gray-900">{data.shopDetails.shopName}</h1>
-              <p className="text-textSecondary text-sm flex items-center gap-1">
-                <span className="w-2 h-2 bg-primary rounded-full inline-block"></span>
-                {data.shopDetails.location}
-              </p>
+              <div 
+                onClick={handleGetLocation}
+                className="flex items-center gap-2 cursor-pointer hover:opacity-75 transition-opacity mt-1"
+              >
+                <div className="w-5 h-5 bg-orange-100 text-primary rounded-full flex items-center justify-center">
+                  <FiMapPin size={12} className={locating ? 'animate-bounce' : ''} />
+                </div>
+                <span className="text-textSecondary text-xs font-black tracking-tight">{locating ? 'Verifying...' : address}</span>
+              </div>
             </div>
           </div>
           <div className="flex items-center space-x-6">
