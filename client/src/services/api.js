@@ -47,9 +47,15 @@ class FetchClient {
     try {
       const response = await fetch(url, config);
       
+      // M10: Handle empty body responses (204 No Content, 201 Created with no body)
+      const contentType = response.headers.get('content-type');
+      let data = {};
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json().catch(() => ({}));
+      }
+
       // Response Interceptor Logic
       if (response.status === 401) {
-        const data = await response.json().catch(() => ({}));
         if (data.message === 'Session expired: Logged in from another device') {
           store.dispatch(terminateSession());
         } else {
@@ -60,15 +66,14 @@ class FetchClient {
       }
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw { response: { status: response.status, data: errorData } };
+        throw { response: { status: response.status, data } };
       }
 
-      const data = await response.json().catch(() => ({}));
       return { data, status: response.status, ok: response.ok };
       
     } catch (error) {
       if (error.response) throw error;
+      // Ensure error object always has a response structure for consistent catch handling
       throw { response: { data: { message: error.message || 'Network Error' } } };
     }
   }
@@ -83,6 +88,10 @@ class FetchClient {
 
   put(endpoint, data, options = {}) {
     return this.request(endpoint, { ...options, method: 'PUT', data });
+  }
+
+  patch(endpoint, data, options = {}) {
+    return this.request(endpoint, { ...options, method: 'PATCH', data });
   }
 
   delete(endpoint, options = {}) {

@@ -58,8 +58,14 @@ const notificationSlice = createSlice({
           state.unreadCount -= 1;
         }
       })
+      // M10: Optimistic Update - Mark all as read instantly on pending
+      .addCase(markAllNotificationsRead.pending, (state) => {
+        state.items.forEach(n => { n.isRead = true; });
+        state.unreadCount = 0;
+      })
       .addCase(markAllNotificationsRead.fulfilled, (state) => {
-        state.items.forEach(n => n.isRead = true);
+        // Sync check: Ensure server and client are in sync (mostly redundant due to pending)
+        state.items.forEach(n => { n.isRead = true; });
         state.unreadCount = 0;
       })
       .addCase(deleteNotifications.fulfilled, (state) => {

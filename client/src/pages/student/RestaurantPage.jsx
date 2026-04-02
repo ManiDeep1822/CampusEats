@@ -43,15 +43,15 @@ const RestaurantPage = () => {
 
   const toggleFav = async () => {
     const oldIsFavorite = isFavorite;
-    
-    // ⚡ Optimistic UI Update: Toggle heart instantly
+    const wasAdding = !isFavorite;
     setIsFavorite(!isFavorite);
+    toast.success(wasAdding ? "Saved to favorites!" : "Removed from favorites");
     
     try {
       const { data } = await api.put(`/student/favorites/${id}`);
-      const serverIsFav = (data?.favorites || []).includes(id);
-      setIsFavorite(serverIsFav);
-      toast.success(serverIsFav ? "Saved to favorites!" : "Removed from favorites");
+      if (data?.favorites) {
+        setIsFavorite(data.favorites.includes(id));
+      }
     } catch(err) { 
       // Rollback if the server fails
       setIsFavorite(oldIsFavorite);

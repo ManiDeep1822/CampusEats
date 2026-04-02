@@ -364,18 +364,20 @@ const createVendorReview = asyncHandler(async (req, res) => {
 const toggleFavorite = asyncHandler(async (req, res) => {
   const vendorId = req.params.id;
   const user = await User.findById(req.user._id);
-  
   if (!user) { res.status(404); throw new Error('User not found'); }
-  
+
   const isSelected = user.favorites.includes(vendorId);
-  if (isSelected) {
-    user.favorites = user.favorites.filter(id => id.toString() !== vendorId.toString());
-  } else {
-    user.favorites.push(vendorId);
-  }
-  
-  await user.save();
-  res.json({ favorites: user.favorites });
+
+  // M10 Optimization: Use direct atomic updates for high speed
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user._id,
+    isSelected 
+      ? { $pull: { favorites: vendorId } }
+      : { $addToSet: { favorites: vendorId } },
+    { new: true, select: 'favorites' }
+  );
+
+  res.json({ favorites: updatedUser.favorites });
 });
 
 const getFavorites = asyncHandler(async (req, res) => {

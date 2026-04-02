@@ -128,16 +128,16 @@ const StudentHome = () => {
       ? favorites.filter(id => id !== vendorIdStr)
       : [...favorites, vendorIdStr];
     
+    const wasAdding = !isCurrentlyFav;
     setFavorites(newFavs);
+    toast.success(wasAdding ? "Saved to Favorites" : "Removed from Favorites");
 
     try {
       const { data } = await api.put(`/student/favorites/${vendorId}`);
-      // Re-sync with server response for consistency
-      const serverFavs = (data?.favorites || []).map(id => id.toString());
-      setFavorites(serverFavs);
-      
-      const wasAdded = serverFavs.includes(vendorIdStr);
-      toast.success(wasAdded ? "Saved to Favorites" : "Removed from Favorites");
+      // Re-sync with server response for consistency if needed, but don't block the UI
+      if (data?.favorites) {
+        setFavorites(data.favorites.map(id => id.toString()));
+      }
     } catch(err) { 
       // Rollback if the server fails
       setFavorites(oldFavs);
