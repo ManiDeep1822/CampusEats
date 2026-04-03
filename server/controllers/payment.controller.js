@@ -103,8 +103,34 @@ const verifyPayment = asyncHandler(async (req, res) => {
           type: 'order_update',
           orderId: order._id
         });
+      }
 
-        // Real-time Socket Emission
+      // If this was a group order, mark the GroupCart as converted and notify all members
+      if (order.isGroupOrder) {
+        try {
+          const GroupCart = require('../models/GroupCart');
+          // The joinCode was returned alongside the order on group checkout
+          // Find the cart that was for this order's vendor and host
+          const groupCart = await GroupCart.findOne({
+            hostId: order.studentId,
+            vendorId: order.vendorId,
+            status: 'active'
+          });
+          if (groupCart) {
+            groupCart.status = 'converted';
+            await groupCart.save();
+            if (io) {
+              const populatedCart = await GroupCart.findById(groupCart._id)
+                .populate('members.userId', 'name profilePic');
+              io.to(`group:${groupCart.joinCode}`).emit('group:cart_updated', {
+                ...populatedCart.toObject(),
+                status: 'converted'
+              });
+            }
+          }
+        } catch (groupErr) {
+          console.error('[Payment] Could not convert group cart:', groupErr.message);
+        }
       }
     }
     

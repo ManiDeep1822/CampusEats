@@ -12,6 +12,8 @@ import { setActiveOrder } from '../../store/orderSlice';
 import AddressCard from '../../components/student/AddressCard';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
+import { useSocketContext } from '../../context/SocketContext';
+import { useSocketEvent } from '../../hooks/useSocket';
 
 const CartPage = () => {
   const { items, vendorId } = useSelector(state => state.cart);
@@ -38,6 +40,13 @@ const CartPage = () => {
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [couponError, setCouponError] = useState('');
   const [addressError, setAddressError] = useState('');
+
+  // Group Ordering State
+  const socket = useSocketContext();
+  const [groupCart, setGroupCart] = useState(null);
+  const [isGroupMode, setIsGroupMode] = useState(false);
+  const [joinCodeInput, setJoinCodeInput] = useState('');
+  const [loadingGroup, setLoadingGroup] = useState(false);
 
   const getTimeSlots = () => {
     const slots = [];
@@ -77,6 +86,131 @@ const CartPage = () => {
     const timeout = setTimeout(() => fetchBill(), 300);
     return () => clearTimeout(timeout);
   }, [items, vendorId, orderType, appliedCoupon]);
+
+  // Restore active group session on mount (e.g., after navigating back from restaurant page)
+  useEffect(() => {
+    const savedSession = localStorage.getItem('activeGroupSession');
+    if (savedSession && !isGroupMode) {
+      const { joinCode } = JSON.parse(savedSession);
+      api.get(`/group/${joinCode}`)
+        .then(({ data }) => {
+          if (data && data.status === 'active') {
+            setGroupCart(data);
+            setIsGroupMode(true);
+            socket?.emit('group:join', { joinCode });
+          } else {
+            localStorage.removeItem('activeGroupSession');
+          }
+        })
+        .catch(() => localStorage.removeItem('activeGroupSession'));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket]);
+
+  // Re-join socket room if socket reconnects
+  useEffect(() => {
+    if (socket && groupCart?.joinCode) {
+      socket.emit('group:join', { joinCode: groupCart.joinCode });
+    }
+  }, [socket, groupCart?.joinCode]);
+
+  // Listen for items added via RestaurantPage while in group mode
+  useEffect(() => {
+    const handleGroupItemAdded = (e) => {
+      const updatedCart = e.detail;
+      setGroupCart(updatedCart);
+      // Also broadcast to other members
+      if (socket && updatedCart?.joinCode) {
+        socket.emit('group:update', { joinCode: updatedCart.joinCode, cartData: updatedCart });
+      }
+    };
+    window.addEventListener('group:item_added', handleGroupItemAdded);
+    return () => window.removeEventListener('group:item_added', handleGroupItemAdded);
+  }, [socket]);
+
+  const leaveGroup = () => {
+    setIsGroupMode(false);
+    setGroupCart(null);
+    setJoinCodeInput('');
+    localStorage.removeItem('activeGroupSession');
+  };
+
+  useSocketEvent('group:cart_updated', (updatedCart) => {
+    setGroupCart(updatedCart);
+    if (updatedCart.status === 'converted') {
+       toast.success("Host has finalized the order!");
+       dispatch(clearCart());
+       localStorage.removeItem('activeGroupSession');
+       navigate('/student/home');
+    }
+  });
+
+  const handleCreateGroup = async () => {
+    if (!vendorId) return toast.error("Add items first to select a vendor");
+    setLoadingGroup(true);
+    try {
+      const { data } = await api.post('/group/create', { 
+        vendorId, 
+        // Pass existing cart items so host's items appear immediately
+        initialItems: items.map(i => ({ menuItemId: i.menuItemId, quantity: i.quantity }))
+      });
+      setGroupCart(data);
+      setIsGroupMode(true);
+      socket?.emit('group:join', { joinCode: data.joinCode });
+      // Save group session to localStorage for RestaurantPage to detect
+      localStorage.setItem('activeGroupSession', JSON.stringify({ joinCode: data.joinCode, vendorId }));
+      toast.success(`Group created! Share code: ${data.joinCode}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to create group");
+    } finally {
+      setLoadingGroup(false);
+    }
+  };
+
+  const handleJoinGroup = async () => {
+    if (!joinCodeInput) return;
+    setLoadingGroup(true);
+    try {
+      const { data } = await api.post('/group/join', { joinCode: joinCodeInput });
+      setGroupCart(data);
+      setIsGroupMode(true);
+      dispatch(clearCart()); // Clear personal cart to use group cart
+      socket?.emit('group:join', { joinCode: data.joinCode });
+      // Save group session to localStorage for RestaurantPage to detect
+      localStorage.setItem('activeGroupSession', JSON.stringify({ joinCode: data.joinCode, vendorId: data.vendorId }));
+      toast.success("Joined group successfully!");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to join group");
+    } finally {
+      setLoadingGroup(false);
+    }
+  };
+
+  const syncItemToGroup = async (item, quantityDelta) => {
+    if (!isGroupMode || !groupCart) return;
+    // Support both item formats: group items use menuItemId, local cart items might use _id
+    const menuItemId = item.menuItemId || item._id;
+    try {
+      if (quantityDelta > 0) {
+        const { data } = await api.post('/group/add-item', { 
+          joinCode: groupCart.joinCode, 
+          menuItemId,
+          quantity: quantityDelta 
+        });
+        setGroupCart(data);
+        socket?.emit('group:update', { joinCode: data.joinCode, cartData: data });
+      } else {
+        const { data } = await api.post('/group/remove-item', { 
+          joinCode: groupCart.joinCode, 
+          menuItemId
+        });
+        setGroupCart(data);
+        socket?.emit('group:update', { joinCode: data.joinCode, cartData: data });
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Group sync failed");
+    }
+  };
 
   const handleApplyCoupon = async () => {
     if (!couponCode) return;
@@ -146,12 +280,22 @@ const CartPage = () => {
   const handlePayment = async () => {
     if (orderType === 'delivery' && !address) { 
       setAddressError("Please select or enter an address"); 
-      // Scroll to address section
       const addrSection = document.getElementById('delivery-section');
       if (addrSection) addrSection.scrollIntoView({ behavior: 'smooth' });
       return; 
     }
-    if (!bill) return; 
+    // In group mode there's no bill (group total shown separately), so skip the bill guard
+    if (!isGroupMode && !bill) return; 
+    // In group mode, ensure the group cart isn't empty
+    if (isGroupMode && (!groupCart || groupCart.totalAmount === 0)) {
+      toast.error('Group cart is empty. Add items first.');
+      return;
+    }
+    // Only the host can checkout
+    if (isGroupMode && groupCart?.hostId !== user._id) {
+      toast.error('Only the host can checkout the group order.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -161,7 +305,11 @@ const CartPage = () => {
         } catch (e) { console.error("Could not save address", e); }
       }
 
-      const orderPayload = {
+      const orderPayload = isGroupMode ? {
+        joinCode: groupCart.joinCode,
+        deliveryAddress: orderType === 'take_away' ? undefined : address,
+        orderType
+      } : {
         vendorId,
         items: items.map(i => ({ menuItemId: i.menuItemId, quantity: i.quantity, price: i.price })),
         deliveryAddress: orderType === 'take_away' ? undefined : address,
@@ -171,7 +319,8 @@ const CartPage = () => {
         couponCode: appliedCoupon?.code
       };
       
-      const { data: order } = await api.post('/student/order', orderPayload);
+      const { data: order } = await api.post(isGroupMode ? '/group/checkout' : '/student/order', orderPayload);
+      
       const { data: initData } = await api.post('/payment/initiate', { orderId: order._id });
 
       const options = {
@@ -193,6 +342,11 @@ const CartPage = () => {
             setShowSuccessModal(true);
             dispatch(setActiveOrder(order));
             setTimeout(() => dispatch(clearCart()), 100);
+            // Clean up group session after successful payment
+            if (isGroupMode) {
+              leaveGroup();
+              toast.success("Group order placed successfully!");
+            }
           } catch (err) {
             console.error('Payment Verification Failed', err);
           }
@@ -233,7 +387,7 @@ const CartPage = () => {
     }
   };
 
-  if (items.length === 0 && !showSuccessModal) {
+  if (items.length === 0 && !showSuccessModal && !isGroupMode) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 text-center">
         <div className="text-6xl mb-4">🛒</div>
@@ -249,29 +403,108 @@ const CartPage = () => {
       <div className="max-w-4xl mx-auto flex flex-row gap-8 max-sm:flex-col items-stretch max-sm:gap-6">
         {/* Left Column: Order Summary & Delivery */}
         <div className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 max-sm:p-5">
-          <h2 className="text-2xl font-bold font-heading mb-6 border-b border-gray-50 pb-4 max-sm:text-xl">Order Summary</h2>
-          <div className="space-y-6">
-            {(items || []).map(item => (
-              <div key={item.menuItemId} className="flex flex-row justify-between items-center gap-3 max-sm:flex-col max-sm:items-start">
-                <div className="flex-1 pr-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${item.isVeg ? 'border-accent' : 'border-red-500'}`}>
-                      <div className={`w-1.5 h-1.5 rounded-full ${item.isVeg ? 'bg-accent' : 'bg-red-500'}`}></div>
-                    </div>
-                    <span className="font-bold text-textPrimary leading-tight">{item.name}</span>
-                  </div>
-                  <div className="hidden max-sm:block text-xs text-textSecondary">₹{item.price} per item</div>
-                </div>
-                <div className="flex items-center justify-between gap-4 max-sm:w-full">
-                  <div className="flex items-center bg-gray-50 border border-gray-100 rounded-xl px-2 py-1">
-                    <button onClick={() => dispatch(removeFromCart(item.menuItemId))} className="p-1.5 text-gray-500 hover:text-primary transition-colors"><FiMinus size={14}/></button>
-                    <span className="w-8 text-center text-sm font-extrabold text-gray-800">{item.quantity}</span>
-                    <button onClick={() => dispatch(addToCart(item))} className="p-1.5 text-gray-500 hover:text-primary transition-colors"><FiPlus size={14}/></button>
-                  </div>
-                  <div className="w-20 text-right font-bold text-textPrimary">₹{item.price * item.quantity}</div>
-                </div>
+          <div className="flex justify-between items-center mb-6 border-b border-gray-50 pb-4">
+            <h2 className="text-2xl font-bold font-heading max-sm:text-xl">Order Summary</h2>
+            {!isGroupMode ? (
+              <button 
+                onClick={handleCreateGroup}
+                disabled={loadingGroup || items.length === 0}
+                className="text-xs font-black bg-orange-100 text-primary px-3 py-1.5 rounded-full hover:bg-primary hover:text-white transition-all disabled:opacity-50"
+              >
+                {loadingGroup ? 'Starting...' : 'START GROUP ORDER'}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Code:</span>
+                <span className="text-sm font-black text-primary bg-orange-50 px-2 py-1 rounded select-all font-mono">{groupCart.joinCode}</span>
+                <button onClick={leaveGroup} className="text-gray-400 hover:text-red-500"><FiX size={16} /></button>
               </div>
-            ))}
+            )}
+          </div>
+
+          {!isGroupMode && items.length > 0 && (
+            <div className="mb-8 p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+               <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-xl">👥</div>
+                 <div className="flex-1">
+                   <p className="text-xs font-black text-slate-800 uppercase tracking-tight">Order with friends?</p>
+                   <p className="text-[10px] text-slate-400 font-medium">Join a group using a code</p>
+                 </div>
+                 <div className="flex h-10 bg-white rounded-lg border border-slate-200 overflow-hidden">
+                    <input 
+                      type="text" 
+                      placeholder="CODE"
+                      value={joinCodeInput}
+                      onChange={e => setJoinCodeInput(e.target.value.toUpperCase())}
+                      className="w-20 px-3 text-xs font-black font-mono outline-none"
+                    />
+                    <button onClick={handleJoinGroup} className="bg-slate-900 text-white px-3 text-[10px] font-black uppercase tracking-widest">JOIN</button>
+                 </div>
+               </div>
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {!isGroupMode ? (
+               (items || []).map(item => (
+                <div key={item.menuItemId} className="flex flex-row justify-between items-center gap-3 max-sm:flex-col max-sm:items-start">
+                  <div className="flex-1 pr-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${item.isVeg ? 'border-accent' : 'border-red-500'}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${item.isVeg ? 'bg-accent' : 'bg-red-500'}`}></div>
+                      </div>
+                      <span className="font-bold text-textPrimary leading-tight">{item.name}</span>
+                    </div>
+                    <div className="hidden max-sm:block text-xs text-textSecondary">₹{item.price} per item</div>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 max-sm:w-full">
+                    <div className="flex items-center bg-gray-50 border border-gray-100 rounded-xl px-2 py-1">
+                      <button onClick={() => dispatch(removeFromCart(item.menuItemId))} className="p-1.5 text-gray-500 hover:text-primary transition-colors"><FiMinus size={14}/></button>
+                      <span className="w-8 text-center text-sm font-extrabold text-gray-800">{item.quantity}</span>
+                      <button onClick={() => dispatch(addToCart(item))} className="p-1.5 text-gray-500 hover:text-primary transition-colors"><FiPlus size={14}/></button>
+                    </div>
+                    <div className="w-20 text-right font-bold text-textPrimary">₹{item.price * item.quantity}</div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="space-y-8">
+                {(groupCart.members || []).map((member, mIdx) => (
+                  <div key={member.userId || mIdx} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                       <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] text-primary font-black uppercase">
+                          {member.name.charAt(0)}
+                       </div>
+                       <span className="text-xs font-black text-slate-800 uppercase tracking-widest">{(member.userId?._id || member.userId) === user._id ? 'YOUR ITEMS' : `${member.name.split(' ')[0]}'S ITEMS`}</span>
+                       {(member.userId?._id || member.userId) === user._id && <span className="bg-primary/10 text-primary text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase">HOST</span>}
+                    </div>
+                    <div className="space-y-4 pl-8 border-l-2 border-slate-50">
+                      {member.items.length === 0 ? (
+                        <p className="text-[10px] font-medium text-slate-300 italic uppercase">No items added yet...</p>
+                      ) : (
+                        member.items.map(item => (
+                          <div key={item.menuItemId} className="flex justify-between items-center group">
+                            <div className="flex-1">
+                               <p className="text-sm font-bold text-slate-700">{item.name}</p>
+                               <p className="text-[10px] font-medium text-slate-400">₹{item.price} x {item.quantity}</p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                               {(member.userId?._id || member.userId) === user._id && (
+                                 <div className="flex items-center bg-slate-50 rounded-lg p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => syncItemToGroup(item, -1)} className="p-1 text-slate-400 hover:text-red-500"><FiMinus size={12}/></button>
+                                    <button onClick={() => syncItemToGroup(item, 1)} className="p-1 text-slate-400 hover:text-green-500"><FiPlus size={12}/></button>
+                                 </div>
+                               )}
+                               <span className="font-bold text-slate-700 text-sm">₹{item.price * item.quantity}</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mt-10 pt-8 border-t border-gray-100 space-y-8">
@@ -657,7 +890,7 @@ const CartPage = () => {
                 </div>
               </div>
               
-              {calculating || !bill ? (
+              {calculating || !bill || (isGroupMode && !groupCart) ? (
                  <div className="py-12 text-center text-sm text-gray-400">Computing Bill...</div>
               ) : (
                  <>
@@ -665,7 +898,7 @@ const CartPage = () => {
                      <div className="flex justify-between items-center text-sm text-gray-500 font-medium">
                         <span>Subtotal</span>
                         <span className={`text-gray-800 font-bold rounded px-2 ${calculating ? 'shimmer-bg text-transparent' : ''}`}>
-                          ₹{(bill?.subtotal || 0).toFixed(2)}
+                          ₹{(isGroupMode ? groupCart?.totalAmount : bill?.subtotal || 0).toFixed(2)}
                         </span>
                      </div>
                      <div className="flex justify-between items-center text-sm text-gray-500 font-medium">
@@ -701,7 +934,7 @@ const CartPage = () => {
                       <div className="flex justify-between items-end mb-1">
                          <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Grand Total</span>
                          <span className={`text-primary font-black text-3xl max-sm:text-2xl tracking-tight rounded px-2 ${calculating ? 'shimmer-bg text-transparent' : ''}`}>
-                           ₹{(bill?.finalTotal || 0).toFixed(2)}
+                           ₹{(isGroupMode ? (groupCart?.totalAmount + (bill?.deliveryFee || 0) + (bill?.platformFee || 0) + (bill?.taxes || 0)) : (bill?.finalTotal || 0)).toFixed(2)}
                          </span>
                       </div>
                    </div>
@@ -724,7 +957,8 @@ const CartPage = () => {
                   onClick={handlePayment} 
                   className="w-full bg-primary text-white py-5 max-sm:py-4 rounded-2xl font-black text-lg max-sm:text-base shadow-lg shadow-orange-500/30 transition-all uppercase tracking-wider flex items-center justify-center gap-2 group"
                 >
-                  {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Pay Securely'}
+                  {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 
+                    isGroupMode ? (groupCart?.hostId === user._id ? 'Checkout Group Order' : 'Waiting for Host...') : 'Pay Securely'}
                 </motion.button>
                </div>
             )}

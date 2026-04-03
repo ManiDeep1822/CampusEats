@@ -108,3 +108,19 @@
 .animate-success-pulse {
   animation: successPulse 1s ease-in-out forwards;
 }
+
+/* Smooth Leaflet Marker Transitions */
+.leaflet-marker-pane .leaflet-marker-icon {
+  transition: all 0.5s linear;
+}
+
+/* Marker bounce for rider */
+@keyframes markerReveal {
+  from { transform: scale(0) translateY(0); opacity: 0; }
+  to { transform: scale(1) translateY(-10px); opacity: 1; }
+}
+
+.rider-marker-reveal {
+  animation: markerReveal 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+

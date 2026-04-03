@@ -47,7 +47,17 @@ const orderSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
   }],
   couponCode: { type: String },
-  discountAmount: { type: Number, default: 0 }
+  discountAmount: { type: Number, default: 0 },
+  isGroupOrder: { type: Boolean, default: false },
+  groupSplits: [{
+    studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    items: [{
+      menuItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'MenuItem' },
+      quantity: { type: Number },
+      price: { type: Number }
+    }],
+    subtotal: { type: Number }
+  }]
 }, { timestamps: true });
 
 const Order = mongoose.model('Order', orderSchema);

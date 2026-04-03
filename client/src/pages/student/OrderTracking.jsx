@@ -469,7 +469,7 @@ const OrderTracking = () => {
               {/* Rider Marker (Only if active) */}
               {riderLocation && (
                 <Marker position={riderLocation} icon={L.divIcon({
-                  html: `<div class="relative">
+                  html: `<div class="relative rider-marker-reveal">
                            <div class="text-3xl filter drop-shadow-md animate-bounce">🛵</div>
                            ${(trackingStatus || activeOrder.status) !== 'picked_up' ? '<div class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>' : ''}
                          </div>`,

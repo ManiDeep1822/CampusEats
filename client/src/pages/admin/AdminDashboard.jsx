@@ -111,9 +111,6 @@ const AdminDashboard = () => {
               <Link to="/admin/feedback" className="bg-purple-500 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-purple-600 transition flex items-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95 text-sm">
                 <FiMessageSquare /> Manage Feedback
               </Link>
-              <Link to="/admin/coupons" className="bg-rose-500 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-rose-600 transition flex items-center gap-2 shadow-lg shadow-rose-500/20 active:scale-95 text-sm">
-                <FiTag /> Manage Coupons
-              </Link>
             </div>
           </div>
         </motion.div>

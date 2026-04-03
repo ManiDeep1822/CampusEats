@@ -107,6 +107,19 @@ const socketHandler = (io) => {
       }
     });
 
+    // GROUP CART SOCKETS
+    socket.on('group:join', ({ joinCode }) => {
+      const room = `group:${joinCode}`;
+      socket.join(room);
+      console.log(`👥 Socket ${socket.id} joined group room: ${room}`);
+    });
+
+    socket.on('group:update', ({ joinCode, cartData }) => {
+      const room = `group:${joinCode}`;
+      // Broadcast to ALL group members including the sender so they all see the same state
+      io.to(room).emit('group:cart_updated', cartData);
+    });
+
     socket.on('disconnect', () => {
       console.log('🔌 Client disconnected:', socket.id);
     });

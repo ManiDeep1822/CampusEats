@@ -31,6 +31,7 @@ const botRoutes = require('./routes/bot.routes');
 const feedbackRoutes = require('./routes/feedback.routes');
 const receiptRoutes = require('./routes/receipt.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const groupRoutes = require('./routes/group.routes');
 
 const app = express();
 const server = http.createServer(app);
@@ -199,6 +200,7 @@ app.use('/api/bot', apiLimiter, botRoutes);
 app.use('/api/feedback', feedbackLimiter, feedbackRoutes);
 app.use('/api/receipts', receiptRoutes);
 app.use('/api/notifications', apiLimiter, notificationRoutes);
+app.use('/api/group', apiLimiter, groupRoutes);
  
  // Apply strict rate limits for Admin to prevent brute-force or abuse
  app.use('/api/admin', adminLimiter, adminRoutes);
