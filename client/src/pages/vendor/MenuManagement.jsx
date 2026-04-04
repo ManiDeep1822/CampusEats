@@ -34,7 +34,6 @@ const MenuManagement = () => {
       setFormData({ name: '', description: '', price: '', category: '', isVeg: true, image: '' });
       setEditingId(null);
       fetchMenu();
-      fetchMenu();
     } catch(err) { toast.error('Failed to save item'); }
   };
 
@@ -63,19 +62,34 @@ const MenuManagement = () => {
   };
 
   const handleToggle = async (id) => {
+    // ⚡ Optimistic Update: Toggle status instantly in UI
+    const oldMenu = [...menu];
+    setMenu(prev => prev.map(item => 
+      item._id === id ? { ...item, isAvailable: item.isAvailable === false ? true : false } : item
+    ));
+
     try {
       await api.put(`/vendor/menu/${id}/toggle`);
-      fetchMenu();
-    } catch (err) { toast.error("Toggle failed"); }
+    } catch (err) { 
+      setMenu(oldMenu); // Rollback
+      toast.error("Toggle sync failed"); 
+    }
   };
 
   const handleDelete = async (id) => {
     if(!window.confirm('Delete this item?')) return;
+    
+    // ⚡ Optimistic Update: Remove instantly from UI
+    const oldMenu = [...menu];
+    setMenu(prev => prev.filter(item => item._id !== id));
+
     try {
       await api.delete(`/vendor/menu/${id}`);
       toast.success("Item deleted");
-      fetchMenu();
-    } catch(err) { toast.error("Deletion failed"); }
+    } catch(err) { 
+      setMenu(oldMenu); // Rollback
+      toast.error("Deletion failed"); 
+    }
   };
 
   if (loading) return <Loader />;

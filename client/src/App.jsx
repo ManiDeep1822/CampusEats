@@ -101,6 +101,7 @@ const ManageVendors = lazy(() => import('./pages/admin/ManageVendors'));
 const ManageRiders = lazy(() => import('./pages/admin/ManageRiders'));
 const ManageFeedback = lazy(() => import('./pages/admin/ManageFeedback'));
 const ManageCoupons = lazy(() => import('./pages/admin/ManageCoupons'));
+const ManageOrders = lazy(() => import('./pages/admin/ManageOrders'));
 
 function App() {
   const location = useLocation();
@@ -180,6 +181,7 @@ function App() {
               <Route path="/admin/riders" element={<ManageRiders />} />
               <Route path="/admin/feedback" element={<ManageFeedback />} />
               <Route path="/admin/coupons" element={<ManageCoupons />} />
+              <Route path="/admin/orders" element={<ManageOrders />} />
             </Route>
           </Routes>
         </Suspense>

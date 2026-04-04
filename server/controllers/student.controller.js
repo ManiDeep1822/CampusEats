@@ -5,6 +5,7 @@ const MenuItem = require('../models/MenuItem');
 const Order = require('../models/Order');
 const Notification = require('../models/Notification');
 const Coupon = require('../models/Coupon');
+const DeliveryBoy = require('../models/DeliveryBoy');
 const { generateReceiptHTML } = require('../utils/receiptTemplate');
 
 // Helper to calculate delivery fees based on distance
@@ -41,6 +42,7 @@ const searchItems = asyncHandler(async (req, res) => {
   if (!queryTerm) return res.json({ vendors: [], items: [], query: '' });
 
   try {
+    const escapedTerm = escapeRegex(queryTerm);
     const tokens = escapedTerm.split(/\s+/).filter(t => t.length > 0);
     const tokenRegex = tokens.join('|');
     const regex = { $regex: tokenRegex, $options: 'i' };
@@ -138,10 +140,14 @@ const calculateOrderBill = asyncHandler(async (req, res) => {
   const distance = 1.2; 
   const deliveryFee = orderType === 'take_away' ? 0 : calculateDeliveryFee(subtotal, distance);
   const platformFee = 5; 
-  const taxes = Number((subtotal * 0.05).toFixed(2));
-  const finalTotal = Number((subtotal + deliveryFee + platformFee + taxes - discountAmount).toFixed(2));
+  
+  // CAPPING: Discount should not exceed subtotal to prevent negative billing
+  const cappedDiscount = Math.min(subtotal, discountAmount);
+  
+  const taxes = 0; // GST Removed by request
+  const finalTotal = Number((((subtotal - cappedDiscount) + deliveryFee + platformFee)).toFixed(2));
 
-  res.json({ subtotal, distance, deliveryFee, platformFee, taxes, discountAmount, finalTotal });
+  res.json({ subtotal, distance, deliveryFee, platformFee, taxes, discountAmount: cappedDiscount, finalTotal });
 });
 
 const applyCoupon = asyncHandler(async (req, res) => {
@@ -241,16 +247,19 @@ const generateSecureBill = async (vendorId, items, orderType, couponCode) => {
     }
   }
 
+  // CAPPING: Discount should not exceed subtotal to prevent negative billing
+  const cappedDiscount = Math.min(subtotal, discountAmount);
+  
   const deliveryFee = orderType === 'take_away' ? 0 : calculateDeliveryFee(subtotal);
   const platformFee = 5;
-  const taxes = Number((subtotal * 0.05).toFixed(2));
-  const finalTotal = Number((subtotal + deliveryFee + platformFee + taxes - discountAmount).toFixed(2));
+  const taxes = 0; // GST Removed by request
+  const finalTotal = Number((((subtotal - cappedDiscount) + deliveryFee + platformFee)).toFixed(2));
 
-  return { verifiedItems, subtotal, deliveryFee, platformFee, taxes, discountAmount, finalTotal, validCoupon };
+  return { verifiedItems, subtotal, deliveryFee, platformFee, taxes, discountAmount: cappedDiscount, finalTotal, validCoupon };
 };
 
 const placeOrder = asyncHandler(async (req, res) => {
-  const { vendorId, items, deliveryAddress, paymentId, specialInstructions, scheduledFor, orderType, couponCode } = req.body;
+  const { vendorId, items, deliveryAddress, deliveryCoordinates, paymentId, specialInstructions, scheduledFor, orderType, couponCode } = req.body;
 
   const vendor = await Vendor.findById(vendorId);
   if (!vendor) {
@@ -297,6 +306,7 @@ const placeOrder = asyncHandler(async (req, res) => {
     items: bill.verifiedItems, 
     orderType: orderType || 'delivery',
     deliveryAddress: orderType === 'take_away' ? 'Pickup from Restaurant' : deliveryAddress, 
+    deliveryCoordinates, // Capture student's geo coordinates
     totalAmount: bill.finalTotal, 
     taxAmount: bill.taxes,
     deliveryFee: bill.deliveryFee,
@@ -324,7 +334,10 @@ const getMyOrders = asyncHandler(async (req, res) => {
 });
 
 const getOrderById = asyncHandler(async (req, res) => {
-  const order = await Order.findById(req.params.id).populate('vendorId', 'shopName location').populate('deliveryBoyId', 'vehicleType rating userId');
+  const order = await Order.findById(req.params.id)
+    .populate('vendorId', 'shopName location coordinates')
+    .populate('deliveryBoyId', 'vehicleType rating userId locationCoordinates');
+  
   if (order && order.studentId.toString() === req.user._id.toString()) res.json(order);
   else { res.status(404); throw new Error('Order not found'); }
 });

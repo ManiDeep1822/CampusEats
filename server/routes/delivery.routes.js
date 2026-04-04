@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { getDashboardStats, toggleAvailability, getAvailableOrders, acceptOrder, pickUpOrder, deliverOrder, getOrderById, sendDeliveryOTP, cancelOrder, markArrivedAtVendor, getDeliveryPayments, updateRiderProfile } = require('../controllers/delivery.controller');
+const { getDashboardStats, toggleAvailability, getAvailableOrders, acceptOrder, pickUpOrder, deliverOrder, getOrderById, sendDeliveryOTP, cancelOrder, markArrivedAtVendor, getDeliveryPayments, updateRiderProfile, updateLocation } = require('../controllers/delivery.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { authorizeRoles } = require('../middleware/role.middleware');
 
 router.use(protect, authorizeRoles('delivery', 'admin'));
 router.get('/dashboard', getDashboardStats);
 router.put('/profile', updateRiderProfile);
+router.put('/location', updateLocation);
 router.put('/toggle-availability', toggleAvailability);
 router.get('/available-orders', getAvailableOrders);
 router.get('/orders/:id', getOrderById);

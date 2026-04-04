@@ -67,6 +67,21 @@ const Profile = () => {
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
         setLoading(true);
+        const oldUser = { ...user };
+        const oldProfileForm = { ...profileForm };
+
+        // ⚡ Optimistic Update
+        const updatedUser = { 
+          ...user, 
+          name: profileForm.name, 
+          phone: profileForm.phone,
+          notificationSettings: {
+            email: profileForm.emailNotifications,
+            push: profileForm.pushNotifications
+          }
+        };
+        setUser(updatedUser);
+
         try {
             const { data } = await api.put('/auth/profile', {
                 name: profileForm.name,
@@ -79,26 +94,46 @@ const Profile = () => {
             setUser(data);
             toast.success('Profile updated successfully!');
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Update failed');
+            setUser(oldUser);
+            setProfileForm(oldProfileForm);
+            toast.error(error.response?.data?.message || 'Update failed. Reverting changes.');
         } finally { setLoading(false); }
     };
 
     const handleAddressAdd = async (e) => {
       e.preventDefault();
+      const oldAddresses = [...(user?.savedAddresses || [])];
+      
+      // ⚡ Optimistic Update: Add a temporary ID for immediate list rendering
+      const tempId = Date.now().toString();
+      const newAddress = { ...addressForm, _id: tempId };
+      setUser({ ...user, savedAddresses: [...oldAddresses, newAddress] });
+
       try {
         const { data } = await api.post('/auth/profile/address', addressForm);
         setUser({ ...user, savedAddresses: data });
         setShowAddAddress(false);
         setAddressForm({ tag: 'Hostel', address: '', isDefault: false });
         toast.success('Address added!');
-      } catch (err) { toast.error('Failed to add address'); }
+      } catch (err) { 
+        setUser({ ...user, savedAddresses: oldAddresses });
+        toast.error('Failed to add address'); 
+      }
     };
 
     const handleAddressDelete = async (id) => {
+      const oldAddresses = [...(user?.savedAddresses || [])];
+      
+      // ⚡ Optimistic Update
+      setUser({ ...user, savedAddresses: oldAddresses.filter(a => a._id !== id) });
+
       try {
         const { data } = await api.delete(`/auth/profile/address/${id}`);
         setUser({ ...user, savedAddresses: data });
-      } catch (err) { toast.error('Failed to remove'); }
+      } catch (err) { 
+        setUser({ ...user, savedAddresses: oldAddresses });
+        toast.error('Failed to remove address'); 
+      }
     };
 
     const handleImageClick = () => {

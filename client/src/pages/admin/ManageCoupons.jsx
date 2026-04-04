@@ -10,9 +10,11 @@ import {
   FiX,
   FiMoreVertical,
   FiClock,
-  FiShoppingBag
+  FiShoppingBag,
+  FiCopy
 } from 'react-icons/fi';
 import api from '../../services/api';
+import toast from 'react-hot-toast';
 
 const ManageCoupons = () => {
   const [coupons, setCoupons] = useState([]);
@@ -47,10 +49,16 @@ const ManageCoupons = () => {
 
   const handleToggleStatus = async (id) => {
     setProcessingId(id);
+    const oldCoupons = [...coupons];
+    
+    // ⚡ Optimistic Update
+    setCoupons(prev => prev.map(c => c._id === id ? { ...c, isActive: !c.isActive } : c));
+
     try {
-      await api.patch(`/admin/coupons/${id}/toggle`);
-      fetchCoupons();
+      await api.put(`/admin/coupons/${id}/status`);
+      toast.success('Coupon status updated!');
     } catch (error) {
+      setCoupons(oldCoupons); // Rollback
       console.error('Failed to toggle status', error);
     } finally {
       setProcessingId(null);
@@ -60,10 +68,15 @@ const ManageCoupons = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this campaign forever?')) return;
     setProcessingId(id);
+    const oldCoupons = [...coupons];
+    
+    // ⚡ Optimistic Update
+    setCoupons(prev => prev.filter(c => c._id !== id));
+
     try {
       await api.delete(`/admin/coupons/${id}`);
-      fetchCoupons();
     } catch (error) {
+      setCoupons(oldCoupons); // Rollback
       console.error('Failed to delete coupon', error);
     } finally {
       setProcessingId(null);

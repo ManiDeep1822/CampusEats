@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../../store/authSlice';
 import { 
@@ -77,17 +78,15 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           {/* Logo */}
-          <Link to={isAuthenticated ? getDashboardLink() : '/'} className="flex items-center space-x-2 group shrink-0">
+          <Link to={isAuthenticated ? getDashboardLink() : '/'} className="flex items-baseline space-x-1.5 group shrink-0">
             <span className="text-2xl font-heading font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 group-hover:from-orange-500 group-hover:to-rose-400 transition-all max-sm:text-xl">CampusEats</span>
+            <span className="text-[10px] font-black text-gray-400/60 uppercase tracking-wider">v1.1</span>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             <Link to="/contact" className="text-textPrimary hover:text-primary font-bold transition-colors text-sm">Contact</Link>
             <InstallPWA buttonStyle="navbar" className="ml-2" />
-            {user?.role === 'admin' && (
-              <Link to="/admin/dashboard" className="text-primary hover:text-orange-600 font-bold transition-colors text-sm bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100">🛡️ Admin Panel</Link>
-            )}
           </div>
 
           {/* User Actions */}
@@ -241,11 +240,6 @@ const Navbar = () => {
                     <Link onClick={() => setIsMenuOpen(false)} to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Profile Settings</Link>
                     {user?.role === 'student' && (
                       <Link onClick={() => setIsMenuOpen(false)} to="/student/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">My Orders</Link>
-                    )}
-                    {user?.role === 'admin' && (
-                      <div className="px-2 py-1">
-                        <Link onClick={() => setIsMenuOpen(false)} to="/admin/dashboard" className="block px-4 py-3 text-sm text-primary bg-orange-50/50 rounded-xl font-black uppercase tracking-wider mb-2">Admin Dashboard</Link>
-                      </div>
                     )}
                     <Link onClick={() => setIsMenuOpen(false)} to="/contact" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-medium">Contact Us</Link>
                     <InstallPWA 

@@ -6,6 +6,7 @@ const Order = require('../models/Order');
 const OTP = require('../models/OTP');
 const Coupon = require('../models/Coupon');
 const sendEmail = require('../utils/sendEmail');
+const Settlement = require('../models/Settlement');
 
 const crypto = require('crypto');
 
@@ -204,6 +205,13 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   const lifetimeTurnover = allDeliveredOrders.reduce((acc, curr) => acc + curr.totalAmount, 0);
   const lifetimeCommission = allDeliveredOrders.reduce((acc, curr) => acc + (curr.adminEarnings || 0), 0);
 
+  // --- NEW: Recent Activity for Admin Feed ---
+  const recentOrders = await Order.find({ status: 'delivered' })
+    .sort({ deliveredAt: -1 })
+    .limit(10)
+    .populate('vendorId', 'shopName')
+    .populate('studentId', 'name');
+
   res.json({
     totalUsers,
     totalStudents,
@@ -213,7 +221,8 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     activeDelivery,
     revenueData,
     lifetimeTurnover,
-    lifetimeCommission
+    lifetimeCommission,
+    recentOrders
   });
 });
 
@@ -478,78 +487,136 @@ const toggleCouponStatus = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get weekly payout calculation for vendors and riders
-// @route   GET /api/admin/weekly-payouts
+// @desc    Get detailed payout data for vendors and riders
+// @route   GET /api/admin/payouts
 // @access  Private/Admin
 const getWeeklyPayouts = asyncHandler(async (req, res) => {
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
+  // 1. Fetch Vendors with unsettled orders
+  const vendorPayoutsRaw = await Vendor.find({})
+    .populate({
+      path: 'userId',
+      select: 'name email phone'
+    });
 
-  // Fetch all vendors with pending payouts or recent activity
-  const vendorPayouts = await Vendor.aggregate([
-    { $lookup: {
-        from: "users",
-        localField: "userId",
-        foreignField: "_id",
-        as: "userInfo"
-    } },
-    { $unwind: "$userInfo" },
-    { $project: {
-        name: "$userInfo.name",
-        shopName: 1,
-        phone: "$userInfo.phone",
-        pendingPayout: 1,
-        paymentDetails: 1
-    } }
-  ]);
+  const vendorPayouts = await Promise.all(vendorPayoutsRaw.map(async (vendor) => {
+    const unsettledOrders = await Order.find({ 
+      vendorId: vendor._id, 
+      status: 'delivered', 
+      isSettled: false 
+    }).select('orderId totalAmount vendorEarnings deliveredAt items');
+    
+    return {
+      _id: vendor._id,
+      name: vendor.userId?.name,
+      shopName: vendor.shopName,
+      phone: vendor.userId?.phone,
+      pendingPayout: vendor.pendingPayout,
+      paymentDetails: vendor.paymentDetails,
+      unsettledOrders
+    };
+  }));
 
-  const riderPayouts = await DeliveryBoy.aggregate([
-    { $lookup: {
-        from: "users",
-        localField: "userId",
-        foreignField: "_id",
-        as: "userInfo"
-    } },
-    { $unwind: "$userInfo" },
-    { $project: {
-        name: "$userInfo.name",
-        phone: "$userInfo.phone",
-        vehicleType: 1,
-        pendingPayout: 1,
-        paymentDetails: 1
-    } }
-  ]);
+  // 2. Fetch Riders with unsettled orders
+  const riderPayoutsRaw = await DeliveryBoy.find({})
+    .populate({
+      path: 'userId',
+      select: 'name email phone'
+    });
+
+  const riderPayouts = await Promise.all(riderPayoutsRaw.map(async (rider) => {
+    const unsettledOrders = await Order.find({ 
+      deliveryBoyId: rider._id, 
+      status: 'delivered', 
+      isSettled: false 
+    }).select('orderId totalAmount deliveryEarnings deliveredAt');
+
+    return {
+      _id: rider._id,
+      name: rider.userId?.name,
+      phone: rider.userId?.phone,
+      vehicleType: rider.vehicleType,
+      pendingPayout: rider.pendingPayout,
+      paymentDetails: rider.paymentDetails,
+      unsettledOrders
+    };
+  }));
+
+  // 3. Fetch Recent Settlement History
+  const settlementHistory = await Settlement.find({})
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .populate({
+        path: 'actorId',
+        select: 'shopName name'
+    });
 
   res.json({
-    dateRange: { start: sevenDaysAgo, end: new Date() },
-    vendorPayouts: vendorPayouts.filter(v => v.pendingPayout > 0),
-    riderPayouts: riderPayouts.filter(r => r.pendingPayout > 0)
+    vendorPayouts: vendorPayouts.filter(v => v.unsettledOrders.length > 0 || v.pendingPayout > 0),
+    riderPayouts: riderPayouts.filter(r => r.unsettledOrders.length > 0 || r.pendingPayout > 0),
+    settlementHistory
   });
 });
 
 // @desc    Mark a payout as settled (Paid)
-// @route   POST /api/admin/settle-payout
+// @route   POST /api/admin/payouts/settle
 // @access  Private/Admin
 const settlePayout = asyncHandler(async (req, res) => {
   const { type, id } = req.body;
+  const adminId = req.user._id;
+
+  let actor;
+  let unsettledOrders;
+  let amount;
 
   if (type === 'vendor') {
-    const vendor = await Vendor.findById(id);
-    if (!vendor) throw new Error('Vendor not found');
-    vendor.pendingPayout = 0;
-    await vendor.save();
+    actor = await Vendor.findById(id);
+    if (!actor) throw new Error('Vendor not found');
+    unsettledOrders = await Order.find({ vendorId: id, status: 'delivered', isSettled: false });
+    amount = actor.pendingPayout;
   } else if (type === 'rider') {
-    const rider = await DeliveryBoy.findById(id);
-    if (!rider) throw new Error('Rider not found');
-    rider.pendingPayout = 0;
-    await rider.save();
+    actor = await DeliveryBoy.findById(id);
+    if (!actor) throw new Error('Rider not found');
+    unsettledOrders = await Order.find({ deliveryBoyId: id, status: 'delivered', isSettled: false });
+    amount = actor.pendingPayout;
   } else {
-    res.status(400);
-    throw new Error('Invalid payout type');
+    res.status(400); throw new Error('Invalid payout type');
   }
 
-  res.json({ message: 'Payout marked as settled successfully' });
+  if (amount <= 0 && unsettledOrders.length === 0) {
+    res.status(400); throw new Error('No pending balance to settle');
+  }
+
+  // 1. Generate Settlement ID
+  const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+  const randomSuffix = Math.floor(100 + Math.random() * 900);
+  const settlementId = `SET-${dateStr}-${randomSuffix}`;
+
+  // 2. Create the permanent Settlement record
+  const settlement = await Settlement.create({
+    settlementId,
+    actorType: type,
+    actorId: id,
+    actorModel: type === 'vendor' ? 'Vendor' : 'DeliveryBoy',
+    amount: amount,
+    orderIds: unsettledOrders.map(o => o._id),
+    settledBy: adminId,
+    summary: `${unsettledOrders.length} orders settled for ${type}: ${id}`
+  });
+
+  // 3. Mark all orders as settled
+  await Order.updateMany(
+    { _id: { $in: unsettledOrders.map(o => o._id) } },
+    { $set: { isSettled: true } }
+  );
+
+  // 4. Reset the actor's pending balance
+  actor.pendingPayout = 0;
+  await actor.save();
+
+  res.json({ 
+    message: 'Payout marked as settled and recorded successfully',
+    settlementId: settlement.settlementId 
+  });
 });
 
 // @desc    Delete a vendor review
@@ -588,6 +655,24 @@ const deleteVendorReview = asyncHandler(async (req, res) => {
   res.json({ message: 'Review removed successfully', rating: vendor.rating, numReviews: vendor.numReviews });
 });
 
+// @desc    Get all platform orders for Admin
+// @route   GET /api/admin/orders
+// @access  Private/Admin
+const getGlobalOrders = asyncHandler(async (req, res) => {
+  const page = Number(req.query.pageNumber) || 1;
+  const pageSize = 20;
+
+  const count = await Order.countDocuments({});
+  const orders = await Order.find({})
+    .populate('vendorId', 'shopName')
+    .populate('studentId', 'name')
+    .sort({ createdAt: -1 })
+    .limit(pageSize)
+    .skip(pageSize * (page - 1));
+
+  res.json({ orders, page, pages: Math.ceil(count / pageSize), total: count });
+});
+
 module.exports = {
   getUsers,
   deleteUser,
@@ -607,5 +692,6 @@ module.exports = {
   toggleCouponStatus,
   getWeeklyPayouts,
   settlePayout,
-  deleteVendorReview
+  deleteVendorReview,
+  getGlobalOrders
 };

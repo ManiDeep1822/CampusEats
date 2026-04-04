@@ -24,6 +24,10 @@ const orderSchema = new mongoose.Schema({
     index: true
   },
   deliveryAddress: { type: String, required: function() { return this.orderType === 'delivery'; } },
+  deliveryCoordinates: {
+    lat: { type: Number },
+    lng: { type: Number }
+  },
   totalAmount: { type: Number, required: true },
   taxAmount: { type: Number, default: 0 },
   deliveryFee: { type: Number, default: 0 },
@@ -55,7 +59,8 @@ const orderSchema = new mongoose.Schema({
   vendorEarnings: { type: Number, default: 0 },
   deliveryEarnings: { type: Number, default: 0 },
   adminEarnings: { type: Number, default: 0 },
-  isCommissionSplit: { type: Boolean, default: false, index: true }
+  isCommissionSplit: { type: Boolean, default: false, index: true },
+  isSettled: { type: Boolean, default: false, index: true }
 }, { timestamps: true });
 
 const Order = mongoose.model('Order', orderSchema);

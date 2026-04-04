@@ -40,11 +40,15 @@ const ManageRiders = () => {
       return;
     }
 
+    const oldRiders = [...riders];
+    // ⚡ Optimistic Update
+    setRiders(prev => prev.map(r => r._id === id ? { ...r, isAvailable: !currentStatus } : r));
+
     try {
       const { data } = await api.put(`/admin/delivery/${id}/status`, { isAvailable: !currentStatus });
       toast.success(data.isAvailable ? 'Rider set to Available' : 'Rider set to Off-Duty');
-      setRiders(riders.map(r => r._id === id ? { ...r, isAvailable: data.isAvailable } : r));
     } catch (error) {
+      setRiders(oldRiders); // Rollback
       toast.error('Error updating rider status');
     }
   };
@@ -60,7 +64,7 @@ const ManageRiders = () => {
       const { data } = await api.put(`/admin/delivery/${selectedRider.id}/status`, { isAvailable: true });
       
       toast.success('Rider Verified & Set to Available!');
-      setRiders(riders.map(r => r._id === selectedRider.id ? { 
+      setRiders(prev => prev.map(r => r._id === selectedRider.id ? { 
         ...r, 
         isAvailable: true,
         userId: { ...r.userId, isVerified: true }
@@ -85,14 +89,18 @@ const ManageRiders = () => {
   };
 
   const handleDeleteRider = async (id) => {
-    if (window.confirm('Are you sure you want to completely remove this delivery personnel? This cannot be undone.')) {
-      try {
-        await api.delete(`/admin/delivery/${id}`);
-        toast.success('Rider account removed successfully');
-        setRiders(riders.filter(r => r._id !== id));
-      } catch (error) {
-        toast.error(error.response?.data?.message || 'Error deleting rider');
-      }
+    if (!window.confirm('Are you sure you want to completely remove this delivery personnel? This cannot be undone.')) return;
+    
+    const oldRiders = [...riders];
+    // ⚡ Optimistic Update
+    setRiders(prev => prev.filter(r => r._id !== id));
+
+    try {
+      await api.delete(`/admin/delivery/${id}`);
+      toast.success('Rider account removed successfully');
+    } catch (error) {
+      setRiders(oldRiders); // Rollback
+      toast.error(error.response?.data?.message || 'Error deleting rider');
     }
   };
 

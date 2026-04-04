@@ -40,6 +40,8 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   });
 
   const weeklyData = Object.values(weeklyDataMap);
+  const weeklyEarnings = weeklyData.reduce((acc, curr) => acc + curr.earnings, 0);
+
   const recentDeliveries = await Order.find({ deliveryBoyId, status: 'delivered' })
     .populate('vendorId', 'shopName')
     .sort({ deliveredAt: -1 })
@@ -51,6 +53,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
       totalDeliveries: deliveryBoy.totalDeliveries,
       rating: deliveryBoy.rating,
       earnings: deliveryBoy.earnings, // Lifetime
+      weeklyEarnings,
       pendingPayout: deliveryBoy.pendingPayout || 0,
       todaysEarnings,
       todaysOrders: todaysOrders.length
@@ -182,10 +185,17 @@ const deliverOrder = asyncHandler(async (req, res) => {
       throw new Error('This order has already been settled.');
     }
 
-    // --- SECURE PAYMENT SPLIT (Option 1: Internal Ledger) ---
+    // --- SECURE PAYMENT SPLIT (Audited Net Earnings) ---
+    // Calculate subtotal from items to ensure vendor gets paid even on 100% discount orders
+    const subtotal = order.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    
+    // Vendor gets Subtotal - 5% Platform Commission (Example 5%)
+    const vendorShare = Math.round(subtotal * 0.95); 
     const riderShare = order.deliveryFee || 15;
-    const adminShare = (order.platformFee || 0) + (order.taxAmount || 0);
-    const vendorShare = order.totalAmount - riderShare - adminShare;
+    
+    // Admin Net = (What Student Paid) - (What we owe Vendor) - (What we owe Rider)
+    // This will be negative if the discount was larger than our commission + fees
+    const adminShare = order.totalAmount - vendorShare - riderShare;
 
     order.status = 'delivered';
     order.deliveredAt = Date.now();
@@ -198,6 +208,22 @@ const deliverOrder = asyncHandler(async (req, res) => {
     order.isCommissionSplit = true;
     
     await order.save();
+
+    // Update Vendor's pending payout balance
+    const vendor = await Vendor.findById(order.vendorId);
+    if (vendor) {
+      vendor.pendingPayout = (vendor.pendingPayout || 0) + vendorShare;
+      vendor.lifetimeEarnings = (vendor.lifetimeEarnings || 0) + vendorShare;
+      await vendor.save();
+    }
+
+    // Update Rider's pending payout balance
+    const rider = await DeliveryBoy.findById(order.deliveryBoyId);
+    if (rider) {
+      rider.pendingPayout = (rider.pendingPayout || 0) + riderShare;
+      rider.lifetimeEarnings = (rider.lifetimeEarnings || 0) + riderShare;
+      await rider.save();
+    }
     
     // 1. Update Rider Profile
     const deliveryBoy = await DeliveryBoy.findById(deliveryBoyId);
@@ -384,6 +410,42 @@ const updateRiderProfile = asyncHandler(async (req, res) => {
   }
 });
 
+const updateLocation = asyncHandler(async (req, res) => {
+  const { lat, lng, currentLocation } = req.body;
+  const deliveryBoyId = await getMyDeliveryId(req.user._id);
+
+  const rider = await DeliveryBoy.findByIdAndUpdate(
+    deliveryBoyId,
+    { 
+      $set: { 
+        locationCoordinates: { lat, lng },
+        currentLocation: currentLocation || undefined
+      } 
+    },
+    { new: true }
+  );
+
+  if (!rider) {
+    res.status(404);
+    throw new Error('Rider profile not found');
+  }
+
+  // If rider has an active order, notify the student via Socket
+  if (rider.activeOrderId) {
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`student_order:${rider.activeOrderId}`).emit('rider_location_update', {
+        orderId: rider.activeOrderId,
+        lat,
+        lng,
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  res.json({ success: true, coordinates: rider.locationCoordinates });
+});
+
 module.exports = { 
   getDashboardStats, 
   toggleAvailability, 
@@ -396,5 +458,6 @@ module.exports = {
   cancelOrder, 
   markArrivedAtVendor, 
   getDeliveryPayments,
-  updateRiderProfile 
+  updateRiderProfile,
+  updateLocation
 };

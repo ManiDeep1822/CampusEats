@@ -26,11 +26,9 @@ const sendOTP = asyncHandler(async (req, res) => {
     { upsert: true, returnDocument: 'after' }
   );
 
-  const BREVO_LOGO = process.env.LOGO_URL || 'https://i.ibb.co/vzN4X86/campus-eats-logo.png';
   const html = `
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
       <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 40px 20px; text-align: center;">
-        <img src="${BREVO_LOGO}" alt="CampusEats Logo" style="width: 120px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
         <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px;">CampusEats</h1>
         <p style="color: #ffedd5; font-size: 16px; margin-top: 8px; font-weight: 400;">Your Premium Campus Dining Experience</p>
       </div>
@@ -54,6 +52,7 @@ const sendOTP = asyncHandler(async (req, res) => {
     </div>
   `;
 
+  const message = `Your CampusEats verification code is: ${otpCode}`;
   await sendEmail({ email, subject: 'CampusEats Verification Code', message, html });
   res.status(200).json({ message: 'Verification code sent to email' });
 });
@@ -289,7 +288,9 @@ const googleAuth = asyncHandler(async (req, res) => {
             timestamp: Date.now()
           });
         }
-      } catch (e) {}
+      } catch (err) {
+        console.warn('Non-critical Google Auth socket error:', err.message);
+      }
 
       res.status(200).json({
         _id: user._id,
@@ -373,7 +374,9 @@ const changePassword = asyncHandler(async (req, res) => {
           timestamp: Date.now()
         });
       }
-    } catch (e) {}
+    } catch (err) {
+      console.warn('Non-critical password change socket error:', err.message);
+    }
 
     res.json({ message: 'Password changed successfully' });
   } else {
@@ -403,11 +406,9 @@ const forgotPassword = asyncHandler(async (req, res) => {
     { upsert: true, returnDocument: 'after' }
   );
 
-  const BREVO_LOGO = process.env.LOGO_URL || 'https://i.ibb.co/vzN4X86/campus-eats-logo.png';
   const html = `
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
       <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 40px 20px; text-align: center;">
-        <img src="${BREVO_LOGO}" alt="CampusEats Logo" style="width: 120px; height: auto; margin-bottom: 20px;" />
         <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800;">CampusEats</h1>
         <p style="color: #ffedd5; font-size: 16px; margin-top: 8px;">Password Reset Request</p>
       </div>
@@ -476,7 +477,9 @@ const resetPasswordWithOTP = asyncHandler(async (req, res) => {
         timestamp: Date.now()
       });
     }
-  } catch (e) {}
+  } catch (err) {
+    console.warn('Non-critical password reset socket error:', err.message);
+  }
 
   // 4. Delete used OTP
   await OTP.deleteOne({ email });

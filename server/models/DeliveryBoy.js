@@ -12,6 +12,10 @@ const deliveryBoySchema = new mongoose.Schema({
   vehicleType: { type: String },
   isAvailable: { type: Boolean, default: false },
   currentLocation: { type: String },
+  locationCoordinates: {
+    lat: { type: Number },
+    lng: { type: Number }
+  },
   totalDeliveries: { type: Number, default: 0 },
   earnings: { type: Number, default: 0 },
   pendingPayout: { type: Number, default: 0 },

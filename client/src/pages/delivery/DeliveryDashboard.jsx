@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useSocketEvent } from '../../hooks/useSocket';
@@ -22,7 +22,7 @@ const DeliveryDashboard = () => {
   const lastFetchRef = useRef(0);
 
   // Optimized fetching logic with a small cooldown
-  const fetchData = async (force = false) => {
+  const fetchData = useCallback(async (force = false) => {
     const now = Date.now();
     if (!force && lastFetchRef.current > now - 2000) return; 
     lastFetchRef.current = now;
@@ -40,9 +40,9 @@ const DeliveryDashboard = () => {
     } finally { 
       setLoading(false); 
     }
-  };
+  }, [navigate]);
 
-  useEffect(() => { fetchData(true); }, []);
+  useEffect(() => { fetchData(true); }, [fetchData]);
 
   useSocketEvent('order:new', () => { fetchData(); toast.success("New task found on campus! 🚨"); });
   useSocketEvent('order:ready', () => { fetchData(); toast.success("Food is ready for pickup!"); });
@@ -158,10 +158,11 @@ const DeliveryDashboard = () => {
       <div className="max-w-7xl mx-auto p-5 space-y-8">
         
         {/* 📊 RESPONSIVE STATS GRID */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
               { label: 'Today', value: `₹${data.stats.todaysEarnings}`, icon: <FiTrendingUp />, color: 'orange' },
               { label: 'Orders', value: data.stats.todaysOrders, icon: <FiActivity />, color: 'blue' },
+              { label: 'Weekly', value: `₹${data.stats.weeklyEarnings || 0}`, icon: <FiTrendingUp />, color: 'purple' },
               { label: 'Rating', value: data.profile.rating?.toFixed(1) || '5.0', icon: '⭐', color: 'yellow' },
               { label: 'Status', value: data.profile.isAvailable ? 'Online' : 'Offline', icon: <FiMapPin />, color: data.profile.isAvailable ? 'green' : 'red' }
             ].map((stat, i) => (

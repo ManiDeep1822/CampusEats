@@ -42,13 +42,11 @@ const ManageVendors = () => {
 
     const oldVendors = [...vendors];
     // ⚡ Optimistic UI: Toggle approval status immediately
-    setVendors(vendors.map(v => v._id === id ? { ...v, isApproved: !currentStatus } : v));
+    setVendors(prev => prev.map(v => v._id === id ? { ...v, isApproved: !currentStatus } : v));
 
     try {
       const { data } = await api.put(`/admin/vendors/${id}/status`, { isApproved: !currentStatus });
       toast.success(data.isApproved ? 'Vendor Approved ✅' : 'Vendor Suspended 🚫');
-      // Re-sync with server response
-      setVendors(vendors.map(v => v._id === id ? { ...v, isApproved: data.isApproved } : v));
     } catch (error) {
       // Rollback on failure
       setVendors(oldVendors);
@@ -67,7 +65,7 @@ const ManageVendors = () => {
       const { data } = await api.put(`/admin/vendors/${selectedVendor.id}/status`, { isApproved: true });
       
       toast.success('Account Verified & Vendor Approved!');
-      setVendors(vendors.map(v => v._id === selectedVendor.id ? { 
+      setVendors(prev => prev.map(v => v._id === selectedVendor.id ? { 
         ...v, 
         isApproved: true,
         userId: { ...v.userId, isVerified: true }
@@ -92,27 +90,28 @@ const ManageVendors = () => {
   };
 
   const handleDeleteVendor = async (id) => {
-    if (window.confirm('Are you sure you want to completely remove this vendor account? This cannot be undone.')) {
-      const oldVendors = [...vendors];
-      
-      // ⚡ Optimistic UI: Remove vendor immediately from view
-      setVendors(vendors.filter(v => v._id !== id));
+    if (!window.confirm('Are you sure you want to completely remove this vendor account? This cannot be undone.')) return;
+    
+    const oldVendors = [...vendors];
+    // ⚡ Optimistic UI: Remove vendor immediately from view
+    setVendors(prev => prev.filter(v => v._id !== id));
 
-      try {
-        await api.delete(`/admin/vendors/${id}`);
-        toast.success('Vendor account removed successfully');
-      } catch (error) {
-        // Rollback on failure
-        setVendors(oldVendors);
-        toast.error('Error deleting vendor. Account restored.');
-      }
+    try {
+      await api.delete(`/admin/vendors/${id}`);
+      toast.success('Vendor account removed successfully');
+    } catch (error) {
+      // Rollback on failure
+      setVendors(oldVendors);
+      toast.error('Error deleting vendor. Account restored.');
     }
   };
+
   const openCreateModal = () => {
     const randomPassword = Math.random().toString(36).slice(-8) + '@' + Math.floor(Math.random() * 100);
     setFormData({ ...formData, password: randomPassword });
     setShowModal(true);
   };
+
   const handleCreateVendor = async (e) => {
     e.preventDefault();
     setIsCreating(true);

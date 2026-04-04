@@ -21,7 +21,8 @@ const {
   getCoupons,
   createCoupon,
   deleteCoupon,
-  toggleCouponStatus
+  toggleCouponStatus,
+  getGlobalOrders
 } = require('../controllers/admin.controller');
 
 // Apply middleware to all routes
@@ -55,5 +56,8 @@ router.route('/delivery/:id/status').put(updateDeliveryStatus);
 router.route('/coupons').get(getCoupons).post(createCoupon);
 router.route('/coupons/:id').delete(deleteCoupon);
 router.route('/coupons/:id/status').put(toggleCouponStatus);
+
+// Global Order Management
+router.route('/orders').get(getGlobalOrders);
 
 module.exports = router;

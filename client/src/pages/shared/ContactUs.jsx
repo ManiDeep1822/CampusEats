@@ -43,7 +43,7 @@ const ContactUs = () => {
             <div className="inline-block px-3 py-1 bg-primary/20 border border-primary/20 rounded-full text-primary text-[10px] font-black uppercase tracking-widest mb-6 px-4">
               Contact Hub
             </div>
-            <h2 className="text-4xl font-black font-heading mb-4 leading-tight">We're here to help.</h2>
+            <h2 className="text-4xl font-black font-heading mb-4 leading-tight">We&apos;re here to help.</h2>
             <p className="text-slate-400 mb-10 font-medium leading-relaxed">
               Have a question about an order, partnership, or just want to say hi? Send us a message and our team will get back to you within 24 hours.
             </p>

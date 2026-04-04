@@ -41,14 +41,18 @@ const ManageFeedback = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Delete this feedback entry?')) {
-      try {
-        await api.delete(`/feedback/${id}`);
-        toast.success('Feedback deleted');
-        setFeedbacks(feedbacks.filter(f => f._id !== id));
-      } catch (error) {
-        toast.error('Failed to delete feedback');
-      }
+    if (!window.confirm('Delete this feedback entry?')) return;
+    
+    // ⚡ Optimistic Update
+    const oldFeedbacks = [...feedbacks];
+    setFeedbacks(prev => prev.filter(f => f._id !== id));
+
+    try {
+      await api.delete(`/feedback/${id}`);
+      toast.success('Feedback deleted');
+    } catch (error) {
+      setFeedbacks(oldFeedbacks); // Rollback
+      toast.error('Failed to delete feedback');
     }
   };
 
@@ -57,15 +61,28 @@ const ManageFeedback = () => {
     if (!replyText.trim()) return;
 
     setIsSubmitting(true);
+    const oldFeedbacks = [...feedbacks];
+    const targetFeedback = feedbacks.find(f => f._id === selectedFeedback._id);
+    
+    // ⚡ Optimistic Update: Mark as replied instantly in the list
+    setFeedbacks(prev => prev.map(f => f._id === selectedFeedback._id ? { 
+      ...f, 
+      isReplied: true, 
+      adminReply: replyText, 
+      repliedAt: new Date().toISOString() 
+    } : f));
+
     try {
       const { data } = await api.put(`/feedback/${selectedFeedback._id}/reply`, {
         adminReply: replyText
       });
       toast.success('Reply submitted successfully');
-      setFeedbacks(feedbacks.map(f => f._id === data._id ? data : f));
+      // Sync exactly with server data
+      setFeedbacks(prev => prev.map(f => f._id === data._id ? data : f));
       setSelectedFeedback(null);
       setReplyText('');
     } catch (error) {
+      setFeedbacks(oldFeedbacks); // Rollback
       toast.error('Failed to send reply');
     } finally {
       setIsSubmitting(false);

@@ -201,6 +201,13 @@ const VendorDashboard = () => {
           </div>
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
+              <h3 className="text-textSecondary font-bold text-xs uppercase tracking-widest">Weekly Collection</h3>
+              <div className="p-2 bg-purple-100 text-purple-600 rounded-lg"><FiMonitor size={20}/></div>
+            </div>
+            <p className="text-3xl font-extrabold text-gray-900">₹{data.stats.weeklyRevenue || 0}</p>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-2">
               <h3 className="text-textSecondary font-bold text-xs uppercase tracking-widest">Pending Orders</h3>
               <div className="p-2 bg-yellow-100 text-yellow-600 rounded-lg"><FiClock size={20}/></div>
             </div>

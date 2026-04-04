@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
 import toast from 'react-hot-toast';
-import { FiPhoneCall, FiMapPin, FiCheckCircle, FiArrowRight, FiSend, FiMessageSquare, FiPackage, FiTarget, FiNavigation, FiZap, FiChevronLeft } from 'react-icons/fi';
+import { FiPhoneCall, FiCheckCircle, FiSend, FiMessageSquare, FiPackage, FiTarget, FiNavigation, FiChevronLeft } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSocketContext } from '../../context/SocketContext';
 import { useSocketEvent } from '../../hooks/useSocket';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap, Polyline } from 'react-leaflet';
 import { fetchOSRMRoute } from '../../utils/routeUtils';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -51,7 +51,7 @@ const ActiveDelivery = () => {
        setRouteCoords(coords);
     };
     getRoute();
-  }, []);
+  }, [STUDENT_LATLNG, VENDOR_LATLNG]);
 
   const [cancelReason, setCancelReason] = useState('');
   const [waitTimer, setWaitTimer] = useState('00:00');
@@ -81,7 +81,7 @@ const ActiveDelivery = () => {
     } catch(err) { toast.error("Failed to load active delivery"); } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchActiveDelivery(); }, []);
+  useEffect(() => { fetchActiveDelivery(); }, [fetchActiveDelivery]);
 
   useEffect(() => {
     let interval;
@@ -111,6 +111,8 @@ const ActiveDelivery = () => {
     return () => clearInterval(interval);
   }, [data?.arrivedAtVendorAt, data?.pickedUpAt, calculateWaitTime]);
 
+  const lastSyncRef = useRef(0);
+
   useEffect(() => {
     let watchId;
     if (data?.status && data.status !== 'delivered' && navigator.geolocation) {
@@ -120,6 +122,14 @@ const ActiveDelivery = () => {
            const { latitude, longitude } = pos.coords;
            setRiderLocation([latitude, longitude]);
            setLocationStatus('active');
+
+           const now = Date.now();
+           // Sync to DB every 30 seconds to save battery/bandwidth
+           if (now - lastSyncRef.current > 30000) {
+             api.put('/delivery/location', { lat: latitude, lng: longitude }).catch(() => {});
+             lastSyncRef.current = now;
+           }
+
            if (socket && data.studentId) {
              const targetUserId = typeof data.studentId === 'string' ? data.studentId : (data.studentId._id || data.studentId.userId);
              if (targetUserId) {
@@ -136,11 +146,11 @@ const ActiveDelivery = () => {
           if (err.code === 1) setLocationStatus('denied');
           else setLocationStatus('error');
         },
-        { enableHighAccuracy: true, timeout: 10000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
     return () => { if (watchId) navigator.geolocation.clearWatch(watchId); };
-  }, [data?.status, socket, data?._id, data?.studentId]);
+  }, [data?.status, socket, data?._id, data?.studentId, locationStatus]);
 
   useSocketEvent('order:confirmed', () => { fetchActiveDelivery(); toast.success("Vendor has accepted!"); });
   useSocketEvent('order:preparing', () => { fetchActiveDelivery(); toast.success("Food is being prepared"); });

@@ -46,12 +46,6 @@ const CartBillSummary = React.memo(({
                     ₹{(bill?.platformFee || 0).toFixed(2)}
                   </span>
                </div>
-               <div className="flex justify-between items-center text-sm text-gray-500 font-medium">
-                  <span>GST (5%)</span>
-                  <span className={`text-gray-800 font-bold rounded px-2`}>
-                    ₹{(bill?.taxes || 0).toFixed(2)}
-                  </span>
-               </div>
                 {(bill?.discountAmount || 0) > 0 && (
                   <motion.div 
                     initial={{ opacity: 0, x: -10 }}

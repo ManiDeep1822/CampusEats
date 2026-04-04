@@ -3,6 +3,7 @@ const Vendor = require('../models/Vendor');
 const Order = require('../models/Order');
 const MenuItem = require('../models/MenuItem');
 const Notification = require('../models/Notification');
+const Settlement = require('../models/Settlement');
 const { sendPushNotification } = require('../utils/notification.utils');
 const webpush = require('web-push');
 
@@ -37,7 +38,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   const revenue = todaysOrders.reduce((acc, order) => acc + (order.vendorEarnings || 0), 0);
   
   const allOrders = await Order.find({ vendorId });
-  const pendingOrders = allOrders.filter(o => ['placed', 'confirmed', 'preparing'].includes(o.status)).length;
+  const pendingOrders = allOrders.filter(o => ['placed', 'confirmed', 'preparing', 'picked_up'].includes(o.status)).length;
   
   const weeklyDataMap = {};
   for (let i = 0; i < 7; i++) {
@@ -57,6 +58,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   });
 
   const weeklyData = Object.values(weeklyDataMap);
+  const weeklyRevenue = weeklyData.reduce((acc, current) => acc + current.sales, 0);
 
   const popularItems = await Order.aggregate([
     { $match: { vendorId: vendorId, status: 'delivered' } },
@@ -78,6 +80,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     stats: { 
       todaysOrders: todaysOrders.length, 
       revenue, // Today's Earnings
+      weeklyRevenue,
       lifetimeEarnings: vendor.earnings || 0,
       pendingPayout: vendor.pendingPayout || 0,
       pendingOrders, 
@@ -294,15 +297,37 @@ const updateVendorProfile = asyncHandler(async (req, res) => {
 
 const getVendorPayments = asyncHandler(async (req, res) => {
   const vendorId = await getMyVendorId(req.user._id);
-  const orders = await Order.find({ 
+  
+  // 1. Fetch orders not yet settled
+  const unsettledOrders = await Order.find({ 
     vendorId, 
-    status: { $in: ['delivered', 'ready', 'picked_up'] } 
+    status: 'delivered',
+    isSettled: false
   })
     .populate('studentId', 'name phone email')
-    .populate('paymentId')
-    .sort({ createdAt: -1 });
+    .sort({ deliveredAt: -1 });
+
+  // 2. Fetch past settlement records
+  const payoutHistory = await Settlement.find({ 
+    actorId: vendorId,
+    actorType: 'vendor'
+  }).sort({ createdAt: -1 });
+
+  // 3. Fetch settled orders (last 50 for audit)
+  const settledOrders = await Order.find({
+    vendorId,
+    status: 'delivered',
+    isSettled: true
+  })
+    .populate('studentId', 'name phone email')
+    .sort({ deliveredAt: -1 })
+    .limit(50);
     
-  res.json(orders);
+  res.json({
+    unsettledOrders,
+    payoutHistory,
+    settledOrders
+  });
 });
 
 module.exports = { getDashboardStats, toggleShopStatus, getMenu, addMenuItem, updateMenuItem, deleteMenuItem, toggleMenuItemStatus, getOrders, updateOrderStatus, updateVendorProfile, getVendorPayments };

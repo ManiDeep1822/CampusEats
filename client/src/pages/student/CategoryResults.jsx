@@ -24,23 +24,31 @@ const CategoryResults = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
     const fetchEverything = async () => {
+      setLoading(true);
       try {
-        const [vendorsRes, favsRes, searchRes] = await Promise.all([
-          api.get('/student/vendors'),
-          api.get('/student/favorites'),
-          api.get(`/student/search?query=${categoryId}`)
+        // Fetch vendors and favorites in parallel, but handle search separately for resilience
+        const [vendorsRes, favsRes] = await Promise.all([
+          api.get('/student/vendors').catch(() => ({ data: [] })),
+          api.get('/student/favorites').catch(() => ({ data: [] }))
         ]);
 
         setVendors(Array.isArray(vendorsRes.data) ? vendorsRes.data : []);
         setFavorites((favsRes.data || []).map(f => (f._id || f).toString()));
 
-        // M10: Fix data access - searchRes.data is { vendors, items, query }, not an array
-        const searchItems = Array.isArray(searchRes.data?.items) ? searchRes.data.items : [];
-        const itemVendorIds = [...new Set(searchItems.map(item => item.vendorId?._id || item.vendorId))];
-        setCategoryVendorIds(itemVendorIds.filter(Boolean));
+        // Fetch search results for the category items
+        try {
+          const searchRes = await api.get(`/student/search?query=${encodeURIComponent(categoryId)}`);
+          const searchItems = Array.isArray(searchRes.data?.items) ? searchRes.data.items : [];
+          const itemVendorIds = [...new Set(searchItems.map(item => item.vendorId?._id || item.vendorId))];
+          setCategoryVendorIds(itemVendorIds.filter(Boolean));
+        } catch (searchError) {
+          console.warn("Search fetch failed for category, falling back to cuisine matching only.", searchError);
+          setCategoryVendorIds([]);
+        }
+
       } catch (error) {
-        console.error(error);
-        toast.error("Failed to load category data");
+        console.error("Critical fetch failed:", error);
+        toast.error("Could not load your food mood. Please try again.");
       } finally {
         setLoading(false);
       }

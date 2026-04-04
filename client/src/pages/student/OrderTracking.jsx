@@ -32,8 +32,7 @@ const RecenterMap = ({ lat, lng }) => {
   return null;
 };
 
-const VENDOR_LATLNG = [28.7041, 77.1025];
-const STUDENT_LATLNG = [28.7061, 77.1045];
+const CAMPUS_CENTER = [28.7041, 77.1025]; // Default fallback
 
 const OrderTracking = () => {
   const { id } = useParams();
@@ -51,10 +50,17 @@ const OrderTracking = () => {
 
   useEffect(() => {
     const getRoute = async () => {
-       const coords = await fetchOSRMRoute(VENDOR_LATLNG, STUDENT_LATLNG);
+       const vendorCoords = activeOrder?.vendorId?.coordinates?.lat 
+         ? [activeOrder.vendorId.coordinates.lat, activeOrder.vendorId.coordinates.lng] 
+         : CAMPUS_CENTER;
+       const studentCoords = activeOrder?.deliveryCoordinates?.lat 
+         ? [activeOrder.deliveryCoordinates.lat, activeOrder.deliveryCoordinates.lng] 
+         : [CAMPUS_CENTER[0] + 0.002, CAMPUS_CENTER[1] + 0.002];
+
+       const coords = await fetchOSRMRoute(vendorCoords, studentCoords);
        setRouteCoords(coords);
     };
-    getRoute();
+    if (activeOrder) getRoute();
 
     const scriptId = 'razorpay-checkout-script';
     if (!document.getElementById(scriptId)) {
@@ -134,6 +140,10 @@ const OrderTracking = () => {
       try {
         const { data } = await api.get(`/student/orders/${id}`);
         dispatch(setActiveOrder(data));
+        
+        if (data.deliveryBoyId?.locationCoordinates?.lat) {
+          setRiderLocation([data.deliveryBoyId.locationCoordinates.lat, data.deliveryBoyId.locationCoordinates.lng]);
+        }
         
         if (data.chatHistory) {
           setChatHistory(data.chatHistory.map(c => ({
@@ -463,30 +473,34 @@ const OrderTracking = () => {
               />
               {riderLocation && <RecenterMap lat={riderLocation[0]} lng={riderLocation[1]} />}
               {routeCoords.length > 0 && (
-                <Polyline 
-                  positions={routeCoords} 
-                  color="#f97316" 
-                  weight={6} 
-                  opacity={0.4} 
-                />
-              )}
-              {riderLocation && routeCoords.length > 0 && (
-                 <Polyline 
-                    positions={[riderLocation, STUDENT_LATLNG]} 
-                    color="#f97316" 
+                <>
+                  {/* Ghost Path (Full Journey) */}
+                  <Polyline 
+                    positions={routeCoords} 
+                    color="#cbd5e1" 
                     weight={4} 
-                    dashArray="5, 10" 
-                    opacity={0.8}
-                 />
+                    opacity={0.6} 
+                    dashArray="10, 10"
+                  />
+                  {/* Active Path (Vibrant Swipe Orange) */}
+                  <Polyline 
+                    positions={routeCoords} 
+                    color="#FC8019" 
+                    weight={8} 
+                    opacity={0.8} 
+                    lineJoin="round"
+                    lineCap="round"
+                  />
+                </>
               )}
-              <Marker position={[28.7041, 77.1025]} icon={L.divIcon({
+              <Marker position={activeOrder?.vendorId?.coordinates?.lat ? [activeOrder.vendorId.coordinates.lat, activeOrder.vendorId.coordinates.lng] : CAMPUS_CENTER} icon={L.divIcon({
                 html: '<div class="text-2xl filter drop-shadow-md">🏪</div>',
                 className: 'bg-transparent border-none',
                 iconAnchor: [12, 24]
               })}>
                 <Popup className="font-bold">Restaurant: {activeOrder?.vendorId?.shopName || 'Vendor'}</Popup>
               </Marker>
-              <Marker position={[28.7061, 77.1045]} icon={L.divIcon({
+              <Marker position={activeOrder?.deliveryCoordinates?.lat ? [activeOrder.deliveryCoordinates.lat, activeOrder.deliveryCoordinates.lng] : [CAMPUS_CENTER[0] + 0.002, CAMPUS_CENTER[1] + 0.002]} icon={L.divIcon({
                 html: '<div class="text-2xl filter drop-shadow-md">🏠</div>',
                 className: 'bg-transparent border-none',
                 iconAnchor: [12, 24]

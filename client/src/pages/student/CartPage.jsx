@@ -131,6 +131,7 @@ const CartPage = () => {
       }
     };
     fetchSavedAddresses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const localSubtotal = useMemo(() => {
@@ -167,6 +168,20 @@ const CartPage = () => {
     if (!bill) return; 
 
     setLoading(true);
+    let finalCoordinates = null;
+    
+    // Attempt to get student coordinates for real-time tracking
+    if (orderType === 'delivery') {
+      try {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+        });
+        finalCoordinates = { lat: position.coords.latitude, lng: position.coords.longitude };
+      } catch (e) {
+        console.warn("Could not get student location for delivery", e);
+      }
+    }
+
     try {
       if (saveThisAddress && orderType === 'delivery') {
         try {
@@ -178,6 +193,7 @@ const CartPage = () => {
         vendorId,
         items: items.map(i => ({ menuItemId: i.menuItemId, quantity: i.quantity, price: i.price })),
         deliveryAddress: orderType === 'take_away' ? undefined : address,
+        deliveryCoordinates: finalCoordinates,
         orderType,
         specialInstructions: instructions || '',
         scheduledFor: scheduledFor ? scheduledFor : undefined,
