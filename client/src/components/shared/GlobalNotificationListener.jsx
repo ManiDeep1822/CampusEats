@@ -156,8 +156,11 @@ const GlobalNotificationListener = () => {
         'order:preparing',
         'order:ready',
         'order:picked',
+        'order:picked_up',
         'order:delivered',
         'order:cancelled',
+        'order:rider_assigned',
+        'order:arrived',
         'delivery:otp',
         'receive_message'
       ];

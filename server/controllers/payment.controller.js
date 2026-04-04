@@ -90,8 +90,8 @@ const verifyPayment = asyncHandler(async (req, res) => {
       });
 
       const io = req.app.get('io');
-      if (io && populatedOrder.vendorId?.userId) {
-        const vendorRoom = `vendor:${populatedOrder.vendorId.userId}`;
+      if (io && populatedOrder.vendorId) {
+        const vendorRoom = `vendor:${populatedOrder.vendorId._id || populatedOrder.vendorId}`;
         const vendorMsg = `🚀 New paid order! A confirmed order for ₹${order.totalAmount} is waiting for you.`;
         
         io.to(vendorRoom).emit('order:new', { orderId: order._id, message: vendorMsg });

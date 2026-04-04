@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useSocketContext } from '../../context/SocketContext';
 import { useSocketEvent } from '../../hooks/useSocket';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FiStar, FiShoppingBag, FiCheckSquare, FiPackage, FiTruck, FiCheckCircle, FiClock } from 'react-icons/fi';
+import { FiStar, FiShoppingBag, FiCheckSquare, FiPackage, FiTruck, FiCheckCircle, FiClock, FiPhoneCall, FiMapPin, FiMessageSquare, FiNavigation, FiZap, FiTarget, FiArrowRight, FiSend } from 'react-icons/fi';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
 import toast from 'react-hot-toast';
@@ -30,6 +30,47 @@ const RecenterMap = ({ lat, lng }) => {
     map.setView([lat, lng], 16);
   }, [lat, lng, map]);
   return null;
+};
+
+// 🛵 SUB-COMPONENT: ISOLATED CHAT TO PREVENT MAP FLICKER
+const RiderChatBox = ({ chatHistory, onSendMessage, riderName }) => {
+  const [msg, setMsg] = useState('');
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [chatHistory]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!msg.trim()) return;
+    onSendMessage(msg);
+    setMsg('');
+  };
+
+  return (
+    <div className="mt-8 border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col transition-all bg-white" style={{ height: '350px' }}>
+      <div className="bg-gray-50 p-4 font-bold border-b text-gray-700 flex justify-between items-center">
+        <div className="flex items-center gap-2">
+           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+           <span className="text-sm uppercase tracking-tight">Chat with {riderName || 'Rider'}</span>
+        </div>
+      </div>
+      <div ref={scrollRef} className="flex-1 p-4 bg-gray-50/30 overflow-y-auto space-y-3 flex flex-col no-scrollbar">
+        {chatHistory.length === 0 && <div className="m-auto text-gray-400 text-[10px] font-bold uppercase tracking-widest text-center">Secure Channel Established.<br/>Connected with Delivery Partner.</div>}
+        {chatHistory?.map((m, i) => (
+          <div key={i} className={`max-w-[85%] p-3 rounded-2xl shadow-sm text-sm font-medium leading-relaxed ${m.isMe ? 'bg-gray-800 text-white self-end rounded-br-none' : 'bg-white border border-gray-100 text-gray-700 self-start rounded-bl-none'}`}>
+             {m.message}
+             <p className={`text-[8px] mt-1 font-black uppercase opacity-40 ${m.isMe ? 'text-right' : 'text-left'}`}>{m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Just now'}</p>
+          </div>
+        ))}
+      </div>
+      <form onSubmit={handleSubmit} className="p-3 bg-white border-t flex gap-2">
+        <input type="text" value={msg} onChange={e => setMsg(e.target.value)} placeholder="Type update for rider..." className="flex-1 min-w-0 bg-gray-100 rounded-2xl px-5 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500/20 transition-all" />
+        <button type="submit" disabled={!msg.trim()} className="shrink-0 bg-gray-800 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all disabled:opacity-20"><FiSend size={18} /></button>
+      </form>
+    </div>
+  );
 };
 
 const CAMPUS_CENTER = [28.7041, 77.1025]; // Default fallback
@@ -135,28 +176,29 @@ const OrderTracking = () => {
   
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
-  useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        const { data } = await api.get(`/student/orders/${id}`);
-        dispatch(setActiveOrder(data));
-        
-        if (data.deliveryBoyId?.locationCoordinates?.lat) {
-          setRiderLocation([data.deliveryBoyId.locationCoordinates.lat, data.deliveryBoyId.locationCoordinates.lng]);
-        }
-        
-        if (data.chatHistory) {
-          setChatHistory(data.chatHistory.map(c => ({
-             message: c.message,
-             sender: c.sender,
-             timestamp: c.timestamp,
-             isMe: c.sender === 'Student'
-          })));
-        }
-      } catch (error) { console.error(error); } finally { setLoading(false); }
-    };
-    fetchOrder();
+  const fetchOrder = useCallback(async () => {
+    try {
+      const { data } = await api.get(`/student/orders/${id}`);
+      dispatch(setActiveOrder(data));
+      
+      if (data.deliveryBoyId?.locationCoordinates?.lat) {
+        setRiderLocation([data.deliveryBoyId.locationCoordinates.lat, data.deliveryBoyId.locationCoordinates.lng]);
+      }
+      
+      if (data.chatHistory) {
+        setChatHistory(data.chatHistory.map(c => ({
+           message: c.message,
+           sender: c.sender,
+           timestamp: c.timestamp,
+           isMe: c.sender === 'Student'
+        })));
+      }
+    } catch (error) { console.error(error); } finally { setLoading(false); }
   }, [id, dispatch]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
 
   const handleReceiveMessage = useCallback((msg) => {
     setChatHistory(prev => [...prev, msg]);
@@ -166,7 +208,10 @@ const OrderTracking = () => {
   useSocketEvent('order:preparing', (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'preparing', estimatedTime: data.estimatedTime })); });
   useSocketEvent('order:ready',     (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'ready' })); });
   useSocketEvent('order:picked',    (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'picked_up' })); });
+  useSocketEvent('order:picked_up', (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'picked_up' })); });
   useSocketEvent('order:delivered', (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'delivered' })); });
+  useSocketEvent('order:rider_assigned', (data) => { if (data.orderId === id) fetchOrder(); });
+  useSocketEvent('order:arrived', (data) => { if (data.orderId === id) fetchOrder(); });
   useSocketEvent('receive_message', handleReceiveMessage);
   
   useSocketEvent('rider_location_update', (locData) => { 
@@ -175,9 +220,8 @@ const OrderTracking = () => {
     }
   });
 
-  const sendMessage = (e) => {
-    e.preventDefault();
-    if (!chatMessage.trim() || !activeOrder.deliveryBoyId) return;
+  const sendMessage = (messageText) => {
+    if (!messageText.trim() || !activeOrder.deliveryBoyId) return;
 
     const getTargetId = () => {
       const targetUser = activeOrder?.deliveryBoyId?.userId;
@@ -192,17 +236,16 @@ const OrderTracking = () => {
          orderId: activeOrder._id, 
          to: targetRoom, 
          replyTo: `student:${activeOrder.studentId?._id || activeOrder.studentId || ''}`,
-         message: chatMessage, 
+         message: messageText, 
          sender: 'Student', 
          timestamp: Date.now() 
       };
       
       socket?.emit('send_message', packet);
       setChatHistory(prev => [...prev, { ...packet, isMe: true }]);
-      setChatMessage('');
-    } catch (err) {
-      console.warn('Chat failure:', err.message);
-      toast.error('Could not send message. Rider might be offline.');
+    } catch (error) { 
+      console.error(error); 
+      toast.error('Could not send message');
     }
   };
 
@@ -524,24 +567,11 @@ const OrderTracking = () => {
         )}
 
         {activeOrder?.deliveryBoyId && (trackingStatus || activeOrder.status) !== 'delivered' && (
-          <div className="mt-8 border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col" style={{ height: '350px' }}>
-            <div className="bg-gray-100 p-4 font-bold border-b text-gray-700 flex justify-between">
-              <span>Chat with Rider</span>
-              <span className="text-green-500 text-sm font-bold animate-pulse">● Online</span>
-            </div>
-            <div className="flex-1 p-4 bg-gray-50 overflow-y-auto space-y-3 flex flex-col">
-              {chatHistory.length === 0 && <div className="m-auto text-gray-400 text-sm">Send a message to your delivery partner.</div>}
-              {chatHistory?.map((msg, i) => (
-                <div key={i} className={`max-w-[75%] p-3 rounded-xl shadow-sm text-sm ${msg.isMe ? 'bg-primary text-white self-end rounded-br-none' : 'bg-white border text-gray-800 self-start rounded-bl-none'}`}>
-                   {msg.message}
-                </div>
-              ))}
-            </div>
-            <form onSubmit={sendMessage} className="p-3 bg-white border-t flex gap-2">
-              <input type="text" value={chatMessage} onChange={e => setChatMessage(e.target.value)} placeholder="Type a message..." className="flex-1 min-w-0 bg-gray-100 rounded-full px-4 outline-none focus:ring-2 focus:ring-orange-200" />
-              <button type="submit" disabled={!chatMessage.trim()} className="shrink-0 bg-primary text-white px-4 sm:px-6 py-2 rounded-full hover:bg-orange-600 transition disabled:opacity-50 font-bold text-sm sm:text-base">Send</button>
-            </form>
-          </div>
+          <RiderChatBox 
+            chatHistory={chatHistory} 
+            onSendMessage={sendMessage} 
+            riderName={activeOrder.deliveryBoyId?.userId?.name || activeOrder.deliveryBoyId?.name} 
+          />
         )}
 
         <AnimatePresence>

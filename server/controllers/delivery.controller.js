@@ -433,8 +433,10 @@ const updateLocation = asyncHandler(async (req, res) => {
   // If rider has an active order, notify the student via Socket
   if (rider.activeOrderId) {
     const io = req.app.get('io');
-    if (io) {
-      io.to(`student_order:${rider.activeOrderId}`).emit('rider_location_update', {
+    const order = await Order.findById(rider.activeOrderId).select('studentId');
+    if (io && order) {
+      const recipientId = order.studentId?._id || order.studentId;
+      io.to(`student:${recipientId}`).emit('rider_location_update', {
         orderId: rider.activeOrderId,
         lat,
         lng,
