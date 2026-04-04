@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useSocketContext } from '../../context/SocketContext';
 import { useSocketEvent } from '../../hooks/useSocket';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FiStar } from 'react-icons/fi';
+import { FiStar, FiShoppingBag, FiCheckSquare, FiPackage, FiTruck, FiCheckCircle, FiClock } from 'react-icons/fi';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
 import toast from 'react-hot-toast';
@@ -41,13 +41,14 @@ const OrderTracking = () => {
   const { activeOrder, trackingStatus } = useSelector(state => state.order);
   const { user } = useSelector(state => state.auth);
   const dispatch = useDispatch();
-  
+
   const socket = useSocketContext();
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
   const [riderLocation, setRiderLocation] = useState(null);
   const [routeCoords, setRouteCoords] = useState([]);
-  
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+
   useEffect(() => {
     const getRoute = async () => {
        const coords = await fetchOSRMRoute(VENDOR_LATLNG, STUDENT_LATLNG);
@@ -55,11 +56,23 @@ const OrderTracking = () => {
     };
     getRoute();
 
-    if (!document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) {
+    const scriptId = 'razorpay-checkout-script';
+    if (!document.getElementById(scriptId)) {
       const script = document.createElement('script');
+      script.id = scriptId;
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.async = true;
+      script.onload = () => {
+        console.log('Razorpay script loaded successfully');
+        setRazorpayLoaded(true);
+      };
+      script.onerror = () => {
+        console.error('Failed to load Razorpay script');
+        toast.error('Payment system failed to load. Please refresh the page.');
+      };
       document.body.appendChild(script);
+    } else if (window.Razorpay) {
+      setRazorpayLoaded(true);
     }
   }, []);
 
@@ -267,26 +280,48 @@ const OrderTracking = () => {
            </div>
         )}
 
-        <div className="relative pl-8 space-y-8 py-6 max-sm:pl-4 max-sm:space-y-6 max-sm:py-4">
-          <div className="absolute left-11 top-6 bottom-6 w-0.5 bg-gray-100 max-sm:left-[27px]"></div>
+        <div className="relative pl-10 space-y-10 py-8 max-sm:pl-6 max-sm:space-y-8 max-sm:py-6">
+          <div className="absolute left-14 top-10 bottom-10 w-0.5 bg-gray-100 max-sm:left-[35px]"></div>
           {steps.map((step, idx) => {
             const isDelivered = (trackingStatus || activeOrder.status) === 'delivered';
             const isCompleted = idx < currentStepIdx || (isDelivered && idx === currentStepIdx);
             const isActive = idx === currentStepIdx && !isDelivered;
-            const labels = { 
-              placed: "Order Placed", 
-              confirmed: "Confirmed", 
-              preparing: "Preparing", 
-              ready: isTakeAway ? "Ready for Pickup" : "Ready", 
-              picked_up: "Out for Delivery", 
-              delivered: isTakeAway ? "Collected" : "Delivered" 
+            
+            const stepConfig = {
+              placed: { label: "Order Placed", icon: <FiShoppingBag />, color: "blue" },
+              confirmed: { label: "Booking Confirmed", icon: <FiCheckSquare />, color: "indigo" },
+              preparing: { label: "Chef is Preparing", icon: <FiClock />, color: "orange" },
+              ready: { label: isTakeAway ? "Ready for Pickup" : "Food is Ready", icon: <FiPackage />, color: "emerald" },
+              picked_up: { label: "Out for Delivery", icon: <FiTruck />, color: "orange" },
+              delivered: { label: isTakeAway ? "Order Collected" : "Delivered", icon: <FiCheckCircle />, color: "emerald" }
             };
+
+            const config = stepConfig[step];
+
             return (
-              <div key={step} className="flex items-center relative z-10">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-4 max-sm:w-6 max-sm:h-6 max-sm:border-2 ${isActive ? 'bg-primary border-orange-200 animate-pulse' : isCompleted ? 'bg-accent border-green-100' : 'bg-gray-100 border-white'}`}>
-                  {(isCompleted || isActive) && <div className="w-2 h-2 bg-white rounded-full max-sm:w-1.5 max-sm:h-1.5"></div>}
+              <div key={step} className="flex items-center relative z-10 group">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border-2 transition-all duration-500 ${
+                  isActive ? 'bg-primary border-orange-200 text-white shadow-lg shadow-orange-200 animate-pulse scale-110' : 
+                  isCompleted ? 'bg-emerald-500 border-emerald-100 text-white' : 
+                  'bg-white border-gray-100 text-gray-300'
+                }`}>
+                  {config.icon}
                 </div>
-                <div className={`ml-4 text-base max-sm:text-sm ${isActive ? 'text-primary font-bold' : isCompleted ? 'text-gray-800' : 'text-gray-400'}`}>{labels[step]}</div>
+                <div className="ml-6">
+                  <div className={`text-base font-black transition-colors ${isActive ? 'text-primary' : isCompleted ? 'text-gray-800' : 'text-gray-400'}`}>
+                    {config.label}
+                  </div>
+                  {isActive && step === 'preparing' && (
+                    <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mt-0.5">
+                      Estimated: {activeOrder?.estimatedTime || 15} mins
+                    </p>
+                  )}
+                  {isCompleted && (
+                    <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest mt-0.5">
+                      Completed
+                    </p>
+                  )}
+                </div>
               </div>
             );
           })}

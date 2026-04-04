@@ -13,7 +13,7 @@ const StudentOffers = () => {
 
    return (
        <div className="min-h-screen bg-slate-50 pb-20 pt-8 px-4">
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-3xl mx-auto">
              <Link to="/student/home" className="flex items-center gap-2 text-slate-500 mb-6 hover:text-slate-800 transition-colors w-max font-bold text-sm">
                 <FiArrowLeft /> Back to Home
              </Link>

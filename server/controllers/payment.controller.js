@@ -103,34 +103,8 @@ const verifyPayment = asyncHandler(async (req, res) => {
           type: 'order_update',
           orderId: order._id
         });
-      }
 
-      // If this was a group order, mark the GroupCart as converted and notify all members
-      if (order.isGroupOrder) {
-        try {
-          const GroupCart = require('../models/GroupCart');
-          // The joinCode was returned alongside the order on group checkout
-          // Find the cart that was for this order's vendor and host
-          const groupCart = await GroupCart.findOne({
-            hostId: order.studentId,
-            vendorId: order.vendorId,
-            status: 'active'
-          });
-          if (groupCart) {
-            groupCart.status = 'converted';
-            await groupCart.save();
-            if (io) {
-              const populatedCart = await GroupCart.findById(groupCart._id)
-                .populate('members.userId', 'name profilePic');
-              io.to(`group:${groupCart.joinCode}`).emit('group:cart_updated', {
-                ...populatedCart.toObject(),
-                status: 'converted'
-              });
-            }
-          }
-        } catch (groupErr) {
-          console.error('[Payment] Could not convert group cart:', groupErr.message);
-        }
+        // Real-time Socket Emission
       }
     }
     
@@ -155,7 +129,7 @@ const getPaymentHistory = asyncHandler(async (req, res) => {
   res.json(payments);
 });
 
-const refundPayment = async (orderId) => {
+const refundPayment = async (orderId, reason = "Customer cancelled within 60s window") => {
   try {
     const payment = await Payment.findOne({ orderId, status: 'completed' });
     if (!payment || !payment.transactionId) return false;
@@ -168,7 +142,7 @@ const refundPayment = async (orderId) => {
     const refund = await razorpay.payments.refund(payment.transactionId, {
       amount: Math.round(payment.amount * 100),
       speed: "normal",
-      notes: { reason: "Customer cancelled within 60s window" }
+      notes: { reason }
     });
 
     if (refund) {

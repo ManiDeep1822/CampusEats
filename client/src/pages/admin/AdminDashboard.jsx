@@ -3,13 +3,13 @@ import { motion } from 'framer-motion';
 import { 
   FiUsers, 
   FiShoppingBag, 
-  FiDollarSign, 
   FiTruck,
   FiTrendingUp,
   FiActivity,
   FiMessageSquare,
   FiTag
 } from 'react-icons/fi';
+import { FaRupeeSign } from 'react-icons/fa';
 import { 
   AreaChart, 
   Area, 
@@ -29,21 +29,39 @@ import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
+  const [payouts, setPayouts] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStats();
+    fetchData();
   }, []);
 
-  const fetchStats = async () => {
+  const fetchData = async () => {
     try {
-      const { data } = await api.get('/admin/stats');
-      setStats(data);
+      const [statsRes, payoutsRes] = await Promise.all([
+        api.get('/admin/stats'),
+        api.get('/admin/payouts')
+      ]);
+      setStats(statsRes.data);
+      setPayouts(payoutsRes.data);
     } catch (error) {
-      toast.error('Failed to load dashboard statistics');
+      toast.error('Failed to load dashboard data');
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSettle = async (type, id) => {
+    if (!window.confirm(`Are you sure you have paid this ${type} and want to settle the balance?`)) return;
+    
+    const settleToast = toast.loading('Recording settlement...');
+    try {
+      await api.post('/admin/payouts/settle', { type, id });
+      toast.success('Payout settled and balance reset!', { id: settleToast });
+      fetchData(); // Refresh list
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to settle payout', { id: settleToast });
     }
   };
 
@@ -108,6 +126,9 @@ const AdminDashboard = () => {
               <Link to="/admin/riders" className="bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-emerald-600 transition flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95">
                 <FiTruck /> Manage Riders
               </Link>
+              <Link to="/admin/coupons" className="bg-amber-500 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-amber-600 transition flex items-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95 text-sm">
+                <FiTag /> Manage Coupons
+              </Link>
               <Link to="/admin/feedback" className="bg-purple-500 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-purple-600 transition flex items-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95 text-sm">
                 <FiMessageSquare /> Manage Feedback
               </Link>
@@ -125,7 +146,7 @@ const AdminDashboard = () => {
             title="Lifetime Volume" 
             value={`₹${(stats?.lifetimeTurnover || 0).toLocaleString()}`} 
             subtitle="Gross Platform Processing"
-            icon={<FiDollarSign size={24} />} 
+            icon={<FaRupeeSign size={24} />} 
             color="bg-blue-500 text-white" 
             lightColor="bg-blue-50"
           />
@@ -222,6 +243,135 @@ const AdminDashboard = () => {
               </ResponsiveContainer>
             </div>
           </motion.div>
+        </div>
+
+        {/* Weekly Payouts Section */}
+        <div className="mt-10 mb-8">
+          <div className="flex items-center gap-3 mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Settlement Command Center</h2>
+            <div className="h-px flex-1 bg-gray-200"></div>
+            <span className="text-xs font-black bg-orange-100 text-orange-600 px-3 py-1 rounded-full uppercase tracking-widest">Pending Payouts</span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Vendor Payouts */}
+            <motion.div 
+              variants={itemVariants}
+              className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <FiShoppingBag className="text-orange-500" />
+                  Vendors
+                </h2>
+                <span className="text-xs font-bold text-gray-400">Net unpaid balance</span>
+              </div>
+              
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {payouts?.vendorPayouts?.length === 0 ? (
+                  <p className="text-center py-10 text-gray-400 font-medium">All vendors are settled. Great job! ✅</p>
+                ) : (
+                  payouts?.vendorPayouts?.map((vendor, idx) => (
+                    <div key={idx} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-orange-200 transition-all group">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-white text-orange-600 rounded-xl flex items-center justify-center font-black shadow-sm group-hover:scale-110 transition-transform">
+                            {vendor.shopName?.[0]}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-gray-900 leading-none">{vendor.shopName}</h4>
+                            <p className="text-xs text-gray-500 mt-1">{vendor.name} • {vendor.phone}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-black text-green-600 leading-none">₹{vendor.pendingPayout?.toLocaleString()}</p>
+                          <p className="text-[10px] text-gray-400 font-black uppercase mt-1">Pending Transfer</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                        {vendor.paymentDetails?.upiId ? (
+                           <button 
+                             onClick={() => { navigator.clipboard.writeText(vendor.paymentDetails.upiId); toast.success('UPI ID Copied!'); }}
+                             className="text-xs font-bold bg-white border border-gray-200 px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-gray-100 transition active:scale-95"
+                           >
+                             <FiTrendingUp className="text-primary" /> {vendor.paymentDetails.upiId}
+                           </button>
+                        ) : (
+                          <span className="text-[10px] text-red-400 font-bold uppercase italic">Missing UPI/Bank Info</span>
+                        )}
+                        <button 
+                          onClick={() => handleSettle('vendor', vendor._id)}
+                          className="ml-auto text-xs font-black bg-orange-500 text-white px-4 py-1.5 rounded-lg hover:bg-orange-600 transition active:scale-95 shadow-lg shadow-orange-500/20"
+                        >
+                          Mark as Paid
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+
+            {/* Rider Payouts */}
+            <motion.div 
+              variants={itemVariants}
+              className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <FiTruck className="text-emerald-500" />
+                  Riders
+                </h2>
+                <span className="text-xs font-bold text-gray-400">Pending delivery commissions</span>
+              </div>
+              
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {payouts?.riderPayouts?.length === 0 ? (
+                  <p className="text-center py-10 text-gray-400 font-medium">All riders are settled. Excellent work! ✅</p>
+                ) : (
+                  payouts?.riderPayouts?.map((rider, idx) => (
+                    <div key={idx} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-emerald-200 transition-all group">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-white text-emerald-600 rounded-xl flex items-center justify-center font-black shadow-sm group-hover:scale-110 transition-transform">
+                            {rider.name?.[0]}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-gray-900 leading-none">{rider.name}</h4>
+                            <p className="text-xs text-gray-500 mt-1">{rider.vehicleType} • {rider.phone}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-black text-green-600 leading-none">₹{rider.pendingPayout?.toLocaleString()}</p>
+                          <p className="text-[10px] text-gray-400 font-black uppercase mt-1">Pending Transfer</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                        {rider.paymentDetails?.upiId ? (
+                           <button 
+                             onClick={() => { navigator.clipboard.writeText(rider.paymentDetails.upiId); toast.success('UPI ID Copied!'); }}
+                             className="text-xs font-bold bg-white border border-gray-200 px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-gray-100 transition active:scale-95"
+                           >
+                             <FiTrendingUp className="text-primary" /> {rider.paymentDetails.upiId}
+                           </button>
+                        ) : (
+                          <span className="text-[10px] text-red-400 font-bold uppercase italic">Missing UPI/Bank Info</span>
+                        )}
+                        <button 
+                          onClick={() => handleSettle('rider', rider._id)}
+                          className="ml-auto text-xs font-black bg-emerald-500 text-white px-4 py-1.5 rounded-lg hover:bg-emerald-600 transition active:scale-95 shadow-lg shadow-emerald-500/20"
+                        >
+                          Mark as Paid
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </div>
         </div>
 
       </div>

@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector, useDispatch } from 'react-redux';
 import { FiPhone, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import { setCredentials } from '../../store/authSlice';
+import { useAuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 const MandatoryPhoneModal = () => {
   const { user, token, isAuthenticated } = useSelector((state) => state.auth);
+  const { loading: authLoading } = useAuthContext();
   const dispatch = useDispatch();
   
   const [phone, setPhone] = useState('');
@@ -15,7 +17,7 @@ const MandatoryPhoneModal = () => {
   const [error, setError] = useState('');
 
   // Only show if user is Google-authenticated and has no phone number
-  const showModal = isAuthenticated && user?.provider === 'google' && !user?.phone;
+  const showModal = !authLoading && isAuthenticated && user?.provider === 'google' && !user?.phone;
 
   const handleSubmit = async (e) => {
     e.preventDefault();

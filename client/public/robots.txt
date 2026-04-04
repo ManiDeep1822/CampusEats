@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /vendor
+Disallow: /delivery
+Disallow: /profile
+
+Sitemap: https://campuseats.app/sitemap.xml

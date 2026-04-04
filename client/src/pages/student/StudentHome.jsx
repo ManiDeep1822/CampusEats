@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  FiSearch, FiClock, FiStar, FiHeart, FiFilter, FiCheck, 
-  FiChevronRight, FiMapPin, FiTruck, FiZap 
+  FiChevronRight, FiMapPin, FiTruck, FiZap, 
+  FiClock, FiHeart, FiSearch, FiStar, FiFilter, FiCheck 
 } from 'react-icons/fi';
+import { FaRupeeSign } from 'react-icons/fa';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 import CartFloatingButton from '../../components/student/CartFloatingButton';
@@ -130,7 +131,6 @@ const StudentHome = () => {
     
     const wasAdding = !isCurrentlyFav;
     setFavorites(newFavs);
-    toast.success(wasAdding ? "Saved to Favorites" : "Removed from Favorites");
 
     try {
       const { data } = await api.put(`/student/favorites/${vendorId}`);
@@ -186,7 +186,6 @@ const StudentHome = () => {
     const success = (position) => {
       setAddress(`LPU (Detected)`);
       setLocating(false);
-      toast.success('Location detected!');
     };
 
     const errorCallback = (error) => {
@@ -206,6 +205,13 @@ const StudentHome = () => {
     navigator.geolocation.getCurrentPosition(success, errorCallback, geoOptions);
   };
 
+  const prefetchRestaurant = async (id) => {
+    try {
+      // Pre-warm the cache for this restaurant
+      api.get(`/student/vendors/${id}`);
+    } catch (e) { /* silent */ }
+  };
+
   const RestaurantCard = ({ vendor }) => (
     <motion.div 
       layout
@@ -213,6 +219,7 @@ const StudentHome = () => {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       whileHover={{ y: -4 }}
+      onMouseEnter={() => prefetchRestaurant(vendor._id)}
       className={`relative bg-white rounded-3xl overflow-hidden premium-shadow border border-gray-100/50 group transition-all duration-300 ${!vendor.isOpen ? 'grayscale-[0.8] opacity-75' : ''}`}
     >
       <Link to={`/student/restaurant/${vendor._id}`} className="block">
@@ -440,17 +447,17 @@ const StudentHome = () => {
             <Link to="/student/offers" className="text-[9px] md:text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:underline">View All</Link>
           </div>
 
-          <div className="flex gap-4 overflow-x-auto no-scrollbar py-4 -mx-4 snap-x snap-mandatory">
+          <div className="flex gap-5 overflow-x-auto no-scrollbar py-6 -mx-4 px-4 snap-x snap-mandatory">
              {[
                { id: 1, title: 'FLAT ₹100 OFF', code: 'CAMPUS100', desc: 'Above ₹499', icon: '₹', color: 'bg-indigo-50 text-indigo-600' },
                { id: 2, title: '50% OFF', code: 'WELCOME50', desc: 'Up to ₹80', icon: '%', color: 'bg-blue-50 text-blue-600' },
                { id: 3, title: 'FREE DELIVERY', code: 'FREESHIP', desc: 'On all orders', icon: '🚚', color: 'bg-emerald-50 text-emerald-600' },
                { id: 4, title: 'BOGO MONDAY', code: 'BOGO', desc: 'Select items', icon: '🍔', color: 'bg-orange-50 text-orange-600' },
-             ].map((offer, index) => (
+             ].map((offer) => (
                 <motion.div
                   key={offer.id}
-                  whileHover={{ y: -2, scale: 1.02 }}
-                  className={`flex-shrink-0 w-[240px] md:w-[260px] p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] flex items-center gap-3.5 snap-center md:snap-start cursor-pointer group ${index === 0 ? 'ml-4' : ''} ${index === 3 ? 'mr-4' : ''}`}
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  className="flex-shrink-0 w-[260px] md:w-[280px] p-4 rounded-3xl bg-white border border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center gap-4 snap-center md:snap-start cursor-pointer group transition-all"
                 >
                    {/* Left Icon */}
                    <div className={`w-10 h-10 shrink-0 ${offer.color} rounded-full flex items-center justify-center text-lg shadow-inner`}>

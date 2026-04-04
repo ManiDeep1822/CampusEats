@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiTrendingUp, FiShoppingBag, FiClock, FiChevronRight, FiMapPin, FiTrash2, FiCamera, FiMonitor } from 'react-icons/fi';
+import { FaRupeeSign } from 'react-icons/fa';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
@@ -111,6 +112,19 @@ const VendorDashboard = () => {
     );
   };
 
+  const handleUpdatePayment = async (e) => {
+    e.preventDefault();
+    const upiId = e.target.upiId.value;
+    const saveToast = toast.loading('Saving payment details...');
+    try {
+      await api.put('/vendor/profile', { paymentDetails: { upiId } });
+      toast.success('Payment settings updated! 💸', { id: saveToast });
+      fetchStats();
+    } catch (error) {
+      toast.error('Failed to update payment info', { id: saveToast });
+    }
+  };
+
   if (loading) return <Loader />;
   if (!data || !data.stats) return <div className="text-center py-20 text-red-500 font-bold">Error loading dashboard. Please refresh.</div>;
 
@@ -195,7 +209,51 @@ const VendorDashboard = () => {
               <h3 className="text-textSecondary font-bold">Pending Orders</h3>
               <div className="p-2 bg-yellow-100 text-yellow-600 rounded-lg"><FiClock size={20}/></div>
             </div>
-            <p className="text-3xl font-extrabold text-gray-900">{(data?.stats?.rating || 0).toFixed(1)}</p>
+            <p className="text-3xl font-extrabold text-gray-900">{data.stats.pendingOrders || 0}</p>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-green-500">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-textSecondary font-bold text-green-700">Lifetime Balance</h3>
+              <div className="p-2 bg-green-100 text-green-600 rounded-lg"><FaRupeeSign size={20}/></div>
+            </div>
+            <p className="text-3xl font-extrabold text-green-700">₹{data.stats.lifetimeEarnings || 0}</p>
+          </div>
+        </div>
+
+        {/* Settlement & Payout Info */}
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col lg:flex-row items-center gap-10">
+          <div className="flex-shrink-0 text-center lg:text-left">
+            <h2 className="text-2xl font-bold font-heading text-gray-900 mb-2">Settlement Center</h2>
+            <p className="text-sm text-gray-500 mb-4 max-w-xs">Your pending balance is settled every week by the admin via your provided UPI ID.</p>
+            <div className="inline-block p-4 bg-orange-50 rounded-2xl border border-orange-100">
+              <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-1">Current Unpaid Balance</p>
+              <p className="text-4xl font-black text-orange-600">₹{data.stats.pendingPayout || 0}</p>
+            </div>
+          </div>
+
+          <div className="flex-1 w-full p-6 bg-gray-50 rounded-2xl border border-gray-100">
+            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <FiTrendingUp className="text-primary" />
+              Update Payout Destination
+            </h3>
+            <form onSubmit={handleUpdatePayment} className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <input 
+                  name="upiId"
+                  defaultValue={data.shopDetails.paymentDetails?.upiId || ''}
+                  placeholder="Enter your UPI ID (e.g. name@paytm)"
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none text-sm transition-all shadow-sm"
+                  required
+                />
+              </div>
+              <button 
+                type="submit"
+                className="bg-primary text-white font-bold px-8 py-3 rounded-xl hover:bg-orange-600 transition shadow-lg shadow-orange-500/20 active:scale-95"
+              >
+                Save UPI
+              </button>
+            </form>
+            <p className="text-[10px] text-gray-400 mt-3 font-medium uppercase tracking-tighter">* All payouts are processed manually by the admin to this ID.</p>
           </div>
         </div>
 
@@ -257,8 +315,11 @@ const VendorDashboard = () => {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
            <h2 className="text-xl font-bold font-heading mb-4">Quick Actions</h2>
            <div className="flex flex-wrap gap-3 items-stretch">
-             <Link to="/vendor/menu" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary hover:text-primary transition text-base max-sm:text-sm">Manage Menu</Link>
-             <Link to="/vendor/orders" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary hover:text-primary transition text-base max-sm:text-sm">Live Orders Queue</Link>
+             <Link to="/vendor/menu" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary hover:text-primary transition text-base max-sm:text-sm flex items-center justify-center">Manage Menu</Link>
+             <Link to="/vendor/payments" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary hover:text-primary transition text-base max-sm:text-sm flex items-center gap-2">
+               <FaRupeeSign size={18} className="text-primary" />
+               Payment History
+             </Link>
              
              {/* KDS — Command Center Card */}
              <Link

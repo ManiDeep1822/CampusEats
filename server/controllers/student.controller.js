@@ -7,9 +7,12 @@ const Notification = require('../models/Notification');
 const Coupon = require('../models/Coupon');
 const { generateReceiptHTML } = require('../utils/receiptTemplate');
 
-// Helper to calculate delivery fees centrally
-const calculateDeliveryFee = (subtotal) => {
-  return subtotal > 200 ? 0 : 15; // Free delivery over 200 INR
+// Helper to calculate delivery fees based on distance
+const calculateDeliveryFee = (subtotal, distance = 1.2) => {
+  if (subtotal > 200) return 0; // Free delivery over 200 INR for normal orders
+  const baseFee = 15;
+  const distanceFee = Math.max(0, Math.floor(distance) * 5); // ₹5 per km
+  return baseFee + distanceFee;
 };
 
 const getVendors = asyncHandler(async (req, res) => {
@@ -38,32 +41,37 @@ const searchItems = asyncHandler(async (req, res) => {
   if (!queryTerm) return res.json({ vendors: [], items: [], query: '' });
 
   try {
-    const escapedTerm = escapeRegex(queryTerm);
-    const regex = { $regex: escapedTerm, $options: 'i' };
+    const tokens = escapedTerm.split(/\s+/).filter(t => t.length > 0);
+    const tokenRegex = tokens.join('|');
+    const regex = { $regex: tokenRegex, $options: 'i' };
 
     // Search vendors by shop name OR cuisine type OR location
     const vendors = await Vendor.find({
       isApproved: true,
       $or: [
         { shopName: regex },
-        { cuisineType: regex }, // matches any in array
+        { cuisineType: { $in: tokens.map(t => new RegExp(t, 'i')) } },
         { location: regex },
       ]
     })
     .populate('userId', 'name profilePic')
     .lean();
 
-    // Search menu items by name or description
+    // Search menu items by name, description, OR category
     const items = await MenuItem.find({
-      $or: [{ name: regex }, { description: regex }],
-      isAvailable: { $ne: false } // Matches true or undefined
+      $or: [
+        { name: regex }, 
+        { description: regex },
+        { category: regex }
+      ],
+      isAvailable: { $ne: false }
     })
     .populate('vendorId', 'shopName location rating isOpen isApproved cuisineType shopImage')
     .lean();
 
     // Filter out items from unapproved vendors with enhanced safety check
     const verifiedItems = items.filter(item => {
-      if (!item.vendorId) return false; // Vendor deleted or not found
+      if (!item.vendorId) return false; 
       return item.vendorId.isApproved === true;
     });
 
@@ -97,9 +105,13 @@ const calculateOrderBill = asyncHandler(async (req, res) => {
     return res.json({ subtotal: 0, distance: 0, deliveryFee: 0, platformFee: 0, taxes: 0, discountAmount: 0, finalTotal: 0 });
   }
 
+  // Bulk Fetch MenuItems to avoid serial DB calls in a loop
+  const itemIds = items.map(i => i.menuItemId || i._id);
+  const menuItems = await MenuItem.find({ _id: { $in: itemIds } });
+  
   let subtotal = 0;
   for (const item of items) {
-    const menuItem = await MenuItem.findById(item.menuItemId || item._id);
+    const menuItem = menuItems.find(m => m._id.toString() === (item.menuItemId || item._id).toString());
     if (menuItem) {
       subtotal += menuItem.price * item.quantity;
     }
@@ -123,8 +135,8 @@ const calculateOrderBill = asyncHandler(async (req, res) => {
     }
   }
 
-  const distance = 1.2; // Constant distance or calculated via vendor proximity
-  const deliveryFee = orderType === 'take_away' ? 0 : calculateDeliveryFee(subtotal);
+  const distance = 1.2; 
+  const deliveryFee = orderType === 'take_away' ? 0 : calculateDeliveryFee(subtotal, distance);
   const platformFee = 5; 
   const taxes = Number((subtotal * 0.05).toFixed(2));
   const finalTotal = Number((subtotal + deliveryFee + platformFee + taxes - discountAmount).toFixed(2));
@@ -145,8 +157,12 @@ const applyCoupon = asyncHandler(async (req, res) => {
   }
 
   let subtotal = 0;
+  // Bulk Fetch MenuItems
+  const itemIds = items.map(i => i.menuItemId || i._id);
+  const menuItems = await MenuItem.find({ _id: { $in: itemIds } });
+
   for (const item of items) {
-    const menuItem = await MenuItem.findById(item.menuItemId || item._id);
+    const menuItem = menuItems.find(m => m._id.toString() === (item.menuItemId || item._id).toString());
     if (menuItem) {
       subtotal += menuItem.price * item.quantity;
     }
@@ -179,9 +195,16 @@ const generateSecureBill = async (vendorId, items, orderType, couponCode) => {
   let subtotal = 0;
   let verifiedItems = [];
 
+  // Bulk Fetch MenuItems to reduce DB round-trips
+  const itemIds = items.map(i => i.menuItemId || i._id);
+  const menuItems = await MenuItem.find({ 
+    _id: { $in: itemIds },
+    vendorId: vendorId 
+  });
+
   for (const item of items) {
-    const menuItem = await MenuItem.findById(item.menuItemId || item._id);
-    if (menuItem && menuItem.vendorId.toString() === vendorId.toString()) {
+    const menuItem = menuItems.find(m => m._id.toString() === (item.menuItemId || item._id).toString());
+    if (menuItem) {
       if (menuItem.isAvailable === false) {
         throw new Error(`Sorry, "${menuItem.name}" is currently out of stock.`);
       }
@@ -189,7 +212,7 @@ const generateSecureBill = async (vendorId, items, orderType, couponCode) => {
       verifiedItems.push({
         menuItemId: menuItem._id,
         quantity: item.quantity,
-        price: menuItem.price // Always use Database price, never trust frontend payload
+        price: menuItem.price // Database price
       });
     }
   }
@@ -416,13 +439,14 @@ const cancelOrder = asyncHandler(async (req, res) => {
 
   // Attempt Refund if already paid
   let refundStatus = 'not_started';
+  const reason = 'User cancelled within 60s window';
   if (order.status === 'placed') {
-      const isRefunded = await refundPayment(order._id);
+      const isRefunded = await refundPayment(order._id, reason);
       refundStatus = isRefunded ? 'success' : 'failed';
   }
 
   order.status = 'cancelled';
-  order.cancellationReason = 'User cancelled within 60s window';
+  order.cancellationReason = reason;
   await order.save();
   
   const io = req.app.get('io');

@@ -13,6 +13,7 @@ const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 const socketHandler = require('./socket/socket');
 const { startPaymentCleanupJob } = require('./jobs/paymentCleanup');
+const { startAutoCancelJob } = require('./jobs/autoCancelJob');
  
  if (!process.env.JWT_SECRET) {
    console.error('❌ FATAL: JWT_SECRET is missing from environment variables. Server exiting.');
@@ -31,15 +32,11 @@ const botRoutes = require('./routes/bot.routes');
 const feedbackRoutes = require('./routes/feedback.routes');
 const receiptRoutes = require('./routes/receipt.routes');
 const notificationRoutes = require('./routes/notification.routes');
-const groupRoutes = require('./routes/group.routes');
 
 const app = express();
 const server = http.createServer(app);
 
-// Connect Database will happen at the bottom with server.listen
-console.log('⏳ Preparing Server...');
-
-console.log('🚀 Loading routes and middleware...');
+// Combined CORS origins
 
 
 // CORS Whitelist — always allow Vercel production + local dev, plus any extra CLIENT_URL from env
@@ -93,7 +90,7 @@ app.use((req, _, next) => {
         configurable: true,
         enumerable: true
       });
-    } catch (e) {
+    } catch {
       // Silent catch for locked properties
     }
   });
@@ -146,6 +143,7 @@ const io = new Server(server, {
 app.set('io', io);
 socketHandler(io);
 startPaymentCleanupJob(io);
+startAutoCancelJob(io);
 
 // Rate Limiting Config
 const apiLimiter = rateLimit({
@@ -200,7 +198,6 @@ app.use('/api/bot', apiLimiter, botRoutes);
 app.use('/api/feedback', feedbackLimiter, feedbackRoutes);
 app.use('/api/receipts', receiptRoutes);
 app.use('/api/notifications', apiLimiter, notificationRoutes);
-app.use('/api/group', apiLimiter, groupRoutes);
  
  // Apply strict rate limits for Admin to prevent brute-force or abuse
  app.use('/api/admin', adminLimiter, adminRoutes);
@@ -262,6 +259,3 @@ process.on('uncaughtException', (err) => {
   console.error(`🔥 Uncaught Exception: ${err.message}`);
   process.exit(1);
 });
-
-
-

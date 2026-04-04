@@ -41,7 +41,6 @@ const ActiveDelivery = () => {
   const [routeCoords, setRouteCoords] = useState([]);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [locationStatus, setLocationStatus] = useState('idle'); 
-  const [locationError, setLocationError] = useState(null);
   
   const VENDOR_LATLNG = [28.7041, 77.1025];
   const STUDENT_LATLNG = [28.7061, 77.1045];
@@ -193,15 +192,15 @@ const ActiveDelivery = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24 font-['Inter',sans-serif]">
-      {/* 🚀 CLEAN TRIP HEADER */}
-      <div className="bg-white border-b sticky top-0 z-50">
-        <div className="max-w-md mx-auto px-5 py-6 flex items-center justify-between">
+      {/* 🚀 RESPONSIVE TRIP HEADER (Fixed Overlap) */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-5 py-6 flex items-center justify-between">
            <button onClick={() => navigate('/delivery/dashboard')} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
               <FiChevronLeft size={24} />
            </button>
            <div className="text-center">
               <h1 className="text-lg font-black text-gray-800 tracking-tight">MISSION ACTIVE</h1>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">ID: #{data._id.slice(-6).toUpperCase()}</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">ID: #{data._id.slice(-6).toUpperCase()}</p>
            </div>
            <button onClick={() => setShowCancelModal(true)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all">
               <FiTarget size={20} />
@@ -209,151 +208,161 @@ const ActiveDelivery = () => {
         </div>
       </div>
 
-      <div className="max-w-md mx-auto p-5 space-y-6">
-        
-        {/* 🗺️ LIVE MAP VIEW */}
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden relative">
-            <div className="h-60 relative z-0">
-                <MapContainer center={riderLocation || VENDOR_LATLNG} zoom={16} className="h-full w-full">
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                    {riderLocation && <RecenterMap lat={riderLocation[0]} lng={riderLocation[1]} />}
-                    {routeCoords.length > 0 && <Polyline positions={routeCoords} color="#FC8019" weight={5} opacity={0.6} />}
-                    {riderLocation && (
-                      <Marker position={riderLocation} icon={L.divIcon({
-                        html: '<div class="text-3xl">🛵</div>',
-                        className: 'bg-transparent border-none'
-                      })} />
-                    )}
-                    <Marker position={VENDOR_LATLNG} icon={L.divIcon({ html: '<div class="text-2xl">🏪</div>' })} />
-                </MapContainer>
-                <div className="absolute top-4 right-4 z-[400]">
-                    <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${locationStatus === 'active' ? 'bg-green-50 text-green-500 border border-green-100' : 'bg-red-50 text-red-500 border border-red-100'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${locationStatus === 'active' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
-                        {locationStatus === 'active' ? 'Live GPS' : 'GPS Linking...'}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {/* 📋 TRIP LIFECYCLE */}
-        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center relative px-2 mb-8">
-                <div className="absolute left-0 right-0 top-4 h-1 bg-gray-50 -z-0">
-                    <motion.div initial={{ width: 0 }} animate={{ width: data.status === 'delivered' ? '100%' : data.status === 'picked_up' ? '66%' : data.status === 'ready' ? '33%' : '5%' }} className="h-full bg-orange-500" />
-                </div>
-                {['Pickup', 'Transit', 'Handover'].map((label, i) => {
-                    const active = (i === 0 && !['picked_up', 'delivered'].includes(data.status)) || (i === 1 && data.status === 'picked_up') || (i === 2 && data.status === 'delivered');
-                    const done = (i === 0 && ['picked_up', 'delivered'].includes(data.status)) || (i === 1 && data.status === 'delivered');
-                    return (
-                        <div key={label} className="flex flex-col items-center gap-2 relative z-10">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all border-4 ${done ? 'bg-orange-500 border-orange-500 text-white' : active ? 'bg-white border-orange-500 text-orange-500 scale-110 shadow-lg' : 'bg-white border-gray-50 text-gray-200'}`}>
-                                {done ? <FiCheckCircle size={14} /> : i === 0 ? <FiPackage /> : i === 1 ? <FiNavigation /> : <FiTarget />}
-                            </div>
-                            <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${active ? 'text-orange-500' : 'text-gray-300'}`}>{label}</span>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* PICKUP INTERFACE */}
-            {data.status !== 'picked_up' && (
-                <div className="space-y-4">
-                    <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-                            <FiPackage size={24} />
-                        </div>
-                        <div className="grow">
-                            <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Collecting From</p>
-                            <h2 className="text-xl font-black text-gray-800 leading-tight uppercase">{data.vendorId?.shopName}</h2>
-                            <p className="text-sm text-gray-400 font-medium italic truncate">{data.vendorId?.location}</p>
-                        </div>
-                    </div>
-                    {['placed', 'confirmed', 'preparing'].includes(data.status) && (
-                        <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 flex items-center justify-between">
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Wait Time</span>
-                            <span className="text-lg font-black text-orange-600 font-mono tracking-tighter">{waitTimer}</span>
-                        </div>
-                    )}
-                    {data.status === 'ready' && (
-                        <button onClick={() => handleAction('picked')} className="w-full bg-[#FC8019] text-white py-4 rounded-2xl font-black text-base shadow-xl shadow-orange-500/20 active:scale-95 transition-all uppercase tracking-widest">Accept Pickup</button>
-                    )}
-                </div>
-            )}
-
-            {/* DROP-OFF INTERFACE */}
-            {data.status === 'picked_up' && (
-                <div className="space-y-6">
-                    <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                            <FiTarget size={24} />
-                        </div>
-                        <div className="grow">
-                            <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Handing Over To</p>
-                            <h2 className="text-xl font-black text-gray-800 leading-tight uppercase">{data.studentId?.name}</h2>
-                            <p className="text-sm text-gray-400 font-medium italic truncate">{data.deliveryAddress}</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <a href={`tel:${data.studentId?.phone}`} className="flex items-center justify-center gap-2 py-4 rounded-2xl border border-green-200 bg-green-50 text-green-600 font-black text-xs uppercase tracking-widest"><FiPhoneCall /> Contact</a>
-                        <button onClick={() => window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'})} className="flex items-center justify-center gap-2 py-4 rounded-2xl border border-blue-200 bg-blue-50 text-blue-600 font-black text-xs uppercase tracking-widest"><FiMessageSquare /> Chat</button>
-                    </div>
-
-                    {/* SECURE PIN ENTRY */}
-                    <div className="pt-6 border-t border-gray-100 space-y-4">
-                        {!isOtpSent ? (
-                            <button onClick={() => sendOtpToStudent()} className="w-full bg-gray-800 text-white py-5 rounded-2xl font-black text-base uppercase tracking-widest shadow-xl active:scale-95 transition-all">Send Delivery PIN</button>
-                        ) : (
-                            <div className="space-y-4">
-                                <input 
-                                    type="text" maxLength="6" value={deliveryOtp} 
-                                    onChange={e => setDeliveryOtp(e.target.value.replace(/\D/g,''))}
-                                    placeholder="Enter 6-digit PIN"
-                                    className="w-full py-5 text-3xl font-black text-center tracking-[0.4em] bg-gray-50 rounded-2xl border-2 border-gray-100 focus:border-orange-500 outline-none transition-all"
-                                />
-                                <button onClick={() => handleAction('delivered')} disabled={deliveryOtp.length < 6} className="w-full bg-green-500 text-white py-5 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl shadow-green-500/20 active:scale-95 disabled:opacity-30">Finish Delivery</button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-
-        {/* 💬 CHAT FEED */}
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[350px]">
-          <div className="p-4 border-b flex items-center justify-between">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Live Chat</span>
-            <span className="text-[8px] font-black text-green-500 uppercase flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-green-500 animate-pulse"></span> App Online</span>
-          </div>
-          <div className="flex-1 p-5 overflow-y-auto space-y-4 flex flex-col no-scrollbar bg-gray-50/30">
-            {chatHistory.length === 0 && <div className="m-auto text-[10px] font-bold text-gray-300 uppercase tracking-widest">Connected with customer</div>}
-            {chatHistory.map((msg, i) => (
-              <div key={i} className={`max-w-[80%] p-4 rounded-2xl text-xs font-bold leading-relaxed ${msg.isMe ? 'bg-gray-800 text-white self-end rounded-br-none' : 'bg-white border text-gray-700 self-start rounded-bl-none'}`}>
-                {msg.message}
+      <div className="max-w-7xl mx-auto p-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            
+            {/* 🗺️ LIVE MAP (STICKY ON DESKTOP) */}
+            <div className="lg:sticky lg:top-28 space-y-4">
+              <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden relative border-t-4 border-t-orange-500">
+                  <div className="h-[400px] lg:h-[600px] relative z-0">
+                      <MapContainer center={riderLocation || VENDOR_LATLNG} zoom={16} className="h-full w-full">
+                          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                          {riderLocation && <RecenterMap lat={riderLocation[0]} lng={riderLocation[1]} />}
+                          {routeCoords.length > 0 && <Polyline positions={routeCoords} color="#FC8019" weight={5} opacity={0.6} />}
+                          {riderLocation && <Marker position={riderLocation} icon={L.divIcon({ html: '<div class="text-3xl">🛵</div>', className: 'bg-transparent border-none' })} />}
+                          <Marker position={VENDOR_LATLNG} icon={L.divIcon({ html: '<div class="text-2xl">🏪</div>' })} />
+                      </MapContainer>
+                      <div className="absolute top-4 right-4 z-[400]">
+                          <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${locationStatus === 'active' ? 'bg-green-50 text-green-500 border border-green-100' : 'bg-red-50 text-red-500 border border-red-100'}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${locationStatus === 'active' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
+                              {locationStatus === 'active' ? 'Live GPS' : 'GPS Linking...'}
+                          </div>
+                      </div>
+                  </div>
               </div>
-            ))}
-          </div>
-          <form onSubmit={sendMessage} className="p-3 bg-white border-t flex gap-2">
-            <input value={chatMessage} onChange={e => setChatMessage(e.target.value)} type="text" placeholder="Type message..." className="flex-1 bg-gray-50 rounded-xl px-4 py-3 text-xs font-bold outline-none" />
-            <button type="submit" className="w-11 h-11 bg-gray-800 text-white rounded-xl flex items-center justify-center shadow-lg active:scale-90 transition-all"><FiSend size={16} /></button>
-          </form>
-        </div>
+            </div>
 
+            {/* 📋 TRIP LIFECYCLE & ACTIONS (RIGHT COLUMN) */}
+            <div className="space-y-6">
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+                    <div className="flex justify-between items-center relative px-2 mb-10">
+                        <div className="absolute left-0 right-0 top-4 h-1 bg-gray-50 -z-0">
+                            <motion.div initial={{ width: 0 }} animate={{ width: data.status === 'delivered' ? '100%' : data.status === 'picked_up' ? '66%' : data.status === 'ready' ? '33%' : '5%' }} className="h-full bg-orange-500" />
+                        </div>
+                        {['Pickup', 'Transit', 'Handover'].map((label, i) => {
+                            const active = (i === 0 && !['picked_up', 'delivered'].includes(data.status)) || (i === 1 && data.status === 'picked_up') || (i === 2 && data.status === 'delivered');
+                            const done = (i === 0 && ['picked_up', 'delivered'].includes(data.status)) || (i === 1 && data.status === 'delivered');
+                            return (
+                                <div key={label} className="flex flex-col items-center gap-2 relative z-10">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all border-4 ${done ? 'bg-orange-500 border-orange-500 text-white' : active ? 'bg-white border-orange-500 text-orange-500 scale-110 shadow-lg' : 'bg-white border-gray-50 text-gray-200'}`}>
+                                        {done ? <FiCheckCircle size={14} /> : i === 0 ? <FiPackage /> : i === 1 ? <FiNavigation /> : <FiTarget />}
+                                    </div>
+                                    <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${active ? 'text-orange-500' : 'text-gray-300'}`}>{label}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* PICKUP INTERFACE */}
+                    {data.status !== 'picked_up' && (
+                        <div className="space-y-6">
+                            <div className="flex items-start gap-5">
+                                <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                                    <FiPackage size={28} />
+                                </div>
+                                <div className="grow">
+                                    <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1">Collecting From</p>
+                                    <h2 className="text-2xl font-black text-gray-800 leading-tight uppercase tracking-tight">{data.vendorId?.shopName}</h2>
+                                    <p className="text-sm text-gray-400 font-medium italic mt-1">{data.vendorId?.location}</p>
+                                </div>
+                            </div>
+                            {['placed', 'confirmed', 'preparing'].includes(data.status) && (
+                                <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 flex items-center justify-between">
+                                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Est. Waiting Time</span>
+                                    <span className="text-xl font-black text-orange-600 font-mono tracking-tighter">{waitTimer}</span>
+                                </div>
+                            )}
+                            {data.status === 'ready' && (
+                                <button onClick={() => handleAction('picked')} className="w-full bg-[#FC8019] text-white py-5 rounded-[2rem] font-black text-base shadow-xl shadow-orange-500/20 active:scale-95 transition-all uppercase tracking-widest">Accept Pickup</button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* DROP-OFF INTERFACE */}
+                    {data.status === 'picked_up' && (
+                        <div className="space-y-8">
+                            <div className="flex items-start gap-5">
+                                <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                    <FiTarget size={28} />
+                                </div>
+                                <div className="grow">
+                                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Handing Over To</p>
+                                    <h2 className="text-2xl font-black text-gray-800 leading-tight uppercase tracking-tight">{data.studentId?.name}</h2>
+                                    <p className="text-sm text-gray-400 font-medium italic mt-1">{data.deliveryAddress}</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <a href={`tel:${data.studentId?.phone}`} className="flex items-center justify-center gap-2 py-5 rounded-[2rem] border border-green-100 bg-green-50/50 text-green-600 font-black text-xs uppercase tracking-widest transition-all hover:bg-green-50"><FiPhoneCall /> Contact</a>
+                                <button onClick={() => window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'})} className="flex items-center justify-center gap-2 py-5 rounded-[2rem] border border-blue-100 bg-blue-50/50 text-blue-600 font-black text-xs uppercase tracking-widest transition-all hover:bg-blue-50"><FiMessageSquare /> Chat</button>
+                            </div>
+
+                            {/* SECURE PIN ENTRY */}
+                            <div className="pt-8 border-t border-gray-100 space-y-6 text-center">
+                                {!isOtpSent ? (
+                                    <button onClick={() => sendOtpToStudent()} className="w-full bg-gray-800 text-white py-6 rounded-[2rem] font-black text-base uppercase tracking-widest shadow-xl active:scale-95 transition-all border-b-4 border-gray-950">Broadcast Delivery PIN</button>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Verify PIN with Customer</p>
+                                        <input 
+                                            type="text" maxLength="6" value={deliveryOtp} 
+                                            onChange={e => setDeliveryOtp(e.target.value.replace(/\D/g,''))}
+                                            placeholder="Enter 6-digit PIN"
+                                            className="w-full py-6 text-4xl font-black text-center tracking-[0.4em] bg-gray-50 rounded-[2rem] border-2 border-gray-100 focus:border-orange-500 outline-none transition-all placeholder:text-gray-200"
+                                        />
+                                        <button onClick={() => handleAction('delivered')} disabled={deliveryOtp.length < 6} className="w-full bg-green-500 text-white py-6 rounded-[2rem] font-black text-lg uppercase tracking-widest shadow-xl shadow-green-500/20 active:scale-95 disabled:opacity-30 border-b-4 border-green-600">Finish Delivery</button>
+                                        <button onClick={() => sendOtpToStudent(true)} disabled={resendTimer > 0} className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{resendTimer > 0 ? `Resend PIN in ${resendTimer}s` : 'Resend PIN?'}</button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* 💬 CHAT FEED */}
+                <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[450px]">
+                  <div className="p-5 border-b flex items-center justify-between bg-gray-50/50">
+                    <div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Communication Channel</span>
+                      <h3 className="text-xs font-black text-gray-800 uppercase">Customer Chat Feed</h3>
+                    </div>
+                    <span className="text-[8px] font-black text-green-500 uppercase flex items-center gap-1.5 p-2 bg-green-50 rounded-full px-4"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> App Online</span>
+                  </div>
+                  <div className="flex-1 p-6 overflow-y-auto space-y-5 flex flex-col no-scrollbar bg-gray-50/20">
+                    {chatHistory.length === 0 && <div className="m-auto text-[10px] font-bold text-gray-300 uppercase tracking-[0.3em] text-center max-w-[200px] leading-loose">Secure channel established. Connected with recipient.</div>}
+                    {chatHistory.map((msg, i) => (
+                      <div key={i} className={`max-w-[85%] p-4 rounded-[1.5rem] text-sm font-bold leading-relaxed shadow-sm ${msg.isMe ? 'bg-gray-800 text-white self-end rounded-br-none' : 'bg-white border border-gray-100 text-gray-700 self-start rounded-bl-none'}`}>
+                        {msg.message}
+                        <p className={`text-[8px] mt-2 font-black uppercase opacity-40 ${msg.isMe ? 'text-right' : 'text-left'}`}>{msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Just now'}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <form onSubmit={sendMessage} className="p-4 bg-white border-t flex gap-3">
+                    <input value={chatMessage} onChange={e => setChatMessage(e.target.value)} type="text" placeholder="Type response..." className="flex-1 bg-gray-100 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500/20 transition-all" />
+                    <button type="submit" disabled={!chatMessage.trim()} className="w-14 h-14 bg-gray-800 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all disabled:opacity-20"><FiSend size={20} /></button>
+                  </form>
+                </div>
+            </div>
+        </div>
       </div>
 
       {/* 🔴 CANCEL MODAL */}
       <AnimatePresence>
         {showCancelModal && (
           <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="bg-white w-full max-w-sm rounded-[2.5rem] p-8">
-              <h3 className="text-xl font-black text-center mb-6">Drop this mission?</h3>
-              <div className="space-y-2 mb-8">
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="bg-white w-full max-w-md rounded-[3rem] p-10">
+              <div className="text-center mb-8">
+                <div className="w-16 h-1 bg-gray-100 rounded-full mx-auto mb-6"></div>
+                <h3 className="text-2xl font-black uppercase tracking-tight">Abort Mission?</h3>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">Cancellation logs will be generated</p>
+              </div>
+              <div className="space-y-3 mb-10">
                 {["Vehicle Problem", "Personal/Health", "Waiting too long", "Other"].map(r => (
-                  <button key={r} onClick={() => setCancelReason(r)} className={`w-full py-4 px-5 rounded-xl text-left text-xs font-black uppercase tracking-widest transition-all ${cancelReason === r ? 'bg-orange-500 text-white shadow-lg' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}>{r}</button>
+                  <button key={r} onClick={() => setCancelReason(r)} className={`w-full py-5 px-6 rounded-2xl text-left text-xs font-black uppercase tracking-widest transition-all ${cancelReason === r ? 'bg-orange-500 text-white shadow-xl scale-105' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}>{r}</button>
                 ))}
               </div>
               <div className="flex gap-4">
-                <button onClick={() => setShowCancelModal(false)} className="flex-1 py-4 font-black text-gray-400 text-xs uppercase tracking-widest">Stay</button>
-                <button onClick={() => toast.error("Cancellation locked.") || setShowCancelModal(false)} className="flex-1 py-4 bg-red-500 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg">Confirm Drop</button>
+                <button onClick={() => setShowCancelModal(false)} className="flex-1 py-5 font-black text-gray-400 text-xs uppercase tracking-widest">Hold Mission</button>
+                <button onClick={() => toast.error("Cancellation locked.") || setShowCancelModal(false)} className="flex-1 py-5 bg-red-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-red-500/20 active:scale-95">Confirm Abort</button>
               </div>
             </motion.div>
           </div>
@@ -364,3 +373,4 @@ const ActiveDelivery = () => {
 };
 
 export default ActiveDelivery;
+

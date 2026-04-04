@@ -7,7 +7,37 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#f97316" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CampusEats</title>
+    
+    <!-- Primary Meta Tags -->
+    <title>CampusEats | Premium Campus Food Delivery & Dining</title>
+    <meta name="title" content="CampusEats | Premium Campus Food Delivery & Dining" />
+    <meta name="description" content="Order from your favorite campus spots with zero-lag delivery. The ultimate campus food network for students, vendors, and riders." />
+    <meta name="keywords" content="CampusEats, University Food Delivery, Campus Dining, Student Meal Plans, Fast Food Campus" />
+    <meta name="author" content="CampusEats Team" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://campuseats.app/" />
+    <meta property="og:title" content="CampusEats | Premium Campus Food Delivery" />
+    <meta property="og:description" content="Experience the fastest campus food delivery network. Order now from top-rated vendors!" />
+    <meta property="og:image" content="/pwa-icon.svg" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://campuseats.app/" />
+    <meta property="twitter:title" content="CampusEats | Premium Campus Food Delivery" />
+    <meta property="twitter:description" content="The ultimate campus food network. Fast, reliable, and student-first." />
+    <meta property="twitter:image" content="/pwa-icon.svg" />
+
+    <!-- Early PWA Prompt Capture -->
+    <script>
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent the mini-infobar from appearing on mobile
+        e.preventDefault();
+        // Stash the event so it can be picked up by the React component later
+        window.deferredPrompt = e;
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

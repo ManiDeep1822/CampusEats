@@ -7,6 +7,13 @@ const deliveryBoySchema = new mongoose.Schema({
   currentLocation: { type: String },
   totalDeliveries: { type: Number, default: 0 },
   earnings: { type: Number, default: 0 },
+  pendingPayout: { type: Number, default: 0 },
+  paymentDetails: {
+    upiId: { type: String },
+    bankName: { type: String },
+    accountNumber: { type: String },
+    ifscCode: { type: String }
+  },
   rating: { type: Number, default: 0 },
   activeOrderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' }
 }, { timestamps: true });

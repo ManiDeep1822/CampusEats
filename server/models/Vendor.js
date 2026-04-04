@@ -19,7 +19,15 @@ const vendorSchema = new mongoose.Schema({
   rating: { type: Number, default: 0 },
   numReviews: { type: Number, default: 0 },
   reviews: [reviewSchema],
-  totalOrders: { type: Number, default: 0 }
+  totalOrders: { type: Number, default: 0 },
+  earnings: { type: Number, default: 0 }, // Total life-time earnings
+  pendingPayout: { type: Number, default: 0 }, // Current unpaid balance
+  paymentDetails: {
+    upiId: { type: String },
+    bankName: { type: String },
+    accountNumber: { type: String },
+    ifscCode: { type: String }
+  }
 }, { timestamps: true });
 
 const Vendor = mongoose.model('Vendor', vendorSchema);

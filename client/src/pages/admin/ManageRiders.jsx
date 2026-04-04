@@ -13,7 +13,7 @@ const ManageRiders = () => {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
   const [selectedRider, setSelectedRider] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', vehicleType: 'Bicycle', role: 'delivery' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', vehicleType: 'Bicycle', upiId: '', role: 'delivery' });
   const [isCreating, setIsCreating] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
@@ -96,6 +96,12 @@ const ManageRiders = () => {
     }
   };
 
+  const openCreateModal = () => {
+    const randomPassword = Math.random().toString(36).slice(-8) + '@' + Math.floor(Math.random() * 100);
+    setFormData({ ...formData, password: randomPassword });
+    setShowModal(true);
+  };
+
   const handleCreateRider = async (e) => {
     e.preventDefault();
     setIsCreating(true);
@@ -108,7 +114,7 @@ const ManageRiders = () => {
       setShowModal(false);
       setShowOtpModal(true);
       
-      setFormData({ name: '', email: '', password: '', phone: '', vehicleType: 'Bicycle', role: 'delivery' });
+      setFormData({ name: '', email: '', password: '', phone: '', vehicleType: 'Bicycle', upiId: '', role: 'delivery' });
       fetchRiders(); // refresh list
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error creating rider');
@@ -142,7 +148,7 @@ const ManageRiders = () => {
               <p className="text-gray-500 mt-2">Monitor delivery personnel, active vehicles, and duty status.</p>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setShowModal(true)} className="bg-primary hover:bg-orange-600 text-white font-bold flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-sm transition active:scale-95">
+              <button onClick={openCreateModal} className="bg-primary hover:bg-orange-600 text-white font-bold flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-sm transition active:scale-95">
                 <FiUserPlus /> Add Rider
               </button>
               <Link to="/admin/dashboard" className="text-gray-500 hover:text-primary font-bold flex items-center gap-2 transition-colors bg-white px-4 py-2.5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md w-fit active:scale-95">
@@ -294,6 +300,17 @@ const ManageRiders = () => {
                   <option value="Scooter">Motorized Scooter</option>
                   <option value="Walking">Walking</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">UPI ID (For Weekly Payouts)</label>
+                <input 
+                  type="text" 
+                  required 
+                  placeholder="e.g. ridername@okaxis" 
+                  value={formData.upiId} 
+                  onChange={e => setFormData({...formData, upiId: e.target.value})} 
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" 
+                />
               </div>
               <button 
                 type="submit" 

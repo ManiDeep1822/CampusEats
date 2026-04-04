@@ -13,7 +13,7 @@ const ManageVendors = () => {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
   const [selectedVendor, setSelectedVendor] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', shopName: '', location: '', role: 'vendor' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', shopName: '', location: '', upiId: '', role: 'vendor' });
   const [isCreating, setIsCreating] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
@@ -108,7 +108,11 @@ const ManageVendors = () => {
       }
     }
   };
-
+  const openCreateModal = () => {
+    const randomPassword = Math.random().toString(36).slice(-8) + '@' + Math.floor(Math.random() * 100);
+    setFormData({ ...formData, password: randomPassword });
+    setShowModal(true);
+  };
   const handleCreateVendor = async (e) => {
     e.preventDefault();
     setIsCreating(true);
@@ -121,7 +125,7 @@ const ManageVendors = () => {
       setShowModal(false);
       setShowOtpModal(true);
       
-      setFormData({ name: '', email: '', password: '', phone: '', shopName: '', location: '', role: 'vendor' });
+      setFormData({ name: '', email: '', password: '', phone: '', shopName: '', location: '', upiId: '', role: 'vendor' });
       fetchVendors();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error creating vendor');
@@ -155,7 +159,7 @@ const ManageVendors = () => {
               <p className="text-gray-500 mt-2">Approve new restaurant applications and monitor active vendors.</p>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setShowModal(true)} className="bg-primary hover:bg-orange-600 text-white font-bold flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-sm transition active:scale-95">
+              <button onClick={openCreateModal} className="bg-primary hover:bg-orange-600 text-white font-bold flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-sm transition active:scale-95">
                 <FiUserPlus /> Add Vendor
               </button>
               <Link to="/admin/dashboard" className="text-gray-500 hover:text-primary font-bold flex items-center gap-2 transition-colors bg-white px-4 py-2.5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md w-fit active:scale-95">
@@ -314,6 +318,17 @@ const ManageVendors = () => {
                   <label className="block text-sm font-bold text-gray-700 mb-1">Campus Location</label>
                   <input type="text" required value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">UPI ID (For Weekly Payouts)</label>
+                <input 
+                  type="text" 
+                  required 
+                  placeholder="e.g. shopname@okaxis" 
+                  value={formData.upiId} 
+                  onChange={e => setFormData({...formData, upiId: e.target.value})} 
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" 
+                />
               </div>
               <button 
                 type="submit" 

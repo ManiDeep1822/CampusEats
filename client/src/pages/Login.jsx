@@ -33,7 +33,6 @@ const Login = () => {
     try {
       const { data } = await api.post('/auth/login', { email, password });
       dispatch(setCredentials({ user: data, token: data.token, role: data.role }));
-      toast.success('Login Successful!');
       
       if (data.mustChangePassword) navigate('/complete-setup');
       else if (data.role === 'admin') navigate('/admin/dashboard');
@@ -121,7 +120,6 @@ const Login = () => {
                   credential: credentialResponse.credential 
                 });
                 dispatch(setCredentials({ user: data, token: data.token, role: data.role }));
-                toast.success('Login Successful!');
                 if (data.mustChangePassword) navigate('/complete-setup');
                 else navigate(data.role === 'admin' ? '/admin/dashboard' : data.role === 'student' ? '/student/home' : data.role === 'vendor' ? '/vendor/dashboard' : '/delivery/dashboard');
               } catch (err) {
@@ -136,7 +134,7 @@ const Login = () => {
         </div>
 
         <p className="mt-6 text-center text-textSecondary">
-          <p className="text-gray-500">Don&apos;t have an account? <Link to="/register" className="text-primary font-bold hover:underline">Register Now</Link></p>
+          <span className="text-gray-500">Don&apos;t have an account? <Link to="/register" className="text-primary font-bold hover:underline">Register Now</Link></span>
         </p>
       </div>
     </div>

@@ -9,6 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 const OrderManagement = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectingTimeFor, setSelectingTimeFor] = useState(null);
 
   const fetchOrders = async () => {
     try {
@@ -88,7 +89,7 @@ const OrderManagement = () => {
               </div>
 
               <div className="mt-auto border-t pt-4 flex gap-2">
-                {order?.status === 'placed' && <button onClick={() => handleUpdateStatus(order._id, 'confirmed')} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2 shadow-blue-100 border-b-4 border-blue-800 active:border-b-0 active:mt-1"><FiCheck className="text-xl "/> Accept & Start Cooking</button>}
+                {order?.status === 'placed' && <button onClick={() => setSelectingTimeFor(order)} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2 shadow-blue-100 border-b-4 border-blue-800 active:border-b-0 active:mt-1"><FiCheck className="text-xl "/> Accept & Start Cooking</button>}
                 {order?.status === 'preparing' && <button onClick={() => handleUpdateStatus(order._id, 'ready')} className="flex-1 bg-gradient-to-r from-emerald-500 to-green-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2 shadow-green-100 border-b-4 border-green-800 active:border-b-0 active:mt-1"><FiCheckCircle className="text-xl"/> Mark as Ready for Pickup</button>}
                 {order?.status === 'ready' && <div className="w-full text-center py-2 text-orange-500 font-bold bg-orange-50 rounded-lg">Waiting for Rider Pickup</div>}
                 {order?.status === 'picked_up' && <div className="w-full text-center py-2 text-blue-500 font-bold bg-blue-50 rounded-lg">Out for Delivery 🛵</div>}
@@ -99,6 +100,39 @@ const OrderManagement = () => {
           {orders.length === 0 && <div className="col-span-full text-center py-20 text-gray-500">No orders yet.</div>}
         </div>
       </div>
+
+      {/* Preparation Time Selection Modal */}
+      {selectingTimeFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 text-center">
+              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">🍳</div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Set Preparation Time</h2>
+              <p className="text-gray-500 mb-6 text-sm">How many minutes will it take to prepare Order #{selectingTimeFor.orderId?.slice(-4).toUpperCase()}?</p>
+              
+              <div className="grid grid-cols-3 gap-2 mb-6">
+                {[10, 15, 20, 25, 30, 45].map(mins => (
+                  <button 
+                    key={mins} 
+                    onClick={() => {
+                      handleUpdateStatus(selectingTimeFor._id, 'preparing', mins);
+                      setSelectingTimeFor(null);
+                    }}
+                    className="py-3 bg-gray-50 hover:bg-blue-600 hover:text-white rounded-xl font-bold text-gray-700 transition-all"
+                  >
+                    {mins}m
+                  </button>
+                ))}
+              </div>
+              
+              <button 
+                onClick={() => setSelectingTimeFor(null)}
+                className="w-full py-3 text-gray-400 font-bold hover:text-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+           </div>
+        </div>
+      )}
     </div>
   );
 };

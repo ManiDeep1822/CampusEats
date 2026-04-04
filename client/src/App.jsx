@@ -10,7 +10,7 @@ import Navbar from './components/shared/Navbar';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 import GlobalNotificationListener from './components/shared/GlobalNotificationListener';
 import CampusEatsAI from './components/shared/CampusEatsAI';
-import PageLoader from './components/shared/PageLoader';
+import Loader from './components/shared/Loader';
 import MandatoryPhoneModal from './components/shared/MandatoryPhoneModal';
 
 const SessionTerminatedModal = () => {
@@ -86,10 +86,13 @@ const VendorDashboard = lazy(() => import('./pages/vendor/VendorDashboard'));
 const OrderManagement = lazy(() => import('./pages/vendor/OrderManagement'));
 const MenuManagement = lazy(() => import('./pages/vendor/MenuManagement'));
 const VendorKDS = lazy(() => import('./pages/vendor/VendorKDS'));
+const VendorPayments = lazy(() => import('./pages/vendor/VendorPayments'));
 
 // Delivery Pages
 const DeliveryDashboard = lazy(() => import('./pages/delivery/DeliveryDashboard'));
 const ActiveDelivery = lazy(() => import('./pages/delivery/ActiveDelivery'));
+const DeliveryHistory = lazy(() => import('./pages/delivery/DeliveryHistory'));
+const RiderPayments = lazy(() => import('./pages/delivery/RiderPayments'));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
@@ -123,7 +126,7 @@ function App() {
         <CampusEatsAI />
 
 
-        <Suspense fallback={<PageLoader />}>
+        <Suspense fallback={<Loader fullPage />}>
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/contact" element={<ContactUs />} />
@@ -160,11 +163,14 @@ function App() {
               <Route path="/vendor/orders" element={<OrderManagement />} />
               <Route path="/vendor/menu" element={<MenuManagement />} />
               <Route path="/vendor/kds" element={<VendorKDS />} />
+              <Route path="/vendor/payments" element={<VendorPayments />} />
             </Route>
             
             <Route element={<ProtectedRoute allowedRoles={['delivery']} />}>
               <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
               <Route path="/delivery/active" element={<ActiveDelivery />} />
+              <Route path="/delivery/history" element={<DeliveryHistory />} />
+              <Route path="/delivery/payments" element={<RiderPayments />} />
             </Route>
     
             <Route element={<ProtectedRoute allowedRoles={['admin']} />}>

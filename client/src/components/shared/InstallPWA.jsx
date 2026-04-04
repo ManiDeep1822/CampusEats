@@ -11,11 +11,17 @@ const InstallPWA = ({ className, containerClass, buttonStyle = 'navbar', showOnD
       setIsInstalled(true);
     }
 
+    // Capture the early event if it fired before the component mounted
+    if (window.deferredPrompt) {
+      setDeferredPrompt(window.deferredPrompt);
+    }
+
     const handleBeforeInstallPrompt = (e) => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
       // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
+      window.deferredPrompt = e; // Sync back to global just in case
     };
 
     const handleAppInstalled = () => {

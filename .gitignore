@@ -9,4 +9,5 @@ client/node_modules/
 server/node_modules/
 client/dist/
 .gemini/
-brain/
+brain/dev-dist/
+client/dev-dist/

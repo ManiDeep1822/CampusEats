@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import { FiStar, FiClock, FiPlus, FiMinus, FiHeart } from 'react-icons/fi';
 import api from '../../services/api';
-import Loader from '../../components/shared/Loader';
+import SkeletonLoader from '../../components/shared/SkeletonLoader';
 import { addToCart, removeFromCart } from '../../store/cartSlice';
 import toast from 'react-hot-toast';
 import CartFloatingButton from '../../components/student/CartFloatingButton';
@@ -18,7 +18,6 @@ const RestaurantPage = () => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
-  const [groupSession, setGroupSession] = useState(null); // Active group session if any
   
   const dispatch = useDispatch();
   const cartItems = useSelector(state => state.cart.items);
@@ -40,22 +39,19 @@ const RestaurantPage = () => {
     }
     fetchRestaurant();
     fetchFavs();
-    // Detect active group ordering session
-    const savedSession = localStorage.getItem('activeGroupSession');
-    if (savedSession) setGroupSession(JSON.parse(savedSession));
   }, [id]);
 
   const toggleFav = async () => {
     const oldIsFavorite = isFavorite;
-    const wasAdding = !isFavorite;
+    
+    // ⚡ Optimistic UI Update: Toggle heart instantly
     setIsFavorite(!isFavorite);
-    toast.success(wasAdding ? "Saved to favorites!" : "Removed from favorites");
     
     try {
       const { data } = await api.put(`/student/favorites/${id}`);
-      if (data?.favorites) {
-        setIsFavorite(data.favorites.includes(id));
-      }
+      const serverIsFav = (data?.favorites || []).includes(id);
+      setIsFavorite(serverIsFav);
+      toast.success(serverIsFav ? "Saved to favorites!" : "Removed from favorites");
     } catch(err) { 
       // Rollback if the server fails
       setIsFavorite(oldIsFavorite);
@@ -83,63 +79,17 @@ const RestaurantPage = () => {
     }
   };
 
-  const handleAddToCart = async (item) => {
-    // Check for active group session first
-    const savedSession = localStorage.getItem('activeGroupSession');
-    if (savedSession) {
-      const { joinCode } = JSON.parse(savedSession);
-      try {
-        const { data } = await api.post('/group/add-item', { joinCode, menuItemId: item._id, quantity: 1 });
-        // Broadcast the update to all group members via socket
-        import('../../context/SocketContext').then(({ useSocketContext: _ }) => {
-          // We use a custom event approach since we don't have socket here directly
-        });
-        // Trigger a custom event that CartPage can listen to
-        window.dispatchEvent(new CustomEvent('group:item_added', { detail: data }));
-        toast.success(`${item.name} added to group cart!`);
-        return;
-      } catch (err) {
-        toast.error(err.response?.data?.message || 'Failed to add to group');
-        return;
-      }
-    }
-
-    // Normal single-user cart flow
+  const handleAddToCart = (item) => {
     if (currentVendorId && currentVendorId !== vendor._id) {
       if(!window.confirm('Your cart contains items from another restaurant. Do you want to discard them and add this item?')) return;
     }
     dispatch(addToCart({ menuItemId: item._id, vendorId: vendor._id, name: item.name, price: item.price, isVeg: item.isVeg }));
-    toast.success('Added to Cart');
   };
 
-  const handleRemove = async (itemId) => {
-    const savedSession = localStorage.getItem('activeGroupSession');
-    if (savedSession) {
-      const { joinCode } = JSON.parse(savedSession);
-      try {
-        const { data } = await api.post('/group/remove-item', { joinCode, menuItemId: itemId });
-        window.dispatchEvent(new CustomEvent('group:item_added', { detail: data }));
-        return;
-      } catch (err) {
-        toast.error(err.response?.data?.message || 'Failed to remove from group');
-        return;
-      }
-    }
-    dispatch(removeFromCart(itemId));
-  };
+  const handleRemove = (itemId) => dispatch(removeFromCart(itemId));
+  const getQuantity = (itemId) => cartItems.find(i => i.menuItemId === itemId)?.quantity || 0;
 
-  const getQuantity = (itemId) => {
-    // Check group session first
-    const savedSession = localStorage.getItem('activeGroupSession');
-    if (savedSession) {
-      // We don't have the full group cart here; just show local cart quantity
-      // The source of truth is the CartPage's group view
-      return cartItems.find(i => i.menuItemId === itemId)?.quantity || 0;
-    }
-    return cartItems.find(i => i.menuItemId === itemId)?.quantity || 0;
-  };
-
-  if (loading) return <Loader />;
+  if (loading) return <SkeletonLoader variant="detailed" />;
   if (!vendor) return <div className="text-center py-20">Restaurant not found</div>;
 
   return (
@@ -170,19 +120,6 @@ const RestaurantPage = () => {
             </div>
           </div>
         </div>
-        {groupSession && (
-          <div className="max-w-4xl mx-auto mt-4 px-4">
-            <div className="bg-orange-500/20 border border-primary/30 px-5 py-3 rounded-2xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">👥</span>
-                <div>
-                  <p className="text-white text-xs font-black uppercase tracking-widest">Group Order Active</p>
-                  <p className="text-orange-200 text-[10px] font-medium">Code: <span className="font-mono font-black">{groupSession.joinCode}</span> · Items go to the group cart</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
         {!vendor.isOpen && (
           <div className="max-w-4xl mx-auto mt-6 px-4 animate-in fade-in slide-in-from-top-2 duration-500">
             <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center gap-4 text-red-700 shadow-sm backdrop-blur-sm">

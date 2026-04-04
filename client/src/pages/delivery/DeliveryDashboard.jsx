@@ -5,6 +5,7 @@ import { useSocketEvent } from '../../hooks/useSocket';
 import Loader from '../../components/shared/Loader';
 import toast from 'react-hot-toast';
 import { FiArrowRight, FiTrendingUp, FiActivity, FiClock, FiMapPin, FiHome, FiList, FiUser, FiPower, FiCrosshair } from 'react-icons/fi';
+import { FaRupeeSign } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -94,32 +95,41 @@ const DeliveryDashboard = () => {
     }
   };
 
+  const handleUpdatePayment = async (e) => {
+    e.preventDefault();
+    const upiId = e.target.upiId.value;
+    const saveToast = toast.loading('Saving payout details...');
+    try {
+      await api.put('/delivery/profile', { paymentDetails: { upiId } });
+      toast.success('Payout destination updated! 💸', { id: saveToast });
+      fetchData(true);
+    } catch (error) {
+      toast.error('Failed to update payout info', { id: saveToast });
+    }
+  };
+
   if (loading) return <Loader />;
   if (!data || !data.profile) return <div className="text-center py-20 text-red-500 font-bold">Error loading dashboard. Please refresh.</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-32 font-['Inter',sans-serif]">
-      {/* 🚀 RESPONSIVE HEADER */}
-      <div className={`sticky top-0 z-50 transition-all duration-500 ${data.profile.isAvailable ? 'bg-white shadow-sm border-b' : 'bg-slate-50 border-b opacity-90'}`}>
-        <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-gray-50 font-['Inter',sans-serif]">
+      {/* 🚀 RIDER STATUS SECTION (Fixed position to avoid Navbar overlap) */}
+      <div className={`bg-white border-b transition-all duration-500 ${data.profile.isAvailable ? 'border-orange-100 shadow-sm' : 'bg-slate-50 border-gray-100 opacity-90'}`}>
+        <div className="max-w-7xl mx-auto px-5 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <div className="relative">
-              <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center text-xl overflow-hidden shadow-sm">
-                {data.profile.profileImage ? <img src={data.profile.profileImage} alt="Rider" className="w-full h-full object-cover" /> : '🛵'}
+              <div className="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center text-2xl overflow-hidden shadow-sm border-2 border-white">
+                {(user?.profilePic || data.profile.profilePic || data.profile.profileImage) ? (
+                  <img src={user?.profilePic || data.profile.profilePic || data.profile.profileImage} alt="Rider" className="w-full h-full object-cover" />
+                ) : '🛵'}
               </div>
               <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${data.profile.isAvailable ? 'bg-green-500' : 'bg-red-500'}`}></div>
             </div>
-            <div className="hidden sm:block">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">RIDER #{data.profile._id.slice(-4).toUpperCase()}</p>
-              <h1 className="text-lg font-black text-gray-800 leading-tight">{user?.name}</h1>
+            <div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Authenticated Rider</p>
+              <h1 className="text-xl font-black text-gray-800 leading-tight">{user?.name}</h1>
+              <p className="text-[9px] font-bold text-gray-400 font-mono uppercase tracking-widest mt-0.5">ID: {data.profile._id.slice(-8).toUpperCase()}</p>
             </div>
-          </div>
-          
-          {/* DESKTOP NAV LINKS */}
-          <div className="hidden md:flex items-center gap-8 text-xs font-black uppercase tracking-widest text-gray-400">
-             <button onClick={() => navigate('/delivery/dashboard')} className="text-orange-500 border-b-2 border-orange-500 pb-1">Dashboard</button>
-             <button onClick={() => navigate('/delivery/history')} className="hover:text-gray-800 transition-colors">Missions</button>
-             <button onClick={() => navigate('/profile')} className="hover:text-gray-800 transition-colors">Profile</button>
           </div>
 
           <div className="flex items-center gap-3">
@@ -159,6 +169,44 @@ const DeliveryDashboard = () => {
                   <p className="text-2xl font-black text-gray-900 tracking-tighter">{stat.value}</p>
               </motion.div>
             ))}
+        </div>
+
+        {/* 💸 RIDER SETTLEMENT CENTER */}
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col lg:flex-row items-center gap-10">
+          <div className="flex-shrink-0 text-center lg:text-left">
+            <h2 className="text-xl font-black text-gray-800 mb-2 uppercase tracking-tight">Settlement Center</h2>
+            <p className="text-[10px] font-bold text-gray-400 mb-4 max-w-[200px] leading-relaxed uppercase tracking-wider">Your mission rewards are settled every week by the admin via UPI.</p>
+            <div className="inline-block p-5 bg-orange-600 rounded-[2rem] shadow-lg shadow-orange-500/20">
+              <p className="text-[9px] font-black text-orange-200 uppercase tracking-[0.2em] mb-1">Unpaid Balance</p>
+              <p className="text-3xl font-black text-white">₹{data.stats.pendingPayout || 0}</p>
+            </div>
+          </div>
+
+          <div className="flex-1 w-full p-7 bg-gray-50 rounded-[2.5rem] border border-gray-100">
+            <h3 className="font-black text-[10px] text-gray-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+              <FiTrendingUp className="text-orange-500" />
+              Update Payout Destination
+            </h3>
+            <form onSubmit={handleUpdatePayment} className="flex flex-col sm:flex-row gap-3">
+              <input 
+                name="upiId"
+                defaultValue={data.profile.paymentDetails?.upiId || ''}
+                placeholder="Enter UPI ID (e.g. name@upi)"
+                className="flex-1 bg-white border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-orange-500 outline-none text-sm font-bold transition-all"
+                required
+              />
+              <button 
+                type="submit"
+                className="bg-gray-900 text-white font-black text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-2xl hover:bg-black transition shadow-lg active:scale-95"
+              >
+                Save UPI
+              </button>
+            </form>
+            <div className="flex items-center gap-2 mt-4">
+               <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+               <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Your earnings are secured in the platform ledger until settlement.</p>
+            </div>
+          </div>
         </div>
 
         {/* 🚨 MAIN DESKTOP GRID */}
@@ -263,9 +311,12 @@ const DeliveryDashboard = () => {
 
             {/* MISSION HISTORY (SIDEBAR STYLE) */}
             <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
-               <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest px-1 flex items-center gap-2 mb-6">
-                  <FiClock size={14} /> Mission Logs
-               </h2>
+               <div className="flex items-center justify-between gap-2 mb-6 px-1">
+                  <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <FiClock size={14} /> Mission Logs
+                  </h2>
+                  <button onClick={() => navigate('/delivery/payments')} className="text-[10px] font-black text-orange-500 uppercase tracking-widest hover:underline">View Earnings</button>
+               </div>
                <div className="space-y-4">
                   {(data?.recentDeliveries?.slice(0, 5) || []).map(order => (
                     <div key={order?._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-200 transition-all cursor-default">
@@ -286,14 +337,6 @@ const DeliveryDashboard = () => {
         </div>
       </div>
 
-      {/* 🧭 BOTTOM NAV (MOBILE ONLY) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-2xl border-t z-50 md:hidden">
-        <div className="max-w-md mx-auto flex items-center justify-around py-4">
-           <button onClick={() => navigate('/delivery/dashboard')} className="flex flex-col items-center gap-1 text-orange-500"><FiHome size={22} /><span className="text-[9px] font-black uppercase tracking-widest">Home</span></button>
-           <button onClick={() => navigate('/delivery/history')} className="flex flex-col items-center gap-1 text-gray-400"><FiList size={22} /><span className="text-[9px] font-black uppercase tracking-widest">Missions</span></button>
-           <button onClick={() => navigate('/profile')} className="flex flex-col items-center gap-1 text-gray-400"><FiUser size={22} /><span className="text-[9px] font-black uppercase tracking-widest">Profile</span></button>
-        </div>
-      </div>
     </div>
   );
 };

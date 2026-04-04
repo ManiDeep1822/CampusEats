@@ -48,16 +48,12 @@ const orderSchema = new mongoose.Schema({
   }],
   couponCode: { type: String },
   discountAmount: { type: Number, default: 0 },
-  isGroupOrder: { type: Boolean, default: false },
-  groupSplits: [{
-    studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    items: [{
-      menuItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'MenuItem' },
-      quantity: { type: Number },
-      price: { type: Number }
-    }],
-    subtotal: { type: Number }
-  }]
+  
+  // SECURE FINANCIAL AUDIT FIELDS (Option 1: Internal Ledger)
+  vendorEarnings: { type: Number, default: 0 },
+  deliveryEarnings: { type: Number, default: 0 },
+  adminEarnings: { type: Number, default: 0 },
+  isCommissionSplit: { type: Boolean, default: false, index: true }
 }, { timestamps: true });
 
 const Order = mongoose.model('Order', orderSchema);

@@ -33,10 +33,12 @@
   .premium-shadow {
     box-shadow: 0 8px 24px rgba(149, 157, 165, 0.2);
   }
-  .no-scrollbar::-webkit-scrollbar {
+  .no-scrollbar::-webkit-scrollbar,
+  .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-  .no-scrollbar {
+  .no-scrollbar,
+  .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }

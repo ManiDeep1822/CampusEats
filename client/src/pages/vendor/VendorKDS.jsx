@@ -118,10 +118,12 @@ const VendorKDS = () => {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [nextRefresh, setNextRefresh] = useState(30);
 
-  // Take Away PIN Verification
   const [verifyingOrder, setVerifyingOrder] = useState(null);
   const [pickupPin, setPickupPin] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+
+  // Time Selection Modal State
+  const [selectingTimeFor, setSelectingTimeFor] = useState(null);
 
   // Tracking last known orders to play sound only for truly NEW orders
   const previousOrderIds = useRef(new Set());
@@ -413,7 +415,7 @@ const VendorKDS = () => {
                                 </button>
                               ) : col.next ? (
                                  <button 
-                                   onClick={() => updateStatus(order._id, col.next)} 
+                                   onClick={() => col.next === 'preparing' ? setSelectingTimeFor(order) : updateStatus(order._id, col.next)} 
                                    className={`w-full py-5 rounded-xl font-black text-sm uppercase tracking-widest transition-all duration-200 hover:-translate-y-1 active:translate-y-0 ${col.buttonTheme}`}
                                  >
                                    {col.nextLabel}
@@ -486,6 +488,55 @@ const VendorKDS = () => {
                     </button>
                   </div>
                </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 🚀 PREPARATION TIME SELECTION MODAL (Zomato/Swiggy Style) 🚀 */}
+      <AnimatePresence>
+        {selectingTimeFor && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+            <motion.div 
+               initial={{ scale: 0.9, opacity: 0, y: 20 }}
+               animate={{ scale: 1, opacity: 1, y: 0 }}
+               exit={{ scale: 0.9, opacity: 0, y: 20 }}
+               className="relative w-full max-w-[450px] bg-[#0B1121] border border-white/10 lg:border-2 lg:border-rose-500/30 rounded-[2.5rem] p-8 shadow-[0_0_60px_rgba(225,29,72,0.2)]"
+            >
+               <div className="text-center mb-8">
+                  <div className="w-16 h-16 bg-rose-500/20 text-rose-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-rose-500/30">
+                    🍳
+                  </div>
+                  <h2 className="text-2xl font-black text-white mb-2 tracking-tight uppercase">How much time?</h2>
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest leading-relaxed">
+                    Set preparation time for order <span className="text-rose-500">#{selectingTimeFor.orderId?.slice(-4).toUpperCase()}</span>
+                  </p>
+               </div>
+
+               <div className="grid grid-cols-2 gap-3 mb-8">
+                  {[10, 15, 20, 30, 45, 60].map((mins) => (
+                    <button 
+                      key={mins}
+                      onClick={async () => {
+                        const success = await updateStatus(selectingTimeFor._id, 'preparing', { prepTime: mins });
+                        if (success) setSelectingTimeFor(null);
+                      }}
+                      className="group p-4 bg-slate-900/50 border-2 border-slate-800 rounded-2xl hover:border-rose-500 hover:bg-rose-500/5 transition-all flex flex-col items-center justify-center gap-1"
+                    >
+                      <span className="text-2xl font-black text-white group-hover:text-rose-500">{mins}</span>
+                      <span className="text-[10px] font-black text-slate-500 group-hover:text-rose-400 uppercase tracking-widest">Minutes</span>
+                    </button>
+                  ))}
+               </div>
+
+               <div className="flex gap-3">
+                  <button 
+                    onClick={() => setSelectingTimeFor(null)}
+                    className="flex-1 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                  >
+                    Not Now (Default 15m)
+                  </button>
+               </div>
             </motion.div>
           </div>
         )}

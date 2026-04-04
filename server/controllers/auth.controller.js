@@ -26,10 +26,11 @@ const sendOTP = asyncHandler(async (req, res) => {
     { upsert: true, returnDocument: 'after' }
   );
 
-  const message = `Your CampusEats registration verification code is: ${otpCode}. It will expire in 5 minutes.`;
+  const BREVO_LOGO = process.env.LOGO_URL || 'https://i.ibb.co/vzN4X86/campus-eats-logo.png';
   const html = `
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
       <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 40px 20px; text-align: center;">
+        <img src="${BREVO_LOGO}" alt="CampusEats Logo" style="width: 120px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
         <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px;">CampusEats</h1>
         <p style="color: #ffedd5; font-size: 16px; margin-top: 8px; font-weight: 400;">Your Premium Campus Dining Experience</p>
       </div>
@@ -279,6 +280,17 @@ const googleAuth = asyncHandler(async (req, res) => {
       user.tokenVersion = (user.tokenVersion || 0) + 1;
       await user.save();
 
+      // Notify existing sessions
+      try {
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`${user.role}:${user._id}`).emit('session-invalidated', { 
+            message: 'You have logged in from another device.',
+            timestamp: Date.now()
+          });
+        }
+      } catch (e) {}
+
       res.status(200).json({
         _id: user._id,
         name: user.name,
@@ -349,7 +361,20 @@ const changePassword = asyncHandler(async (req, res) => {
     }
 
     user.password = newPassword;
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
     await user.save();
+
+    // Invalidate other sessions after password change
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`${user.role}:${user._id}`).emit('session-invalidated', { 
+          message: 'Security alert: Your password was changed. All other sessions have been terminated.',
+          timestamp: Date.now()
+        });
+      }
+    } catch (e) {}
+
     res.json({ message: 'Password changed successfully' });
   } else {
     res.status(401);
@@ -378,9 +403,11 @@ const forgotPassword = asyncHandler(async (req, res) => {
     { upsert: true, returnDocument: 'after' }
   );
 
+  const BREVO_LOGO = process.env.LOGO_URL || 'https://i.ibb.co/vzN4X86/campus-eats-logo.png';
   const html = `
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
       <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 40px 20px; text-align: center;">
+        <img src="${BREVO_LOGO}" alt="CampusEats Logo" style="width: 120px; height: auto; margin-bottom: 20px;" />
         <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800;">CampusEats</h1>
         <p style="color: #ffedd5; font-size: 16px; margin-top: 8px;">Password Reset Request</p>
       </div>
@@ -437,7 +464,19 @@ const resetPasswordWithOTP = asyncHandler(async (req, res) => {
   if (!user) { res.status(404); throw new Error('User not found'); }
 
   user.password = newPassword;
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
   await user.save();
+
+  // Invalidate all sessions after password reset
+  try {
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`${user.role}:${user._id}`).emit('session-invalidated', { 
+        message: 'Security alert: Your password has been reset. Please log in with your new password.',
+        timestamp: Date.now()
+      });
+    }
+  } catch (e) {}
 
   // 4. Delete used OTP
   await OTP.deleteOne({ email });

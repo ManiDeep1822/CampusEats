@@ -105,68 +105,90 @@ const LiveOrderTracker = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, height: 0 }}
-        className="w-full relative group mt-4 mb-2 max-w-7xl mx-auto"
+        className="w-full bg-slate-50/50 border-b border-slate-100"
       >
-        {/* Horizonally Scrolling Track */}
-        <div 
-          ref={trackRef}
-          className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide py-2 px-4 sm:px-[calc(50vw-190px)] gap-3"
-        >
-          {activeOrders.map(order => {
-             const statusInfo = getStatusInfo(order.status);
-             return (
-               <div key={order._id} data-is-card="true" className="snap-center xl:snap-align-none shrink-0 w-[85vw] sm:w-[380px] cursor-pointer group/card" onClick={() => navigate(`/student/tracking/${order._id}`)}>
-                 <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-3 active:scale-[0.98] transition-transform">
-                    {/* Icon */}
-                    <div className={`w-10 h-10 ${statusInfo.bg} ${statusInfo.color} rounded-xl flex items-center justify-center shrink-0 group-hover/card:scale-105 transition-transform`}>
-                       {statusInfo.icon}
-                    </div>
-                    {/* Info */}
-                    <div className="flex-grow min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shrink-0"></span>
-                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest truncate">{order.vendorId?.shopName || 'Restaurant'}</span>
+        <div className="max-w-7xl mx-auto px-4 py-2 flex justify-center">
+          <div className="pointer-events-auto relative group">
+            {/* Horizontal Track for Cards */}
+            <div 
+              ref={trackRef}
+              className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide gap-4 w-screen max-w-[440px] px-4 py-4"
+            >
+              {activeOrders.map(order => {
+                const statusInfo = getStatusInfo(order.status);
+                return (
+                  <div 
+                    key={order._id} 
+                    data-is-card="true" 
+                    className="snap-center shrink-0 w-full cursor-pointer"
+                    onClick={() => navigate(`/student/tracking/${order._id}`)}
+                  >
+                    <div className="bg-white/90 backdrop-blur-md border border-slate-200 shadow-sm rounded-[2rem] p-3 flex items-center gap-4 active:scale-[0.98] transition-all hover:border-primary/30">
+                      {/* Status Icon with animated background */}
+                      <div className={`relative w-12 h-12 ${statusInfo.bg} ${statusInfo.color} rounded-2xl flex items-center justify-center shrink-0 overflow-hidden`}>
+                        <motion.div 
+                          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.1, 0.3] }}
+                          transition={{ repeat: Infinity, duration: 2 }}
+                          className="absolute inset-0 bg-current rounded-full"
+                        />
+                        <span className="relative z-10 text-xl">{statusInfo.icon}</span>
                       </div>
-                      <h3 className="text-xs font-bold text-slate-800 truncate">{statusInfo.label}</h3>
-                      <div className="mt-1.5 flex items-center gap-2 pr-2">
-                        <div className="h-1 bg-slate-100 flex-grow rounded-full overflow-hidden">
+
+                      {/* Info & Progress */}
+                      <div className="flex-grow min-w-0 py-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
+                          <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest truncate">
+                            {order.vendorId?.shopName || 'Restaurant'}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-baseline justify-between gap-2">
+                          <h3 className="text-sm font-bold text-slate-900 truncate tracking-tight">{statusInfo.label}</h3>
+                          <span className="text-[10px] font-black text-primary bg-orange-50 px-2 py-0.5 rounded-full">
+                            {order.estimatedDeliveryTime 
+                              ? new Date(order.estimatedDeliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                              : '~25 min'}
+                          </span>
+                        </div>
+
+                        {/* Minimalist Progress Bar */}
+                        <div className="mt-2.5 h-1.5 bg-slate-100/50 rounded-full overflow-hidden">
                           <motion.div 
                             initial={{ width: 0 }}
                             animate={{ width: `${statusInfo.progress}%` }}
-                            className="h-full bg-gradient-to-r from-orange-400 to-primary rounded-full"
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            className="h-full bg-gradient-to-r from-orange-400 via-primary to-rose-500"
                           />
                         </div>
-                        <span className="text-[9px] font-black text-primary shrink-0">
-                           {order.estimatedDeliveryTime 
-                             ? new Date(order.estimatedDeliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                             : '~30 min'}
-                         </span>
+                      </div>
+
+                      {/* Action Chevron */}
+                      <div className="w-8 h-8 bg-slate-100/50 rounded-2xl flex items-center justify-center text-slate-400 shrink-0 group-hover:bg-orange-500 group-hover:text-white transition-all">
+                        <FiChevronRight size={16} />
                       </div>
                     </div>
-                    {/* Arrow */}
-                    <div className="w-7 h-7 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 shrink-0 group-hover/card:bg-orange-50 group-hover/card:text-primary transition-colors">
-                       <FiChevronRight size={14} />
-                    </div>
-                 </div>
-               </div>
-             )
-          })}
-        </div>
+                  </div>
+                );
+              })}
+            </div>
 
-        {/* The Dots Pagination Track */}
-        {activeOrders.length > 1 && (
-          <div className="flex items-center justify-center w-full gap-1.5 mt-2 h-4">
-            {activeOrders.map((_, idx) => (
-              <div 
-                key={idx}
-                onClick={() => scrollToCard(idx)}
-                className={`rounded-full transition-all duration-300 cursor-pointer ${
-                  idx === activeIndex ? 'w-4 h-1.5 bg-slate-800' : 'w-1.5 h-1.5 bg-slate-300 hover:bg-slate-400'
-                }`}
-              />
-            ))}
+            {/* Pagination Dots (if multiple orders) */}
+            {activeOrders.length > 1 && (
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2 py-1 bg-white/50 backdrop-blur-md rounded-full border border-white/20">
+                {activeOrders.map((_, idx) => (
+                  <button 
+                    key={idx}
+                    onClick={(e) => { e.stopPropagation(); scrollToCard(idx); }}
+                    className={`h-1 rounded-full transition-all duration-500 ${
+                      idx === activeIndex ? 'w-4 bg-slate-800' : 'w-1.5 bg-slate-300'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </motion.div>
     </AnimatePresence>
   );

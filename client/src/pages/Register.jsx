@@ -81,7 +81,6 @@ const Register = () => {
       const { confirmPassword, ...registerData } = formData;
       const { data } = await api.post('/auth/register', registerData);
       dispatch(setCredentials({ user: data, token: data.token, role: data.role }));
-      toast.success('Registration Successful!');
       const roles = { admin: '/admin/dashboard', student: '/student/home', vendor: '/vendor/dashboard', delivery: '/delivery/dashboard' };
       navigate(roles[data.role] || '/');
     } catch (error) {
@@ -208,7 +207,6 @@ const Register = () => {
                   try {
                     const { data } = await api.post('/auth/google', { credential: res.credential });
                     dispatch(setCredentials({ user: data, token: data.token, role: data.role }));
-                    toast.success('Registration Successful!');
                     const roles = { admin: '/admin/dashboard', student: '/student/home', vendor: '/vendor/dashboard', delivery: '/delivery/dashboard' };
                     navigate(roles[data.role] || '/');
                   } catch (err) {

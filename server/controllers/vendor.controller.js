@@ -30,11 +30,14 @@ const getMyVendorId = async (userId) => {
 const getDashboardStats = asyncHandler(async (req, res) => {
   const vendorId = await getMyVendorId(req.user._id);
   const vendor = await Vendor.findById(vendorId);
-  const orders = await Order.find({ vendorId });
+  const orders = await Order.find({ vendorId, status: 'delivered' });
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const todaysOrders = orders.filter(o => o.createdAt >= today);
-  const revenue = todaysOrders.reduce((acc, order) => acc + order.totalAmount, 0);
-  const pendingOrders = todaysOrders.filter(o => ['placed', 'confirmed', 'preparing'].includes(o.status)).length;
+  
+  const todaysOrders = orders.filter(o => o.deliveredAt >= today);
+  const revenue = todaysOrders.reduce((acc, order) => acc + (order.vendorEarnings || 0), 0);
+  
+  const allOrders = await Order.find({ vendorId });
+  const pendingOrders = allOrders.filter(o => ['placed', 'confirmed', 'preparing'].includes(o.status)).length;
   
   const weeklyDataMap = {};
   for (let i = 0; i < 7; i++) {
@@ -45,10 +48,10 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   }
 
   orders.forEach(order => {
-    const orderDate = new Date(order.createdAt).toDateString();
+    const orderDate = new Date(order.deliveredAt).toDateString();
     for (const key in weeklyDataMap) {
-      if (weeklyDataMap[key].dateStr === orderDate && order.status === 'delivered') {
-        weeklyDataMap[key].sales += order.totalAmount;
+      if (weeklyDataMap[key].dateStr === orderDate) {
+        weeklyDataMap[key].sales += (order.vendorEarnings || 0);
       }
     }
   });
@@ -70,7 +73,19 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     { $project: { name: "$itemDetails.name", image: "$itemDetails.image", totalSold: 1, revenue: 1 } }
   ]);
 
-  res.json({ shopDetails: vendor, stats: { todaysOrders: todaysOrders.length, revenue, pendingOrders, rating: vendor.rating }, weeklyData, popularItems });
+  res.json({ 
+    shopDetails: vendor, 
+    stats: { 
+      todaysOrders: todaysOrders.length, 
+      revenue, // Today's Earnings
+      lifetimeEarnings: vendor.earnings || 0,
+      pendingPayout: vendor.pendingPayout || 0,
+      pendingOrders, 
+      rating: vendor.rating 
+    }, 
+    weeklyData, 
+    popularItems 
+  });
 });
 
 const toggleShopStatus = asyncHandler(async (req, res) => {
@@ -200,48 +215,46 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     const io = req.app.get('io');
     if (io) {
       let studentMsg = `Your order status changed to ${status}`;
-      if (status === 'preparing') studentMsg = "🍳 Great news! The vendor has accepted and started preparing your food.";
-      else if (status === 'ready') studentMsg = "🛍️ Piping hot! Your order is packed and waiting for a rider.";
-
-      // Notify student of the final status
-      io.to(`student:${order.studentId?._id || order.studentId}`).emit(`order:${status}`, { 
-        orderId: order._id, 
-        message: studentMsg,
-        estimatedTime: order.estimatedTime 
-      });
-
-      // Notify vendor (self and other sessions)
-      io.to(`vendor:${order.vendorId?._id || order.vendorId}`).emit('order:status_update', { orderId: order._id, status });
+      let title = "Order Update";
       
-      // Persist Notification to DB
+      if (status === 'preparing') {
+        studentMsg = `🎊 Booking Confirmed! The kitchen is preparing your food #${order.orderId.slice(-4)}.`;
+        title = "Booking Confirmed! 🎊";
+      } else if (status === 'ready') {
+        studentMsg = "🥡 Piping hot! Your order is packed and waiting for a rider.";
+        title = "Order Ready! 🥡";
+      }
+
+      const recipientId = order.studentId?._id || order.studentId;
+      
+      // 1. Create DB Notification
       const notification = await Notification.create({
-        recipient: order.studentId,
+        recipient: recipientId,
         message: studentMsg,
         type: 'order_update',
         orderId: order._id
       });
 
-      io.to(`student:${order.studentId?._id || order.studentId}`).emit('notification', notification);
-      
-      // Push Notification Support
-      if (['preparing', 'ready'].includes(status)) {
-        const studentId = order.studentId?._id || order.studentId;
-        const statusTitles = {
-          preparing: "Cooking Started! 🍳",
-          ready: "Order Ready! 🛍️"
-        };
-        const statusBodies = {
-          preparing: `The chef is preparing your meal. Est. time: ${order.estimatedTime} mins.`,
-          ready: "Your order is ready and waiting for a rider."
-        };
+      // 2. Emit Real-time Socket Event
+      io.to(`student:${recipientId}`).emit(`order:${status}`, { 
+        orderId: order._id, 
+        message: studentMsg,
+        status,
+        estimatedTime: order.estimatedTime 
+      });
+      io.to(`student:${recipientId}`).emit('notification', notification);
 
-        sendPushNotification(
-          studentId, 
-          `CampusEats: ${statusTitles[status]}`, 
-          statusBodies[status], 
-          order._id
-        );
+      // 3. Push Notification
+      if (['preparing', 'ready'].includes(status)) {
+        try {
+          sendPushNotification(recipientId, title, studentMsg, { orderId: order._id });
+        } catch (e) {
+          console.error('Push notification failed:', e.message);
+        }
       }
+
+      // Notify vendor (self and other sessions)
+      io.to(`vendor:${order.vendorId?._id || order.vendorId}`).emit('order:status_update', { orderId: order._id, status });
       
       if (status === 'ready') {
         const vendorName = (await order.populate('vendorId')).vendorId?.shopName || 'Campus Spot';
@@ -262,13 +275,14 @@ const updateVendorProfile = asyncHandler(async (req, res) => {
 
   if (vendor) {
     // M6: Whitelist allowed fields to prevent arbitrary updates
-    const { shopImage, shopName, location, cuisineType, operatingHours } = req.body;
+    const { shopImage, shopName, location, cuisineType, operatingHours, paymentDetails } = req.body;
     
     if (shopImage !== undefined) vendor.shopImage = shopImage;
     if (shopName) vendor.shopName = shopName;
     if (location) vendor.location = location;
     if (cuisineType !== undefined) vendor.cuisineType = cuisineType;
     if (operatingHours !== undefined) vendor.operatingHours = operatingHours;
+    if (paymentDetails !== undefined) vendor.paymentDetails = paymentDetails;
 
     const updatedVendor = await vendor.save();
     res.json(updatedVendor);
@@ -278,4 +292,17 @@ const updateVendorProfile = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { getDashboardStats, toggleShopStatus, getMenu, addMenuItem, updateMenuItem, deleteMenuItem, toggleMenuItemStatus, getOrders, updateOrderStatus, updateVendorProfile };
+const getVendorPayments = asyncHandler(async (req, res) => {
+  const vendorId = await getMyVendorId(req.user._id);
+  const orders = await Order.find({ 
+    vendorId, 
+    status: { $in: ['delivered', 'ready', 'picked_up'] } 
+  })
+    .populate('studentId', 'name phone email')
+    .populate('paymentId')
+    .sort({ createdAt: -1 });
+    
+  res.json(orders);
+});
+
+module.exports = { getDashboardStats, toggleShopStatus, getMenu, addMenuItem, updateMenuItem, deleteMenuItem, toggleMenuItemStatus, getOrders, updateOrderStatus, updateVendorProfile, getVendorPayments };

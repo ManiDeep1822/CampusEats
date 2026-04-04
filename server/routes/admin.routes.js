@@ -11,6 +11,8 @@ const {
   getDeliveryBoys,
   updateDeliveryStatus,
   getDashboardStats,
+  getWeeklyPayouts,
+  settlePayout,
   createUser,
   resendStaffOTP,
   deleteVendor,
@@ -26,6 +28,8 @@ router.use(protect, admin);
 
 // Dashboard stats
 router.route('/stats').get(getDashboardStats);
+router.route('/payouts').get(getWeeklyPayouts);
+router.route('/payouts/settle').post(settlePayout);
 
 // User routes
 router.route('/users')

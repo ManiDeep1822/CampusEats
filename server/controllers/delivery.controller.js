@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const DeliveryBoy = require('../models/DeliveryBoy');
+const Vendor = require('../models/Vendor');
 const Order = require('../models/Order');
 const Notification = require('../models/Notification');
 const { sendPushNotification } = require('../utils/notification.utils');
@@ -50,6 +51,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
       totalDeliveries: deliveryBoy.totalDeliveries,
       rating: deliveryBoy.rating,
       earnings: deliveryBoy.earnings, // Lifetime
+      pendingPayout: deliveryBoy.pendingPayout || 0,
       todaysEarnings,
       todaysOrders: todaysOrders.length
     },
@@ -114,7 +116,7 @@ const acceptOrder = asyncHandler(async (req, res) => {
 const pickUpOrder = asyncHandler(async (req, res) => {
   const deliveryBoyId = await getMyDeliveryId(req.user._id);
   const order = await Order.findById(req.params.id);
-  
+
   if (order && order.deliveryBoyId && order.deliveryBoyId.toString() === deliveryBoyId.toString()) {
     if (order.status !== 'ready' && order.status !== 'preparing') {
       res.status(400);
@@ -124,18 +126,18 @@ const pickUpOrder = asyncHandler(async (req, res) => {
     order.status = 'picked_up';
     order.pickedUpAt = Date.now();
     await order.save();
-    
+
     const io = req.app.get('io');
     if (io) {
-      const studentRoom = `student:${order.studentId?._id || order.studentId}`;
-      const vendorRoom = `vendor:${order.vendorId?._id || order.vendorId}`;
       const msg = '🛵 Zoom zoom! Your rider just picked up your food and is on the way!';
+      const vendorRoom = `vendor:${order.vendorId?._id || order.vendorId}`;
+
+      const recipientId = order.studentId?._id || order.studentId;
+      const studentRoom = `student:${recipientId}`;
       io.to(studentRoom).emit('order:picked', { orderId: order._id, message: msg });
-      io.to(vendorRoom).emit('order:status_update', { orderId: order._id, status: 'picked_up' });
-      io.to(vendorRoom).emit('order:picked', { orderId: order._id });
 
       const notification = await Notification.create({
-        recipient: order.studentId,
+        recipient: recipientId,
         message: msg,
         type: 'order_update',
         orderId: order._id
@@ -143,7 +145,10 @@ const pickUpOrder = asyncHandler(async (req, res) => {
       io.to(studentRoom).emit('notification', notification);
 
       // --- NEW: Mobile Bar Alert ---
-      sendPushNotification(order.studentId, "Out for Delivery! 🛵", "Your rider has picked up your food and is on the way.", order._id);
+      sendPushNotification(recipientId, "Out for Delivery! 🛵", "Your rider has picked up your food and is on the way.", order._id);
+
+      io.to(vendorRoom).emit('order:status_update', { orderId: order._id, status: 'picked_up' });
+      io.to(vendorRoom).emit('order:picked', { orderId: order._id });
     }
     
     res.json(order);
@@ -172,39 +177,63 @@ const deliverOrder = asyncHandler(async (req, res) => {
       throw new Error('Invalid Verification Code. Please get the correct 6-digit PIN from the student.');
     }
 
+    if (order.isCommissionSplit) {
+      res.status(400); 
+      throw new Error('This order has already been settled.');
+    }
+
+    // --- SECURE PAYMENT SPLIT (Option 1: Internal Ledger) ---
+    const riderShare = order.deliveryFee || 15;
+    const adminShare = (order.platformFee || 0) + (order.taxAmount || 0);
+    const vendorShare = order.totalAmount - riderShare - adminShare;
+
     order.status = 'delivered';
     order.deliveredAt = Date.now();
     order.deliveryOtp = undefined; 
+    
+    // Snapshots for Audit (Secure Internal Ledger)
+    order.vendorEarnings = vendorShare;
+    order.deliveryEarnings = riderShare;
+    order.adminEarnings = adminShare;
+    order.isCommissionSplit = true;
+    
     await order.save();
     
+    // 1. Update Rider Profile
     const deliveryBoy = await DeliveryBoy.findById(deliveryBoyId);
     deliveryBoy.activeOrderId = null;
     deliveryBoy.isAvailable = true;
     deliveryBoy.totalDeliveries += 1;
-    deliveryBoy.earnings += (order.deliveryFee || 15);
+    deliveryBoy.earnings += riderShare;
+    deliveryBoy.pendingPayout += riderShare; // Add to current pending balance
     await deliveryBoy.save();
+
+    // 2. Update Vendor Profile (Securely)
+    await Vendor.findByIdAndUpdate(order.vendorId, {
+       $inc: { earnings: vendorShare, pendingPayout: vendorShare, totalOrders: 1 }
+    });
 
     const io = req.app.get('io');
     if (io) {
-      const studentRoom = `student:${order.studentId?._id || order.studentId}`;
       const vendorRoom = `vendor:${order.vendorId?._id || order.vendorId}`;
       const studentMsg = '✅ Delivered! Enjoy your CampusEats meal!';
-      const vendorMsg = `✅ Order #${order.orderId} was successfully delivered by the rider.`;
+      const vendorMsg = `✅ Order #${order.orderId} was successfully delivered by the rider. Earnings: ₹${vendorShare}`;
+      
+      const recipientId = order.studentId?._id || order.studentId;
+      const studentRoom = `student:${recipientId}`;
       
       io.to(studentRoom).emit('order:delivered', { orderId: order._id, message: studentMsg });
+      await Notification.create({ recipient: recipientId, message: studentMsg, type: 'order_update', orderId: order._id });
+      sendPushNotification(recipientId, "Order Delivered! 🎉", `Enjoy your meal from ${order.vendorId?.shopName || 'CampusEats'}!`, order._id);
+
       io.to(vendorRoom).emit('order:delivered', { orderId: order._id, message: vendorMsg });
+      await Notification.create({ recipient: order.vendorId?._id || order.vendorId, message: vendorMsg, type: 'order_update', orderId: order._id });
       
       const riderRoom = `delivery:${req.user._id}`;
-      io.to(riderRoom).emit('rider:stats_update', { message: "Earnings Updated! 🎉" });
-
-      await Notification.create({ recipient: order.studentId, message: studentMsg, type: 'order_update', orderId: order._id });
-      await Notification.create({ recipient: order.vendorId, message: vendorMsg, type: 'order_update', orderId: order._id });
-      
-      // Removed redundant 'notification' emits as 'order:delivered' already handles the UI toast
+      io.to(riderRoom).emit('rider:stats_update', { message: `Earnings Updated: +₹${riderShare} 🎉` });
     }
 
-    // --- NEW: Multi-Channel Delivery Status (Push & Email) ---
-    // Wrapped in an async IIFE to avoid blocking, but handled with internal error catching
+    // --- Background Notifications ---
     (async () => {
       try {
         const userId = order.studentId?._id || order.studentId;
@@ -328,4 +357,44 @@ const cancelOrder = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { getDashboardStats, toggleAvailability, getAvailableOrders, acceptOrder, pickUpOrder, deliverOrder, getOrderById, sendDeliveryOTP, cancelOrder, markArrivedAtVendor };
+const getDeliveryPayments = asyncHandler(async (req, res) => {
+  const deliveryBoyId = await getMyDeliveryId(req.user._id);
+  const orders = await Order.find({ deliveryBoyId, status: 'delivered' })
+    .populate('vendorId', 'shopName location')
+    .sort({ deliveredAt: -1 });
+    
+  res.json(orders);
+});
+
+const updateRiderProfile = asyncHandler(async (req, res) => {
+  const deliveryBoyId = await getMyDeliveryId(req.user._id);
+  const deliveryBoy = await DeliveryBoy.findById(deliveryBoyId);
+
+  if (deliveryBoy) {
+    const { vehicleType, paymentDetails } = req.body;
+    
+    if (vehicleType !== undefined) deliveryBoy.vehicleType = vehicleType;
+    if (paymentDetails !== undefined) deliveryBoy.paymentDetails = paymentDetails;
+
+    const updatedRider = await deliveryBoy.save();
+    res.json(updatedRider);
+  } else {
+    res.status(404);
+    throw new Error('Rider not found');
+  }
+});
+
+module.exports = { 
+  getDashboardStats, 
+  toggleAvailability, 
+  getAvailableOrders, 
+  acceptOrder, 
+  pickUpOrder, 
+  deliverOrder, 
+  getOrderById, 
+  sendDeliveryOTP, 
+  cancelOrder, 
+  markArrivedAtVendor, 
+  getDeliveryPayments,
+  updateRiderProfile 
+};

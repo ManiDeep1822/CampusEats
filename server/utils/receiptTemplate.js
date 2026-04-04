@@ -1,7 +1,9 @@
 const generateReceiptHTML = (order) => {
+  const LOGO_URL = process.env.LOGO_URL || 'https://i.ibb.co/vzN4X86/campus-eats-logo.png';
   return `
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
       <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 20px; text-align: center;">
+        <img src="${LOGO_URL}" alt="CampusEats Logo" style="width: 100px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
         <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px;">CampusEats Receipt</h1>
         <p style="color: #d1fae5; font-size: 16px; margin-top: 8px; font-weight: 400;">Thank you for your order!</p>
       </div>

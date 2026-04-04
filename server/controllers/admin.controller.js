@@ -202,7 +202,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 
   const allDeliveredOrders = await Order.find({ status: 'delivered' });
   const lifetimeTurnover = allDeliveredOrders.reduce((acc, curr) => acc + curr.totalAmount, 0);
-  const lifetimeCommission = Number((lifetimeTurnover * 0.05).toFixed(2));
+  const lifetimeCommission = allDeliveredOrders.reduce((acc, curr) => acc + (curr.adminEarnings || 0), 0);
 
   res.json({
     totalUsers,
@@ -218,7 +218,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 });
 
 const createUser = asyncHandler(async (req, res) => {
-  const { name, email, role, phone, shopName, location, vehicleType } = req.body;
+  const { name, email, role, phone, shopName, location, vehicleType, upiId } = req.body;
   let { password } = req.body;
 
   // M5: Generate a secure random temporary password if not provided
@@ -239,6 +239,7 @@ const createUser = asyncHandler(async (req, res) => {
     user.phone = phone || user.phone;
     user.password = password || user.password; // This will trigger the pre-save hash if changed
     user.role = role || user.role;
+    user.mustChangePassword = (user.role === 'vendor' || user.role === 'delivery');
     await user.save();
     
     console.log(`♻️ Resuming onboarding for unverified user: ${email}`);
@@ -251,7 +252,7 @@ const createUser = asyncHandler(async (req, res) => {
       role: role || 'student', 
       phone, 
       isVerified: false,
-      mustChangePassword: true // Mandatory change for admin-created accounts
+      mustChangePassword: (role === 'vendor' || role === 'delivery') // Restricted to Staff
     });
   }
 
@@ -260,14 +261,21 @@ const createUser = asyncHandler(async (req, res) => {
     if (user.role === 'vendor') {
       const vendorRecord = await Vendor.findOneAndUpdate(
         { userId: user._id },
-        { shopName: shopName || `${name}'s Shop`, location: location || 'Campus' },
+        { 
+          shopName: shopName || `${name}'s Shop`, 
+          location: location || 'Campus',
+          paymentDetails: upiId ? { upiId } : undefined
+        },
         { upsert: true, new: true }
       );
       profileId = vendorRecord._id;
     } else if (user.role === 'delivery') {
       const deliveryRecord = await DeliveryBoy.findOneAndUpdate(
         { userId: user._id },
-        { vehicleType: vehicleType || 'Bicycle' },
+        { 
+          vehicleType: vehicleType || 'Bicycle',
+          paymentDetails: upiId ? { upiId } : undefined
+        },
         { upsert: true, new: true }
       );
       profileId = deliveryRecord._id;
@@ -470,6 +478,80 @@ const toggleCouponStatus = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Get weekly payout calculation for vendors and riders
+// @route   GET /api/admin/weekly-payouts
+// @access  Private/Admin
+const getWeeklyPayouts = asyncHandler(async (req, res) => {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  // Fetch all vendors with pending payouts or recent activity
+  const vendorPayouts = await Vendor.aggregate([
+    { $lookup: {
+        from: "users",
+        localField: "userId",
+        foreignField: "_id",
+        as: "userInfo"
+    } },
+    { $unwind: "$userInfo" },
+    { $project: {
+        name: "$userInfo.name",
+        shopName: 1,
+        phone: "$userInfo.phone",
+        pendingPayout: 1,
+        paymentDetails: 1
+    } }
+  ]);
+
+  const riderPayouts = await DeliveryBoy.aggregate([
+    { $lookup: {
+        from: "users",
+        localField: "userId",
+        foreignField: "_id",
+        as: "userInfo"
+    } },
+    { $unwind: "$userInfo" },
+    { $project: {
+        name: "$userInfo.name",
+        phone: "$userInfo.phone",
+        vehicleType: 1,
+        pendingPayout: 1,
+        paymentDetails: 1
+    } }
+  ]);
+
+  res.json({
+    dateRange: { start: sevenDaysAgo, end: new Date() },
+    vendorPayouts: vendorPayouts.filter(v => v.pendingPayout > 0),
+    riderPayouts: riderPayouts.filter(r => r.pendingPayout > 0)
+  });
+});
+
+// @desc    Mark a payout as settled (Paid)
+// @route   POST /api/admin/settle-payout
+// @access  Private/Admin
+const settlePayout = asyncHandler(async (req, res) => {
+  const { type, id } = req.body;
+
+  if (type === 'vendor') {
+    const vendor = await Vendor.findById(id);
+    if (!vendor) throw new Error('Vendor not found');
+    vendor.pendingPayout = 0;
+    await vendor.save();
+  } else if (type === 'rider') {
+    const rider = await DeliveryBoy.findById(id);
+    if (!rider) throw new Error('Rider not found');
+    rider.pendingPayout = 0;
+    await rider.save();
+  } else {
+    res.status(400);
+    throw new Error('Invalid payout type');
+  }
+
+  res.json({ message: 'Payout marked as settled successfully' });
+});
+
 module.exports = {
   getUsers,
   deleteUser,
@@ -487,4 +569,6 @@ module.exports = {
   createCoupon,
   deleteCoupon,
   toggleCouponStatus,
+  getWeeklyPayouts,
+  settlePayout
 };
