@@ -476,34 +476,63 @@ const cancelOrder = asyncHandler(async (req, res) => {
 });
 
 const rateOrder = asyncHandler(async (req, res) => {
-  const { rating, review } = req.body;
+  const { vendorRating, vendorReview, riderRating, riderReview } = req.body;
   
-  if (!rating || rating < 1 || rating > 5) {
-    res.status(400); throw new Error('Valid rating between 1 and 5 is required');
+  if (!vendorRating || vendorRating < 1 || vendorRating > 5) {
+    res.status(400); throw new Error('Vendor rating is required');
   }
 
   const order = await Order.findById(req.params.id);
   if (!order) { res.status(404); throw new Error('Order not found'); }
   if (order.studentId.toString() !== req.user._id.toString()) { res.status(403); throw new Error('Not authorized'); }
-  if (order.status !== 'delivered') { res.status(400); throw new Error('You can only rate an order after it has been delivered'); }
-  if (order.rating) { res.status(400); throw new Error('This order has already been rated'); }
+  if (order.status !== 'delivered') { res.status(400); throw new Error('Rate after delivery'); }
+  if (order.vendorRating) { res.status(400); throw new Error('Already rated'); }
 
-  order.rating = Number(rating);
-  if (review) order.review = review;
+  // 1. Update Order Document
+  order.vendorRating = Number(vendorRating);
+  if (vendorReview) order.vendorReview = vendorReview;
+  
+  const hasRider = order.deliveryBoyId && order.orderType === 'delivery';
+  if (hasRider && riderRating) {
+    order.riderRating = Number(riderRating);
+    if (riderReview) order.riderReview = riderReview;
+  }
+  
   await order.save();
 
+  // 2. Update Vendor Global Metrics
   const vendor = await Vendor.findById(order.vendorId);
   if (vendor) {
-    if (!vendor.totalRatings) vendor.totalRatings = vendor.numReviews || 0;
-    if (!vendor.ratingSum) vendor.ratingSum = (vendor.rating || 0) * vendor.totalRatings;
-    
-    vendor.totalRatings += 1;
-    vendor.ratingSum += Number(rating);
-    vendor.rating = Number((vendor.ratingSum / vendor.totalRatings).toFixed(1));
+    const total = vendor.numReviews || 0;
+    const currentSum = (vendor.rating || 0) * total;
+    vendor.numReviews = total + 1;
+    vendor.rating = Number(((currentSum + Number(vendorRating)) / (total + 1)).toFixed(1));
     await vendor.save();
   }
 
-  res.json({ message: 'Rating submitted successfully', order });
+  // 3. Update DeliveryBoy Global Metrics & Review Array
+  if (hasRider && riderRating) {
+    const rider = await DeliveryBoy.findById(order.deliveryBoyId);
+    if (rider) {
+      // Numerical Rating
+      const total = rider.numReviews || 0;
+      const currentSum = (rider.rating || 0) * total;
+      rider.numReviews = total + 1;
+      rider.rating = Number(((currentSum + Number(riderRating)) / (total + 1)).toFixed(1));
+      
+      // Store Review in array
+      rider.reviews.push({
+        user: req.user._id,
+        name: req.user.name,
+        rating: Number(riderRating),
+        comment: riderReview || 'No comment provided'
+      });
+      
+      await rider.save();
+    }
+  }
+
+  res.json({ message: 'Ratings submitted successfully', order });
 });
 
 const getOrderReceipt = asyncHandler(async (req, res) => {

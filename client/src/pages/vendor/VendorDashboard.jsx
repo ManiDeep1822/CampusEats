@@ -15,6 +15,7 @@ const VendorDashboard = () => {
   const [showProfile, setShowProfile] = useState(() => {
     return localStorage.getItem('vendor_show_profile') !== 'false';
   });
+  const [isEditingUPI, setIsEditingUPI] = useState(false);
 
   const fetchStats = async () => {
     try {
@@ -32,8 +33,6 @@ const VendorDashboard = () => {
 
   const toggleStatus = async () => {
     const oldIsOpen = data.shopDetails.isOpen;
-
-    // ⚡ Optimistic UI Update: Toggle switch instantly
     setData({ 
       ...data, 
       shopDetails: { ...data.shopDetails, isOpen: !oldIsOpen } 
@@ -41,14 +40,12 @@ const VendorDashboard = () => {
 
     try {
       const res = await api.put('/vendor/toggle-status');
-      // Sync with server result
       setData({ 
         ...data, 
         shopDetails: { ...data.shopDetails, isOpen: res.data.isOpen } 
       });
       toast.success(`Shop is now ${res.data.isOpen ? 'OPEN' : 'CLOSED'} 🏪`);
     } catch (error) { 
-      // Rollback if the server fails
       setData({ 
         ...data, 
         shopDetails: { ...data.shopDetails, isOpen: oldIsOpen } 
@@ -66,18 +63,13 @@ const VendorDashboard = () => {
 
     const uploadToast = toast.loading('Uploading image...');
     try {
-      // 1. Upload to Cloudinary
       const uploadRes = await api.post('/upload', formData);
       const imageUrl = uploadRes.data.imageUrl;
-
-      // 2. Update Vendor Profile
       await api.put('/vendor/profile', { shopImage: imageUrl });
-      
       setData({ ...data, shopDetails: { ...data.shopDetails, shopImage: imageUrl } });
-      await fetchStats(); // Refresh all stats and details from backend
+      await fetchStats();
       toast.success('Restaurant image updated!', { id: uploadToast });
     } catch (error) {
-      console.error(error);
       toast.error('Failed to upload image', { id: uploadToast });
     }
   };
@@ -119,6 +111,7 @@ const VendorDashboard = () => {
     try {
       await api.put('/vendor/profile', { paymentDetails: { upiId } });
       toast.success('Payment settings updated! 💸', { id: saveToast });
+      setIsEditingUPI(false);
       fetchStats();
     } catch (error) {
       toast.error('Failed to update payment info', { id: saveToast });
@@ -127,6 +120,8 @@ const VendorDashboard = () => {
 
   if (loading) return <Loader />;
   if (!data || !data.stats) return <div className="text-center py-20 text-red-500 font-bold">Error loading dashboard. Please refresh.</div>;
+
+  const currentUpi = data.shopDetails.paymentDetails?.upiId;
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
@@ -192,28 +187,28 @@ const VendorDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-textSecondary font-bold">Today&apos;s Revenue</h3>
+              <h3 className="text-textSecondary font-bold text-xs uppercase tracking-widest">Today&apos;s Revenue</h3>
               <div className="p-2 bg-orange-100 text-primary rounded-lg"><FiTrendingUp size={20}/></div>
             </div>
             <p className="text-3xl font-extrabold text-gray-900">₹{data.stats.revenue}</p>
           </div>
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-textSecondary font-bold">Today&apos;s Orders</h3>
+              <h3 className="text-textSecondary font-bold text-xs uppercase tracking-widest">Today&apos;s Orders</h3>
               <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><FiShoppingBag size={20}/></div>
             </div>
             <p className="text-3xl font-extrabold text-gray-900">{data.stats.todaysOrders}</p>
           </div>
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-textSecondary font-bold">Pending Orders</h3>
+              <h3 className="text-textSecondary font-bold text-xs uppercase tracking-widest">Pending Orders</h3>
               <div className="p-2 bg-yellow-100 text-yellow-600 rounded-lg"><FiClock size={20}/></div>
             </div>
             <p className="text-3xl font-extrabold text-gray-900">{data.stats.pendingOrders || 0}</p>
           </div>
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-green-500">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-textSecondary font-bold text-green-700">Lifetime Balance</h3>
+              <h3 className="text-textSecondary font-bold text-green-700 text-xs uppercase tracking-widest">Lifetime Balance</h3>
               <div className="p-2 bg-green-100 text-green-600 rounded-lg"><FaRupeeSign size={20}/></div>
             </div>
             <p className="text-3xl font-extrabold text-green-700">₹{data.stats.lifetimeEarnings || 0}</p>
@@ -231,34 +226,62 @@ const VendorDashboard = () => {
             </div>
           </div>
 
-          <div className="flex-1 w-full p-6 bg-gray-50 rounded-2xl border border-gray-100">
+          <div className="flex-1 w-full p-7 bg-gray-50 rounded-2xl border border-gray-100 transition-all">
             <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
               <FiTrendingUp className="text-primary" />
-              Update Payout Destination
+              Payout Destination
             </h3>
-            <form onSubmit={handleUpdatePayment} className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <input 
-                  name="upiId"
-                  defaultValue={data.shopDetails.paymentDetails?.upiId || ''}
-                  placeholder="Enter your UPI ID (e.g. name@paytm)"
-                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none text-sm transition-all shadow-sm"
-                  required
-                />
+            
+            {!isEditingUPI && currentUpi ? (
+              <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-xl border border-orange-100 shadow-sm">
+                <div className="flex-1">
+                  <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1 leading-none">Registered UPI ID</p>
+                  <p className="text-base font-bold text-gray-800">{currentUpi}</p>
+                </div>
+                <button 
+                  onClick={() => setIsEditingUPI(true)}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-orange-50 text-primary font-bold rounded-lg border border-orange-100 hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95 text-sm"
+                >
+                  Edit ID
+                </button>
               </div>
-              <button 
-                type="submit"
-                className="bg-primary text-white font-bold px-8 py-3 rounded-xl hover:bg-orange-600 transition shadow-lg shadow-orange-500/20 active:scale-95"
-              >
-                Save UPI
-              </button>
-            </form>
-            <p className="text-[10px] text-gray-400 mt-3 font-medium uppercase tracking-tighter">* All payouts are processed manually by the admin to this ID.</p>
+            ) : (
+              <form onSubmit={handleUpdatePayment} className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <input 
+                    name="upiId"
+                    defaultValue={currentUpi || ''}
+                    placeholder="Enter UPI ID (e.g. name@upi)"
+                    className="w-full bg-white border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none text-sm font-bold transition-all"
+                    required
+                    autoFocus={isEditingUPI}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    type="submit"
+                    className="flex-1 bg-primary text-white font-bold px-8 py-3 rounded-xl hover:bg-orange-600 transition shadow-lg shadow-orange-500/20 active:scale-95 whitespace-nowrap"
+                  >
+                    {currentUpi ? 'Update UPI' : 'Save UPI'}
+                  </button>
+                  {isEditingUPI && (
+                    <button 
+                      type="button"
+                      onClick={() => setIsEditingUPI(false)}
+                      className="px-4 py-3 bg-white text-gray-500 font-bold border border-gray-200 rounded-xl hover:bg-gray-50 transition"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
+            <p className="text-[10px] text-gray-400 mt-4 font-black uppercase tracking-tighter">* Secure settlements are processed by the admin using this ID.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-2">
-          {/* Chart Section */}
+          {/* Weekly Sales Performance Chart */}
           <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <h2 className="text-xl font-bold font-heading mb-6">Weekly Sales Performance</h2>
             <div className="h-80 w-full">
@@ -273,39 +296,26 @@ const VendorDashboard = () => {
                   <XAxis dataKey="name" stroke="#9ca3af" />
                   <YAxis stroke="#9ca3af" />
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                  <Tooltip />
                   <Area type="monotone" dataKey="sales" stroke="#ea580c" fillOpacity={1} fill="url(#colorSales)" strokeWidth={3} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Popular Items Section */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold font-heading">Top Selling Items</h2>
-              <span className="text-xs font-bold bg-orange-100 text-orange-600 px-2 py-1 rounded">All Time</span>
             </div>
-            
             <div className="space-y-4">
-              {data.popularItems?.length === 0 && (
-                 <p className="text-sm text-gray-400 text-center py-10 border-2 border-dashed border-gray-100 rounded-lg">No delivered sales data yet.</p>
-              )}
               {(data?.popularItems || []).map((item, idx) => (
-                <div key={item?._id || idx} className="flex items-center gap-4 p-3 hover:bg-orange-50 rounded-xl transition cursor-pointer border border-transparent hover:border-orange-100">
+                <div key={item?._id || idx} className="flex items-center gap-4 p-3 hover:bg-orange-50 rounded-xl transition cursor-pointer">
                   <div className="text-xl font-extrabold text-orange-300 w-6">#{idx + 1}</div>
-                  {item?.image ? (
-                    <img src={item.image} alt={item?.name} className="w-12 h-12 object-cover rounded-lg shadow-sm" />
-                  ) : (
-                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-xl">🍲</div>
-                  )}
                   <div className="flex-1">
-                    <h4 className="font-bold text-gray-800 text-sm leading-tight mb-1">{item?.name || 'Item'}</h4>
-                    <p className="text-xs font-medium text-gray-500">{item?.totalSold || 0} units sold</p>
+                    <h4 className="font-bold text-gray-800 text-sm">{item?.name || 'Item'}</h4>
+                    <p className="text-xs text-gray-500">{item?.totalSold || 0} units</p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-extrabold text-green-600 text-sm">₹{item?.revenue || 0}</p>
-                  </div>
+                  <p className="font-extrabold text-green-600 text-sm">₹{item?.revenue || 0}</p>
                 </div>
               ))}
             </div>
@@ -315,39 +325,11 @@ const VendorDashboard = () => {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
            <h2 className="text-xl font-bold font-heading mb-4">Quick Actions</h2>
            <div className="flex flex-wrap gap-3 items-stretch">
-             <Link to="/vendor/menu" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary hover:text-primary transition text-base max-sm:text-sm flex items-center justify-center">Manage Menu</Link>
-             <Link to="/vendor/payments" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary hover:text-primary transition text-base max-sm:text-sm flex items-center gap-2">
-               <FaRupeeSign size={18} className="text-primary" />
-               Payment History
-             </Link>
-             
-             {/* KDS — Command Center Card */}
-             <Link
-               to="/vendor/kds"
-               className="group relative flex items-center gap-4 px-6 py-4 rounded-xl font-bold text-white overflow-hidden shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-br from-slate-900 via-slate-800 to-orange-900 border border-orange-500/20"
-             >
-               {/* Glow blob */}
-               <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-               
-               {/* Icon with pulse ring */}
-               <div className="relative shrink-0">
-                 <div className="absolute inset-0 bg-orange-500 rounded-full animate-ping opacity-20" />
-                 <div className="relative w-10 h-10 flex items-center justify-center bg-orange-500/20 rounded-full border border-orange-500/30">
-                   <FiMonitor size={20} className="text-orange-400" />
-                 </div>
-               </div>
-
-               {/* Text */}
-               <div className="flex flex-col leading-tight">
-                 <span className="text-[11px] font-black uppercase tracking-[0.15em] text-orange-400">Command Center</span>
-                 <span className="text-base font-black text-white">Kitchen Display (KDS)</span>
-                 <span className="text-[10px] text-slate-400 font-medium mt-0.5">
-                   {data.stats.pendingOrders > 0 ? `🔴 ${data.stats.pendingOrders} active order${data.stats.pendingOrders > 1 ? 's' : ''} in queue` : '✅ All queues clear'}
-                 </span>
-               </div>
-
-               {/* Arrow */}
-               <FiChevronRight size={18} className="ml-auto shrink-0 text-orange-400 group-hover:translate-x-1 transition-transform" />
+             <Link to="/vendor/menu" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary transition">Manage Menu</Link>
+             <Link to="/vendor/payments" className="px-5 py-3 border border-gray-200 rounded-lg font-bold text-gray-700 hover:border-primary transition">Payment History</Link>
+             <Link to="/vendor/kds" className="flex items-center gap-4 px-6 py-4 rounded-xl font-bold text-white bg-slate-900 border border-orange-500/20">
+               <FiMonitor size={20} className="text-orange-400" />
+               Kitchen Display (KDS)
              </Link>
            </div>
         </div>

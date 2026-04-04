@@ -119,9 +119,14 @@ const OrderTracking = () => {
     } 
   };
 
-  const [ratingValue, setRatingValue] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [reviewText, setReviewText] = useState('');
+  const [vendorRating, setVendorRating] = useState(0);
+  const [vendorHover, setVendorHover] = useState(0);
+  const [vendorReview, setVendorReview] = useState('');
+  
+  const [riderRating, setRiderRating] = useState(0);
+  const [riderHover, setRiderHover] = useState(0);
+  const [riderReview, setRiderReview] = useState('');
+  
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
   useEffect(() => {
@@ -167,7 +172,6 @@ const OrderTracking = () => {
     const getTargetId = () => {
       const targetUser = activeOrder?.deliveryBoyId?.userId;
       const targetUserId = targetUser?._id || targetUser || activeOrder?.deliveryBoyId;
-      
       if (!targetUserId) throw new Error('Could not identify target rider ID for chat');
       return targetUserId.toString();
     };
@@ -204,10 +208,17 @@ const OrderTracking = () => {
   };
 
   const submitRating = async () => {
-    if (ratingValue === 0) return toast.error("Please select a star rating");
+    if (vendorRating === 0) return toast.error("Please rate the restaurant");
+    if (!isTakeAway && !riderRating) return toast.error("Please rate the delivery rider");
+    
     setIsSubmittingRating(true);
     try {
-      const { data } = await api.post(`/student/orders/${id}/rate`, { rating: ratingValue, review: reviewText });
+      const { data } = await api.post(`/student/orders/${id}/rate`, { 
+        vendorRating, 
+        vendorReview, 
+        riderRating, 
+        riderReview 
+      });
       toast.success(data.message);
       dispatch(setActiveOrder(data.order));
     } catch (err) {
@@ -327,7 +338,6 @@ const OrderTracking = () => {
           })}
         </div>
         
-        {/* NEW: Pickup PIN Banner for Take Away */}
         {isTakeAway && activeOrder?.status === 'ready' && (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -361,14 +371,12 @@ const OrderTracking = () => {
            </div>
         )}
 
-        {/* MINIMALIST ETA MODULE (SWIGGY/ZOMATO STYLE) */}
         <div className="relative mb-12 mt-8">
            <motion.div 
              initial={{ opacity: 0, y: 10 }}
              animate={{ opacity: 1, y: 0 }}
              className="text-center space-y-6"
            >
-              {/* LARGE ETA DISPLAY */}
               <div className="space-y-1">
                  <div className="flex items-center justify-center gap-2 mb-2">
                     <span className="relative flex h-2 w-2">
@@ -391,10 +399,8 @@ const OrderTracking = () => {
                  </div>
               </div>
 
-              {/* SLIDING PROGRESS LINE */}
               <div className="max-w-xs mx-auto relative px-8 py-4">
                  <div className="h-1 bg-slate-100 rounded-full w-full relative">
-                    {/* Active Segment */}
                     <motion.div 
                        initial={{ width: 0 }}
                        animate={{ 
@@ -406,14 +412,13 @@ const OrderTracking = () => {
                        className="h-full bg-primary rounded-full transition-all duration-1000"
                     />
                     
-                    {/* Sliding Icon Wrapper */}
                     <motion.div 
                        initial={{ left: 0 }}
                        animate={{ 
                          left: activeOrder.status === 'delivered' ? '100.5%' : 
-                               activeOrder.status === 'picked_up' ? '70.5%' : 
-                               ['ready', 'prepared'].includes(activeOrder.status) ? '40.5%' : 
-                               activeOrder.status === 'preparing' ? '15.5%' : '0%' 
+                                activeOrder.status === 'picked_up' ? '70.5%' : 
+                                ['ready', 'prepared'].includes(activeOrder.status) ? '40.5%' : 
+                                activeOrder.status === 'preparing' ? '15.5%' : '0%' 
                        }}
                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10"
                     >
@@ -426,12 +431,10 @@ const OrderTracking = () => {
                     </motion.div>
                  </div>
                  
-                 {/* Destination Dots */}
                  <div className="absolute left-7 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-slate-200"></div>
                  <div className="absolute right-7 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-slate-200"></div>
               </div>
 
-              {/* DYNAMIC STATUS TEXT */}
               <div className="space-y-1">
                  <p className="text-lg font-black text-slate-800 tracking-tight leading-none uppercase">
                    {activeOrder.status === 'preparing' ? 'Chef is preparing your food' : 
@@ -458,11 +461,7 @@ const OrderTracking = () => {
                 attribution='&copy; OpenStreetMap'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              
-              {/* Auto-centering only when rider is moving */}
               {riderLocation && <RecenterMap lat={riderLocation[0]} lng={riderLocation[1]} />}
-
-              {/* Live Route Path (OSRM Road Following) */}
               {routeCoords.length > 0 && (
                 <Polyline 
                   positions={routeCoords} 
@@ -471,8 +470,6 @@ const OrderTracking = () => {
                   opacity={0.4} 
                 />
               )}
-
-              {/* Progressive Path (Rider to Destination) */}
               {riderLocation && routeCoords.length > 0 && (
                  <Polyline 
                     positions={[riderLocation, STUDENT_LATLNG]} 
@@ -482,8 +479,6 @@ const OrderTracking = () => {
                     opacity={0.8}
                  />
               )}
-
-              {/* Vendor Marker */}
               <Marker position={[28.7041, 77.1025]} icon={L.divIcon({
                 html: '<div class="text-2xl filter drop-shadow-md">🏪</div>',
                 className: 'bg-transparent border-none',
@@ -491,8 +486,6 @@ const OrderTracking = () => {
               })}>
                 <Popup className="font-bold">Restaurant: {activeOrder?.vendorId?.shopName || 'Vendor'}</Popup>
               </Marker>
-
-              {/* Delivery Drop Marker */}
               <Marker position={[28.7061, 77.1045]} icon={L.divIcon({
                 html: '<div class="text-2xl filter drop-shadow-md">🏠</div>',
                 className: 'bg-transparent border-none',
@@ -500,8 +493,6 @@ const OrderTracking = () => {
               })}>
                 <Popup className="font-bold">Your Location: {activeOrder?.deliveryAddress || 'Destination'}</Popup>
               </Marker>
-
-              {/* Rider Marker (Only if active) */}
               {riderLocation && (
                 <Marker position={riderLocation} icon={L.divIcon({
                   html: `<div class="relative rider-marker-reveal">
@@ -540,25 +531,48 @@ const OrderTracking = () => {
         )}
 
         <AnimatePresence>
-          {(trackingStatus || activeOrder.status) === 'delivered' && !activeOrder.rating && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex items-center justify-center p-4">
-              <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center border">
-                <div className="w-20 h-20 bg-orange-100 text-primary rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">⭐</div>
-                <h2 className="text-2xl font-bold mb-2">How was your meal?</h2>
-                <p className="text-gray-500 mb-8">Your feedback helps {activeOrder?.vendorId?.shopName || 'the vendor'} grow.</p>
+          {(trackingStatus || activeOrder.status) === 'delivered' && !activeOrder.vendorRating && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
+              <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-[2.5rem] p-10 max-w-lg w-full shadow-2xl border overflow-y-auto max-h-[90vh]">
+                <div className="text-center mb-8">
+                  <div className="w-16 h-16 bg-orange-100 text-primary rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 shadow-inner rotate-3">⭐</div>
+                  <h2 className="text-3xl font-black text-gray-800 tracking-tight">Rate your Experience</h2>
+                  <p className="text-gray-400 font-bold text-sm uppercase tracking-widest mt-1">Order #{activeOrder.orderId}</p>
+                </div>
                 
-                <div className="flex justify-center gap-2 mb-8">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <button key={s} onMouseEnter={() => setHoverRating(s)} onMouseLeave={() => setHoverRating(0)} onClick={() => setRatingValue(s)} className="text-4xl transition-transform hover:scale-125 focus:outline-none">
-                      <FiStar className={s <= (hoverRating || ratingValue) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'} />
-                    </button>
-                  ))}
+                <div className="space-y-10">
+                  {/* Vendor Rating */}
+                  <div className="bg-slate-50 p-6 rounded-[2rem] border border-gray-100">
+                    <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-4 text-center">Food & Restaurant</p>
+                    <h4 className="text-lg font-black text-center text-gray-800 mb-4">{activeOrder?.vendorId?.shopName}</h4>
+                    <div className="flex justify-center gap-2 mb-6">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <button key={s} onMouseEnter={() => setVendorHover(s)} onMouseLeave={() => setVendorHover(0)} onClick={() => setVendorRating(s)} className="text-4xl transition-transform hover:scale-125 focus:outline-none">
+                          <FiStar className={s <= (vendorHover || vendorRating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'} />
+                        </button>
+                      ))}
+                    </div>
+                    <textarea placeholder="How was the food? (Optional)" value={vendorReview} onChange={(e) => setVendorReview(e.target.value)} className="w-full p-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none h-20 text-sm font-medium" />
+                  </div>
+
+                  {!isTakeAway && (
+                    <div className="bg-slate-50 p-6 rounded-[2rem] border border-gray-100">
+                      <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4 text-center">Delivery Partner</p>
+                      <h4 className="text-lg font-black text-center text-gray-800 mb-4">Rider Service</h4>
+                      <div className="flex justify-center gap-2 mb-6">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <button key={s} onMouseEnter={() => setRiderHover(s)} onMouseLeave={() => setRiderHover(0)} onClick={() => setRiderRating(s)} className="text-4xl transition-transform hover:scale-125 focus:outline-none">
+                            <FiStar className={s <= (riderHover || riderRating) ? 'fill-blue-500 text-blue-500' : 'text-gray-200'} />
+                          </button>
+                        ))}
+                      </div>
+                      <textarea placeholder="Feedback for the rider? (Optional)" value={riderReview} onChange={(e) => setRiderReview(e.target.value)} className="w-full p-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/5 transition-all resize-none h-20 text-sm font-medium" />
+                    </div>
+                  )}
                 </div>
 
-                <textarea placeholder="Write a quick review (optional)..." value={reviewText} onChange={(e) => setReviewText(e.target.value)} className="w-full p-4 bg-gray-50 border rounded-2xl mb-6 outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none h-24" />
-
-                <button onClick={submitRating} disabled={ratingValue === 0 || isSubmittingRating} className="w-full bg-primary text-white py-4 rounded-2xl font-bold hover:bg-orange-600 transition disabled:opacity-50 shadow-lg shadow-orange-500/30">
-                  {isSubmittingRating ? 'Submitting...' : 'Submit Feedback'}
+                <button onClick={submitRating} disabled={vendorRating === 0 || (!isTakeAway && !riderRating) || isSubmittingRating} className="w-full mt-10 bg-primary text-white py-5 rounded-2xl font-black text-sm uppercase tracking-[0.2em] hover:bg-orange-600 transition-all disabled:opacity-50 shadow-xl shadow-orange-500/20 active:scale-95">
+                  {isSubmittingRating ? 'Saving Feedback...' : 'Submit All Ratings'}
                 </button>
               </motion.div>
             </motion.div>

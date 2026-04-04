@@ -1,14 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
-import { FiStar, FiClock, FiPlus, FiMinus, FiHeart } from 'react-icons/fi';
+import { FiStar, FiClock, FiPlus, FiMinus, FiHeart, FiTrash } from 'react-icons/fi';
 import api from '../../services/api';
 import SkeletonLoader from '../../components/shared/SkeletonLoader';
 import { addToCart, removeFromCart } from '../../store/cartSlice';
 import toast from 'react-hot-toast';
 import CartFloatingButton from '../../components/student/CartFloatingButton';
-
 
 const RestaurantPage = () => {
   const { id } = useParams();
@@ -20,8 +19,32 @@ const RestaurantPage = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   
   const dispatch = useDispatch();
+  const { user } = useSelector(state => state.auth || {});
   const cartItems = useSelector(state => state.cart.items);
   const currentVendorId = useSelector(state => state.cart.vendorId);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const scrollRef = useRef(null);
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+        const maxScroll = scrollWidth - clientWidth;
+        setScrollProgress(maxScroll > 0 ? scrollLeft / maxScroll : 0);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    if (!window.confirm("Are you sure you want to delete this review?")) return;
+    try {
+      await api.delete(`/admin/vendors/${id}/reviews/${reviewId}`);
+      toast.success("Review deleted successfully");
+      // Refetch vendor to update UI
+      const { data } = await api.get(`/student/vendors/${id}`);
+      setVendor(data?.vendor || null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete review");
+    }
+  };
 
   useEffect(() => {
     const fetchRestaurant = async () => {
@@ -43,17 +66,13 @@ const RestaurantPage = () => {
 
   const toggleFav = async () => {
     const oldIsFavorite = isFavorite;
-    
-    // ⚡ Optimistic UI Update: Toggle heart instantly
     setIsFavorite(!isFavorite);
-    
     try {
       const { data } = await api.put(`/student/favorites/${id}`);
       const serverIsFav = (data?.favorites || []).includes(id);
       setIsFavorite(serverIsFav);
       toast.success(serverIsFav ? "Saved to favorites!" : "Removed from favorites");
     } catch(err) { 
-      // Rollback if the server fails
       setIsFavorite(oldIsFavorite);
       toast.error("Cloud sync failed. Favorited status rolled back."); 
     }
@@ -91,6 +110,8 @@ const RestaurantPage = () => {
 
   if (loading) return <SkeletonLoader variant="detailed" />;
   if (!vendor) return <div className="text-center py-20">Restaurant not found</div>;
+
+  const isAdmin = user?.role === 'admin';
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
@@ -204,11 +225,9 @@ const RestaurantPage = () => {
         </div>
       </div>
 
-      {/* Reviews Section */}
       <div className="max-w-4xl mx-auto mt-16 px-4">
         <h2 className="text-2xl font-bold font-heading mb-6">Reviews & Ratings</h2>
         
-        {/* Add Review Form */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
           <h3 className="text-lg font-bold mb-4 text-textPrimary">Write a Review</h3>
           <form onSubmit={submitReviewHandler}>
@@ -231,30 +250,84 @@ const RestaurantPage = () => {
           </form>
         </div>
 
-        {/* Reviews List */}
-        <div className="space-y-4">
-          {(!vendor?.reviews || vendor.reviews.length === 0) && (
-            <div className="text-center text-gray-500 py-6 bg-white rounded-xl shadow-sm border border-gray-100">No reviews yet. Be the first to review this restaurant!</div>
-          )}
-          {(vendor?.reviews || []).map((review) => (
-            <div key={review?._id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="h-10 w-10 bg-orange-100 text-primary rounded-full flex items-center justify-center font-bold text-lg">
-                  {(review?.name || 'U').charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <div className="font-bold text-gray-800">{review?.name || 'Guest'}</div>
-                  <div className="text-xs text-gray-500">{review?.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Recently'}</div>
-                </div>
-                <div className="ml-auto flex items-center bg-orange-50 text-accent font-bold px-2 py-1 rounded text-sm"><FiStar className="mr-1"/> {review?.rating || 0}</div>
+        <div className="relative">
+          <div 
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex overflow-x-auto gap-6 pb-8 pt-4 px-2 snap-x no-scrollbar custom-horizontal-scrollbar scroll-smooth"
+          >
+            {(!vendor?.reviews || vendor.reviews.length === 0) ? (
+              <div className="w-full text-center text-gray-400 py-10 bg-white/50 backdrop-blur-sm rounded-[2.5rem] border border-dashed border-gray-200 font-medium">
+                Be the first to leave a review!
               </div>
-              <p className="text-gray-600">{review?.comment}</p>
+            ) : (
+              vendor.reviews.slice().reverse().map((review, idx) => (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * 0.1 }}
+                  whileHover={{ y: -8, scale: 1.02 }}
+                  key={review?._id} 
+                  className="flex-shrink-0 w-[300px] sm:w-[340px] h-[180px] bg-gradient-to-br from-white/90 to-white/50 backdrop-blur-md p-6 rounded-[3rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 snap-start flex flex-col justify-between group relative"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 bg-gradient-to-tr from-orange-400 to-primary text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-xl shadow-orange-200/40">
+                      {(review?.name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-black text-gray-800 text-sm truncate uppercase tracking-tighter">{review?.name || 'Guest'}</div>
+                      <div className="flex gap-0.5 mt-1">
+                        {[...Array(5)].map((_, i) => (
+                          <FiStar key={i} size={10} className={`${i < (review?.rating || 0) ? 'fill-orange-400 text-orange-400' : 'text-gray-200'}`} />
+                        ))}
+                      </div>
+                    </div>
+                    {isAdmin && (
+                      <button 
+                        onClick={() => handleDeleteReview(review._id)}
+                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors self-start"
+                        title="Delete Review"
+                      >
+                        <FiTrash size={16} />
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="relative mt-4">
+                    <span className="absolute -top-3 -left-2 text-4xl text-orange-200 opacity-30 font-serif">“</span>
+                    <p className="text-gray-600 text-sm leading-relaxed font-medium line-clamp-3 italic px-2">
+                      {review?.comment}
+                    </p>
+                  </div>
+                  
+                  <div className="flex justify-end mt-2">
+                    <div className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] bg-gray-50/50 px-2 py-0.5 rounded-full">Verified Campus Order</div>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </div>
+          
+          {vendor?.reviews && vendor.reviews.length > 1 && (
+            <div className="max-w-[100px] mx-auto h-1 bg-gray-100 rounded-full overflow-hidden mt-2 relative">
+                <motion.div 
+                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-400 to-primary rounded-full transition-transform duration-100 origin-left"
+                    style={{ width: '100%', scaleX: scrollProgress }}
+                />
             </div>
-          ))}
+          )}
         </div>
+
+        <style dangerouslySetInnerHTML={{ __html: `
+          .no-scrollbar::-webkit-scrollbar { display: none; }
+          .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+          .custom-horizontal-scrollbar { mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); }
+        `}} />
       </div>
       <CartFloatingButton />
     </div>
   );
 };
+
 export default RestaurantPage;

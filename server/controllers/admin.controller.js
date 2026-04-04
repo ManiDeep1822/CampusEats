@@ -552,6 +552,42 @@ const settlePayout = asyncHandler(async (req, res) => {
   res.json({ message: 'Payout marked as settled successfully' });
 });
 
+// @desc    Delete a vendor review
+// @route   DELETE /api/admin/vendors/:vendorId/reviews/:reviewId
+// @access  Private/Admin
+const deleteVendorReview = asyncHandler(async (req, res) => {
+  const { vendorId, reviewId } = req.params;
+
+  const vendor = await Vendor.findById(vendorId);
+  if (!vendor) {
+    res.status(404);
+    throw new Error('Vendor not found');
+  }
+
+  // Find the review to be removed
+  const reviewIndex = vendor.reviews.findIndex(r => r._id.toString() === reviewId);
+  
+  if (reviewIndex === -1) {
+    res.status(404);
+    throw new Error('Review not found');
+  }
+
+  // Remove the review
+  vendor.reviews.splice(reviewIndex, 1);
+  vendor.numReviews = vendor.reviews.length;
+
+  // Recalculate average rating
+  if (vendor.numReviews === 0) {
+    vendor.rating = 0;
+  } else {
+    const totalRating = vendor.reviews.reduce((acc, item) => item.rating + acc, 0);
+    vendor.rating = Number((totalRating / vendor.numReviews).toFixed(1));
+  }
+
+  await vendor.save();
+  res.json({ message: 'Review removed successfully', rating: vendor.rating, numReviews: vendor.numReviews });
+});
+
 module.exports = {
   getUsers,
   deleteUser,
@@ -570,5 +606,6 @@ module.exports = {
   deleteCoupon,
   toggleCouponStatus,
   getWeeklyPayouts,
-  settlePayout
+  settlePayout,
+  deleteVendorReview
 };

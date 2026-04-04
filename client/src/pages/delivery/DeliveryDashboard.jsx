@@ -24,7 +24,7 @@ const DeliveryDashboard = () => {
   // Optimized fetching logic with a small cooldown
   const fetchData = async (force = false) => {
     const now = Date.now();
-    if (!force && lastFetchRef.current > now - 2000) return; // Prevent double-fetches within 2s
+    if (!force && lastFetchRef.current > now - 2000) return; 
     lastFetchRef.current = now;
 
     try {
@@ -44,7 +44,6 @@ const DeliveryDashboard = () => {
 
   useEffect(() => { fetchData(true); }, []);
 
-  // Socket updates (Throttled for better "performance" feel)
   useSocketEvent('order:new', () => { fetchData(); toast.success("New task found on campus! 🚨"); });
   useSocketEvent('order:ready', () => { fetchData(); toast.success("Food is ready for pickup!"); });
   useSocketEvent('rider:stats_update', () => fetchData());
@@ -95,6 +94,8 @@ const DeliveryDashboard = () => {
     }
   };
 
+  const [isEditingUPI, setIsEditingUPI] = useState(false);
+
   const handleUpdatePayment = async (e) => {
     e.preventDefault();
     const upiId = e.target.upiId.value;
@@ -102,6 +103,7 @@ const DeliveryDashboard = () => {
     try {
       await api.put('/delivery/profile', { paymentDetails: { upiId } });
       toast.success('Payout destination updated! 💸', { id: saveToast });
+      setIsEditingUPI(false);
       fetchData(true);
     } catch (error) {
       toast.error('Failed to update payout info', { id: saveToast });
@@ -111,9 +113,11 @@ const DeliveryDashboard = () => {
   if (loading) return <Loader />;
   if (!data || !data.profile) return <div className="text-center py-20 text-red-500 font-bold">Error loading dashboard. Please refresh.</div>;
 
+  const currentUpi = data.profile.paymentDetails?.upiId;
+
   return (
     <div className="min-h-screen bg-gray-50 font-['Inter',sans-serif]">
-      {/* 🚀 RIDER STATUS SECTION (Fixed position to avoid Navbar overlap) */}
+      {/* 🚀 RIDER STATUS SECTION */}
       <div className={`bg-white border-b transition-all duration-500 ${data.profile.isAvailable ? 'border-orange-100 shadow-sm' : 'bg-slate-50 border-gray-100 opacity-90'}`}>
         <div className="max-w-7xl mx-auto px-5 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -183,25 +187,53 @@ const DeliveryDashboard = () => {
           </div>
 
           <div className="flex-1 w-full p-7 bg-gray-50 rounded-[2.5rem] border border-gray-100">
-            <h3 className="font-black text-[10px] text-gray-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+            <h3 className="font-black text-[10px] text-gray-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-1.5">
               <FiTrendingUp className="text-orange-500" />
-              Update Payout Destination
+              Payout Destination
             </h3>
-            <form onSubmit={handleUpdatePayment} className="flex flex-col sm:flex-row gap-3">
-              <input 
-                name="upiId"
-                defaultValue={data.profile.paymentDetails?.upiId || ''}
-                placeholder="Enter UPI ID (e.g. name@upi)"
-                className="flex-1 bg-white border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-orange-500 outline-none text-sm font-bold transition-all"
-                required
-              />
-              <button 
-                type="submit"
-                className="bg-gray-900 text-white font-black text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-2xl hover:bg-black transition shadow-lg active:scale-95"
-              >
-                Save UPI
-              </button>
-            </form>
+            
+            {!isEditingUPI && currentUpi ? (
+              <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-5 rounded-2xl border border-orange-50 shadow-sm">
+                <div className="flex-1">
+                  <p className="text-[9px] font-black text-orange-400 uppercase tracking-[0.2em] mb-1 leading-none">Registered ID</p>
+                  <p className="text-sm font-black text-gray-800 tracking-tight">{currentUpi}</p>
+                </div>
+                <button 
+                  onClick={() => setIsEditingUPI(true)}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-gray-900 text-white font-black text-[9px] uppercase tracking-widest rounded-xl hover:bg-black transition shadow-md active:scale-95"
+                >
+                  Edit ID
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleUpdatePayment} className="flex flex-col sm:flex-row gap-3">
+                <input 
+                  name="upiId"
+                  defaultValue={currentUpi || ''}
+                  placeholder="Enter UPI ID (e.g. name@upi)"
+                  className="flex-1 bg-white border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-orange-500 outline-none text-sm font-bold transition-all placeholder:text-gray-300"
+                  required
+                  autoFocus={isEditingUPI}
+                />
+                <div className="flex gap-2">
+                  <button 
+                    type="submit"
+                    className="flex-1 bg-orange-600 text-white font-black text-[9px] uppercase tracking-widest px-8 py-3.5 rounded-2xl hover:bg-orange-700 transition shadow-lg shadow-orange-500/20 active:scale-95 whitespace-nowrap"
+                  >
+                    {currentUpi ? 'Update UPI' : 'Save UPI'}
+                  </button>
+                  {isEditingUPI && (
+                    <button 
+                      type="button"
+                      onClick={() => setIsEditingUPI(false)}
+                      className="px-4 py-3.5 bg-white text-gray-500 font-black text-[9px] uppercase tracking-widest border border-gray-200 rounded-2xl hover:bg-gray-50 transition"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
             <div className="flex items-center gap-2 mt-4">
                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Your earnings are secured in the platform ledger until settlement.</p>
@@ -212,7 +244,7 @@ const DeliveryDashboard = () => {
         {/* 🚨 MAIN DESKTOP GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           
-          {/* LIVE TASKS (MAIN COLUMN) */}
+          {/* LIVE TASKS */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between px-1">
                 <h2 className="text-sm font-black text-gray-800 uppercase tracking-widest flex items-center gap-2">
@@ -276,19 +308,13 @@ const DeliveryDashboard = () => {
                    <p className="text-gray-500 font-black text-xs uppercase tracking-[0.2em]">
                       {data.profile.isAvailable ? "Scanning Campus for Active Signals..." : "Radar Offline - Go On Duty to Listen"}
                    </p>
-                   <div className="mt-6 flex justify-center gap-2">
-                       <span className="w-2 h-2 rounded-full bg-gray-100 animate-pulse"></span>
-                       <span className="w-2 h-2 rounded-full bg-gray-200 animate-pulse delay-75"></span>
-                       <span className="w-2 h-2 rounded-full bg-gray-100 animate-pulse delay-150"></span>
-                   </div>
                 </div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* SIDEBAR COL (DESKTOP ONLY) */}
+          {/* SIDEBAR COL */}
           <div className="space-y-8">
-            {/* PERFORMANCE (RE-USE EXISTING CHART) */}
             <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
                 <h2 className="text-sm font-black text-gray-800 uppercase tracking-widest mb-6">Performance</h2>
                 <div className="h-44 w-full">
@@ -302,20 +328,18 @@ const DeliveryDashboard = () => {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} />
-                      <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                      <Tooltip />
                       <Area type="monotone" dataKey="earnings" stroke="#f97316" strokeWidth={4} fillOpacity={1} fill="url(#colorEarnings)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
             </div>
 
-            {/* MISSION HISTORY (SIDEBAR STYLE) */}
             <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
                <div className="flex items-center justify-between gap-2 mb-6 px-1">
                   <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                     <FiClock size={14} /> Mission Logs
                   </h2>
-                  <button onClick={() => navigate('/delivery/payments')} className="text-[10px] font-black text-orange-500 uppercase tracking-widest hover:underline">View Earnings</button>
                </div>
                <div className="space-y-4">
                   {(data?.recentDeliveries?.slice(0, 5) || []).map(order => (
@@ -330,17 +354,13 @@ const DeliveryDashboard = () => {
                        <p className="font-black text-gray-800 text-xs">₹{order?.deliveryFee || 15}</p>
                     </div>
                   ))}
-                  {(!data.recentDeliveries || data.recentDeliveries.length === 0) && <p className="text-center py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">No recent missions</p>}
                </div>
             </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 };
 
 export default DeliveryDashboard;
-
-

@@ -13,6 +13,7 @@ const {
   getDashboardStats,
   getWeeklyPayouts,
   settlePayout,
+  deleteVendorReview,
   createUser,
   resendStaffOTP,
   deleteVendor,
@@ -43,6 +44,7 @@ router.route('/users/:id/role').put(updateUserRole);
 router.route('/vendors').get(getVendors);
 router.route('/vendors/:id').delete(deleteVendor);
 router.route('/vendors/:id/status').put(updateVendorStatus);
+router.route('/vendors/:vendorId/reviews/:reviewId').delete(deleteVendorReview);
 
 // Delivery routes
 router.route('/delivery').get(getDeliveryBoys);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiShoppingBag, FiCheckCircle, FiXCircle, FiStar, FiArrowLeft, FiUserPlus, FiEye, FiEyeOff, FiTrash2 } from 'react-icons/fi';
+import { FiShoppingBag, FiCheckCircle, FiXCircle, FiStar, FiArrowLeft, FiUserPlus, FiEye, FiEyeOff, FiTrash2, FiExternalLink } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -243,6 +243,13 @@ const ManageVendors = () => {
                             <><FiXCircle size={14} /> Needs Approval</>
                           )}
                         </button>
+                        <Link 
+                          to={`/student/restaurant/${vendor?._id}`}
+                          className="text-gray-400 hover:text-blue-500 p-2 rounded-full hover:bg-blue-50 transition-all"
+                          title="View Live Stall"
+                        >
+                          <FiExternalLink size={18} />
+                        </Link>
                         <button 
                           onClick={() => handleDeleteVendor(vendor?._id)}
                           className="text-gray-400 hover:text-rose-500 p-2 rounded-full hover:bg-rose-50 transition-all"
