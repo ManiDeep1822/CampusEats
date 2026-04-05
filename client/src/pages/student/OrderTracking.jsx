@@ -204,21 +204,33 @@ const OrderTracking = () => {
     setChatHistory(prev => [...prev, msg]);
   }, []);
 
-  useSocketEvent('order:confirmed', (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'confirmed', estimatedTime: data.estimatedTime })); });
-  useSocketEvent('order:preparing', (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'preparing', estimatedTime: data.estimatedTime })); });
-  useSocketEvent('order:ready',     (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'ready' })); });
-  useSocketEvent('order:picked',    (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'picked_up' })); });
-  useSocketEvent('order:picked_up', (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'picked_up' })); });
-  useSocketEvent('order:delivered', (data) => { if (data.orderId === id) dispatch(updateOrderStatus({ status: 'delivered' })); });
-  useSocketEvent('order:rider_assigned', (data) => { if (data.orderId === id) fetchOrder(); });
-  useSocketEvent('order:arrived', (data) => { if (data.orderId === id) fetchOrder(); });
+  useSocketEvent('order:placed',    (data) => { if (data.orderId?.toString() === id?.toString()) dispatch(updateOrderStatus({ status: 'placed' })); });
+  useSocketEvent('order:confirmed', (data) => { if (data.orderId?.toString() === id?.toString()) dispatch(updateOrderStatus({ status: 'confirmed', estimatedTime: data.estimatedTime })); });
+  useSocketEvent('order:preparing', (data) => { if (data.orderId?.toString() === id?.toString()) dispatch(updateOrderStatus({ status: 'preparing', estimatedTime: data.estimatedTime })); });
+  useSocketEvent('order:ready',     (data) => { if (data.orderId?.toString() === id?.toString()) dispatch(updateOrderStatus({ status: 'ready' })); });
+  useSocketEvent('order:picked',    (data) => { if (data.orderId?.toString() === id?.toString()) dispatch(updateOrderStatus({ status: 'picked_up' })); });
+  useSocketEvent('order:picked_up', (data) => { if (data.orderId?.toString() === id?.toString()) dispatch(updateOrderStatus({ status: 'picked_up' })); });
+  useSocketEvent('order:delivered', (data) => { if (data.orderId?.toString() === id?.toString()) dispatch(updateOrderStatus({ status: 'delivered' })); });
+  useSocketEvent('order:rider_assigned', (data) => { if (data.orderId?.toString() === id?.toString()) fetchOrder(); });
+  useSocketEvent('order:arrived', (data) => { if (data.orderId?.toString() === id?.toString()) fetchOrder(); });
   useSocketEvent('receive_message', handleReceiveMessage);
   
   useSocketEvent('rider_location_update', (locData) => { 
-    if(locData.orderId === id && locData.lat && locData.lng) {
+    if(locData.orderId?.toString() === id?.toString() && locData.lat && locData.lng) {
       setRiderLocation([locData.lat, locData.lng]);
     }
   });
+
+  // 🔄 RECONNECTION SYNC: If socket disconnects/reconnects, fetch fresh order state
+  useEffect(() => {
+    if (!socket) return;
+    const handleSync = () => {
+      console.log('🔄 Socket reconnected, syncing order state...');
+      fetchOrder();
+    };
+    socket.on('connect', handleSync);
+    return () => { socket.off('connect', handleSync); };
+  }, [socket, fetchOrder]);
 
   const sendMessage = (messageText) => {
     if (!messageText.trim() || !activeOrder.deliveryBoyId) return;

@@ -12,6 +12,7 @@ import GlobalNotificationListener from './components/shared/GlobalNotificationLi
 import CampusEatsAI from './components/shared/CampusEatsAI';
 import Loader from './components/shared/Loader';
 import MandatoryPhoneModal from './components/shared/MandatoryPhoneModal';
+import ScrollToTop from './components/shared/ScrollToTop';
 
 const SessionTerminatedModal = () => {
   const { isSessionTerminated } = useSelector((state) => state.auth);
@@ -120,6 +121,7 @@ function App() {
   return (
     <div className="min-h-screen bg-background text-textPrimary font-sans">
         <SwipeableToaster />
+        <ScrollToTop />
         <GlobalNotificationListener />
         <SessionTerminatedModal />
         <MandatoryPhoneModal />

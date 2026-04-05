@@ -78,7 +78,13 @@ const ActiveDelivery = () => {
           })));
         }
       }
-    } catch(err) { toast.error("Failed to load active delivery"); } finally { setLoading(false); }
+    } catch(err) { 
+      if (err.response?.status === 401) {
+        toast.error("Session Expired. Please log in again.");
+        return navigate('/login');
+      }
+      toast.error("Failed to load active delivery"); 
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { fetchActiveDelivery(); }, [fetchActiveDelivery]);
@@ -131,10 +137,12 @@ const ActiveDelivery = () => {
            }
 
            if (socket && data.studentId) {
-             const targetUserId = typeof data.studentId === 'string' ? data.studentId : (data.studentId._id || data.studentId.userId);
+             const studentIdRaw = data.studentId?._id || data.studentId;
+             const targetUserId = studentIdRaw?.toString();
+             
              if (targetUserId) {
                socket.emit('rider_location_update', {
-                  orderId: data._id,
+                  orderId: data._id?.toString(),
                   to: `student:${targetUserId}`,
                   lat: latitude,
                   lng: longitude
@@ -152,10 +160,20 @@ const ActiveDelivery = () => {
     return () => { if (watchId) navigator.geolocation.clearWatch(watchId); };
   }, [data?.status, socket, data?._id, data?.studentId, locationStatus]);
 
-  useSocketEvent('order:confirmed', () => { fetchActiveDelivery(); toast.success("Vendor has accepted!"); });
-  useSocketEvent('order:preparing', () => { fetchActiveDelivery(); toast.success("Food is being prepared"); });
-  useSocketEvent('order:ready', () => { fetchActiveDelivery(); toast.success("Pickup ready! 🚨"); });
+  useSocketEvent('order:confirmed', (data) => { if (data.orderId?.toString() === data?._id?.toString()) { fetchActiveDelivery(); toast.success("Vendor has accepted!"); } });
+  useSocketEvent('order:preparing', (data) => { if (data.orderId?.toString() === data?._id?.toString()) { fetchActiveDelivery(); toast.success("Food is being prepared"); } });
+  useSocketEvent('order:ready',     (data) => { if (data.orderId?.toString() === data?._id?.toString()) { fetchActiveDelivery(); toast.success("Pickup ready! 🚨"); } });
   useSocketEvent('receive_message', (msg) => { setChatHistory(prev => [...prev, msg]); });
+
+  // 💓 HEARTBEAT: Prevent mobile browser from putting the app to sleep during active delivery
+  useEffect(() => {
+    const heartbeat = setInterval(() => {
+      if (socket && socket.connected) {
+        socket.emit('rider:heartbeat', { timestamp: Date.now() });
+      }
+    }, 30000); // 30s
+    return () => clearInterval(heartbeat);
+  }, [socket]);
 
   const sendMessage = (e) => {
     e.preventDefault();
