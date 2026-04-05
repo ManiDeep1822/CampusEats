@@ -190,7 +190,7 @@ const OrderTracking = () => {
            message: c.message,
            sender: c.sender,
            timestamp: c.timestamp,
-           isMe: c.sender === 'Student'
+           isMe: c.sender === user?._id?.toString() || c.sender === 'Student'
         })));
       }
     } catch (error) { console.error(error); } finally { setLoading(false); }
@@ -245,11 +245,11 @@ const OrderTracking = () => {
     try {
       const targetRoom = `delivery:${getTargetId()}`;
       const packet = { 
-         orderId: activeOrder._id, 
+         orderId: activeOrder._id?.toString(), 
          to: targetRoom, 
-         replyTo: `student:${activeOrder.studentId?._id || activeOrder.studentId || ''}`,
+         replyTo: `student:${user?._id?.toString()}`,
          message: messageText, 
-         sender: 'Student', 
+         sender: user?._id?.toString(), 
          timestamp: Date.now() 
       };
       

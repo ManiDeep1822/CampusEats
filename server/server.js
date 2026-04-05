@@ -136,7 +136,10 @@ const io = new Server(server, {
     origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
-  }
+  },
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  connectTimeout: 45000
 });
 
 // Attach io to app so controllers can use it

@@ -80,7 +80,7 @@ const Navbar = () => {
           {/* Logo */}
           <Link to={isAuthenticated ? getDashboardLink() : '/'} className="flex items-baseline space-x-1.5 group shrink-0">
             <span className="text-2xl font-heading font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 group-hover:from-orange-500 group-hover:to-rose-400 transition-all max-sm:text-xl">CampusEats</span>
-            <span className="text-[10px] font-black text-gray-400/60 uppercase tracking-wider">v1.1</span>
+            <span className="text-[10px] font-black text-gray-400/60 uppercase tracking-wider">v1.2</span>
           </Link>
 
           {/* Desktop Navigation */}

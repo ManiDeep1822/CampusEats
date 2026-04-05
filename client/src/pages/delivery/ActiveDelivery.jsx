@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import Loader from '../../components/shared/Loader';
 import toast from 'react-hot-toast';
@@ -22,6 +23,48 @@ let DefaultIcon = L.icon({
     iconAnchor: [12, 41]
 });
 L.Marker.prototype.options.icon = DefaultIcon;
+
+// 🛵 SUB-COMPONENT: ISOLATED CHAT TO PREVENT MAP FLICKER
+const DeliveryChatBox = ({ chatHistory, onSendMessage, studentName }) => {
+  const [msg, setMsg] = useState('');
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [chatHistory]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!msg.trim()) return;
+    onSendMessage(msg);
+    setMsg('');
+  };
+
+  return (
+    <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[450px]">
+      <div className="p-5 border-b flex items-center justify-between bg-gray-50/50">
+        <div>
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Communication Channel</span>
+          <h3 className="text-xs font-black text-gray-800 uppercase">Chat with {studentName || 'Customer'}</h3>
+        </div>
+        <span className="text-[8px] font-black text-green-500 uppercase flex items-center gap-1.5 p-2 bg-green-50 rounded-full px-4"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> App Online</span>
+      </div>
+      <div ref={scrollRef} className="flex-1 p-6 overflow-y-auto space-y-5 flex flex-col no-scrollbar bg-gray-50/20">
+        {chatHistory.length === 0 && <div className="m-auto text-[10px] font-bold text-gray-300 uppercase tracking-[0.3em] text-center max-w-[200px] leading-loose">Secure channel established. Connected with recipient.</div>}
+        {chatHistory.map((m, i) => (
+          <div key={i} className={`max-w-[85%] p-4 rounded-[1.5rem] text-sm font-bold leading-relaxed shadow-sm ${m.isMe ? 'bg-gray-800 text-white self-end rounded-br-none' : 'bg-white border border-gray-100 text-gray-700 self-start rounded-bl-none'}`}>
+            {m.message}
+            <p className={`text-[8px] mt-2 font-black uppercase opacity-40 ${m.isMe ? 'text-right' : 'text-left'}`}>{m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Just now'}</p>
+          </div>
+        ))}
+      </div>
+      <form onSubmit={handleSubmit} className="p-4 bg-white border-t flex gap-3">
+        <input value={msg} onChange={e => setMsg(e.target.value)} type="text" placeholder="Type response..." className="flex-1 bg-gray-100 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500/20 transition-all" />
+        <button type="submit" disabled={!msg.trim()} className="w-14 h-14 bg-gray-800 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all disabled:opacity-20"><FiSend size={20} /></button>
+      </form>
+    </div>
+  );
+};
 
 const RecenterMap = ({ lat, lng }) => {
   const map = useMap();
@@ -58,7 +101,7 @@ const ActiveDelivery = () => {
   const navigate = useNavigate();
   
   const socket = useSocketContext();
-  const [chatMessage, setChatMessage] = useState('');
+  const { user } = useSelector(state => state.auth); 
   const [chatHistory, setChatHistory] = useState([]);
 
   const fetchActiveDelivery = async () => {
@@ -74,7 +117,7 @@ const ActiveDelivery = () => {
              message: c.message,
              sender: c.sender,
              timestamp: c.timestamp,
-             isMe: c.sender === 'Rider'
+             isMe: c.sender === user?._id?.toString() || c.sender === 'Rider'
           })));
         }
       }
@@ -175,20 +218,19 @@ const ActiveDelivery = () => {
     return () => clearInterval(heartbeat);
   }, [socket]);
 
-  const sendMessage = (e) => {
-    e.preventDefault();
-    if (!chatMessage.trim() || !data.studentId) return;
-    const targetRoom = `student:${typeof data.studentId === 'string' ? data.studentId : data.studentId._id}`;
+  const sendMessage = (messageText) => {
+    if (!messageText.trim() || !data.studentId) return;
+    const studentIdRaw = data.studentId?._id || data.studentId;
+    const targetRoom = `student:${studentIdRaw?.toString()}`;
     const packet = { 
-       orderId: data._id, 
+       orderId: data._id?.toString(), 
        to: targetRoom, 
-       message: chatMessage, 
-       sender: 'Rider', 
+       message: messageText, 
+       sender: user._id?.toString(), 
        timestamp: Date.now() 
     };
     socket?.emit('send_message', packet);
     setChatHistory(prev => [...prev, { ...packet, isMe: true }]);
-    setChatMessage('');
   };
 
   const sendOtpToStudent = async (isResend = false) => {
@@ -346,29 +388,12 @@ const ActiveDelivery = () => {
                     )}
                 </div>
 
-                {/* 💬 CHAT FEED */}
-                <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[450px]">
-                  <div className="p-5 border-b flex items-center justify-between bg-gray-50/50">
-                    <div>
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Communication Channel</span>
-                      <h3 className="text-xs font-black text-gray-800 uppercase">Customer Chat Feed</h3>
-                    </div>
-                    <span className="text-[8px] font-black text-green-500 uppercase flex items-center gap-1.5 p-2 bg-green-50 rounded-full px-4"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> App Online</span>
-                  </div>
-                  <div className="flex-1 p-6 overflow-y-auto space-y-5 flex flex-col no-scrollbar bg-gray-50/20">
-                    {chatHistory.length === 0 && <div className="m-auto text-[10px] font-bold text-gray-300 uppercase tracking-[0.3em] text-center max-w-[200px] leading-loose">Secure channel established. Connected with recipient.</div>}
-                    {chatHistory.map((msg, i) => (
-                      <div key={i} className={`max-w-[85%] p-4 rounded-[1.5rem] text-sm font-bold leading-relaxed shadow-sm ${msg.isMe ? 'bg-gray-800 text-white self-end rounded-br-none' : 'bg-white border border-gray-100 text-gray-700 self-start rounded-bl-none'}`}>
-                        {msg.message}
-                        <p className={`text-[8px] mt-2 font-black uppercase opacity-40 ${msg.isMe ? 'text-right' : 'text-left'}`}>{msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Just now'}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <form onSubmit={sendMessage} className="p-4 bg-white border-t flex gap-3">
-                    <input value={chatMessage} onChange={e => setChatMessage(e.target.value)} type="text" placeholder="Type response..." className="flex-1 bg-gray-100 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500/20 transition-all" />
-                    <button type="submit" disabled={!chatMessage.trim()} className="w-14 h-14 bg-gray-800 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all disabled:opacity-20"><FiSend size={20} /></button>
-                  </form>
-                </div>
+                {/* 💬 CHAT FEED: ISOLATED TO PREVENT MAP FLICKER */}
+                <DeliveryChatBox 
+                  chatHistory={chatHistory} 
+                  onSendMessage={sendMessage} 
+                  studentName={data?.studentId?.name}
+                />
             </div>
         </div>
       </div>
