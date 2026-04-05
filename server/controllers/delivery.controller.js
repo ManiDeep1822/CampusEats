@@ -137,7 +137,7 @@ const pickUpOrder = asyncHandler(async (req, res) => {
 
       const recipientId = order.studentId?._id || order.studentId;
       const studentRoom = `student:${recipientId}`;
-      io.to(studentRoom).emit('order:picked', { orderId: order._id, message: msg });
+      io.to(studentRoom).emit('order:picked_up', { orderId: order._id, message: msg });
 
       const notification = await Notification.create({
         recipient: recipientId,
@@ -151,7 +151,7 @@ const pickUpOrder = asyncHandler(async (req, res) => {
       sendPushNotification(recipientId, "Out for Delivery! 🛵", "Your rider has picked up your food and is on the way.", order._id);
 
       io.to(vendorRoom).emit('order:status_update', { orderId: order._id, status: 'picked_up' });
-      io.to(vendorRoom).emit('order:picked', { orderId: order._id });
+      io.to(vendorRoom).emit('order:picked_up', { orderId: order._id });
     }
     
     res.json(order);

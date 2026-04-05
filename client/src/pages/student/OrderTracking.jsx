@@ -325,7 +325,8 @@ const OrderTracking = () => {
               <button 
                 onClick={() => {
                   const token = JSON.parse(localStorage.getItem('userInfo') || '{}')?.token;
-                  window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/student/orders/${activeOrder?._id}/receipt?token=${token || ''}`, '_blank');
+                  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                  window.open(`${API_BASE}/student/orders/${activeOrder?._id}/receipt?token=${token || ''}`, '_blank');
                 }}
                 className="flex-1 sm:flex-none bg-gray-50 text-gray-600 px-3 sm:px-4 py-2 rounded-lg font-bold hover:bg-gray-100 transition shadow-sm text-xs sm:text-sm border border-gray-100 whitespace-nowrap"
               >

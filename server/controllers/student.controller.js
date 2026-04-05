@@ -477,7 +477,7 @@ const cancelOrder = asyncHandler(async (req, res) => {
         type: 'order_update',
         orderId: order._id
       });
-      io.to(`vendor:${vendor.userId._id}`).emit('notification', notification);
+      io.to(`vendor:${vendor._id}`).emit('notification', notification);
     }
   }
 

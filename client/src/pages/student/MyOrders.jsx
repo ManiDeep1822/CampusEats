@@ -28,7 +28,8 @@ const MyOrders = () => {
   }, []);
 
   const handleDownloadReceipt = (orderId) => {
-    window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/student/orders/${orderId}/receipt?token=${token}`, '_blank');
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    window.open(`${API_BASE}/student/orders/${orderId}/receipt?token=${token}`, '_blank');
   };
 
   if (loading) return <Loader />;

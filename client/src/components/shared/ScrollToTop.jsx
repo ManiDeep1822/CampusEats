@@ -6,7 +6,7 @@ import { useLocation } from 'react-router-dom';
  * 
  * Automatically resets the window scroll position to (0, 0) whenever
  * the application route changes. This prevents the "scrolled-to-bottom"
- * issue when navigating from a long page to a new page in v1.1.
+ * issue when navigating from a long page to a new page in v1.2.
  */
 const ScrollToTop = () => {
   const { pathname } = useLocation();
