@@ -239,7 +239,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       });
 
       // 2. Emit Real-time Socket Event
-      const eventName = status === 'picked_up' ? 'order:picked' : `order:${status}`;
+      const eventName = status === 'picked_up' ? 'order:picked_up' : `order:${status}`;
       io.to(`student:${recipientId}`).emit(eventName, { 
         orderId: order._id, 
         message: studentMsg,

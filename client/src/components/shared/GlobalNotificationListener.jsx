@@ -137,14 +137,15 @@ const GlobalNotificationListener = () => {
           } else {
              dispatch(addNotification({ message: text }));
              
-             // Smart Toast Suppression:
-             // Only show a toast if the user is NOT on the tracking page AND NOT on the student home (where the LiveTracker is).
-             const isTrackingPage = location.pathname.includes('/student/tracking');
-             const isStudentHome = location.pathname === '/student/home';
-             const isOrderUpdate = eventName.startsWith('order:') || eventName === 'delivery:otp';
-
-             if (!isOrderUpdate || (!isTrackingPage && !isStudentHome)) {
-                toast(text, { icon: '🔔', duration: 4000 });
+             if (data.message) {
+                // Determine if we should show a toast
+                const isTrackingThisOrder = location.pathname.includes(`/student/tracking/${data.orderId}`);
+                
+                // 🛑 ONLY SUPPRESS if they are literally on the tracking page of THIS order. 
+                // If they are on Home or another page, they MUST see the toast.
+                if (!isTrackingThisOrder) {
+                   toast(text, { icon: '🔔', duration: 4000 });
+                }
              }
           }
         }
@@ -155,14 +156,14 @@ const GlobalNotificationListener = () => {
         'order:confirmed',
         'order:preparing',
         'order:ready',
-        'order:picked',
         'order:picked_up',
         'order:delivered',
         'order:cancelled',
         'order:rider_assigned',
         'order:arrived',
         'delivery:otp',
-        'receive_message'
+        'receive_message',
+        'notification'
       ];
 
       // Store handler refs locally in this effect's closure for perfect cleanup
